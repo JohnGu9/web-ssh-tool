@@ -1,0 +1,40 @@
+{
+  "compilerOptions": {
+    "module": "ES2020",
+    "target": "ES2021", // node14->es2020 node16->es2021
+    "lib": [
+      "ES2021"
+    ],
+    "moduleResolution": "node",
+    "allowJs": true,
+    "noImplicitAny": true,
+    "removeComments": true,
+    "preserveConstEnums": true,
+    "sourceMap": true,
+    "isolatedModules": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "outDir": "./build",
+    "jsx": "react",
+    "typeRoots": [
+      "./node_modules/@types"
+    ],
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "web/*": [
+        "../web/src/*"
+      ],
+    }
+  },
+  "files": [
+    "index.ts"
+  ],
+  "include": [
+    "src",
+  ]
+}

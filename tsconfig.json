@@ -1,26 +1,21 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "module": "commonjs",
+    "target": "ES2021", // node14->es2020 node16->es2021
     "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
+      "ES2021"
     ],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true,
-    "module": "esnext",
     "moduleResolution": "node",
-    "resolveJsonModule": true,
+    "noImplicitAny": true,
+    "sourceMap": true,
     "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx"
+    "strict": true,
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "outDir": "./build"
   },
-  "include": [
-    "src"
+  "files": [
+    "build.ts"
   ]
 }
