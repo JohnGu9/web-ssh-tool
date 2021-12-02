@@ -3,7 +3,14 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "build": ""
+    "build:web": "cd web && npm run build",
+    "build:node": "cd node && npm run build",
+    "build:bundle": "npx ts-node build.ts",
+    "build": "npm run build:web && npm run build:node && npm run build:bundle",
+    "clean:web": "cd web && npm ci",
+    "clean:node": "cd node && npm ci",
+    "clean": "npm run clean:web && npm run clean:node && npm ci",
+    "rebuild": "npm run clean && npm run build"
   },
   "author": "JohnGu9",
   "license": "MIT",
@@ -15,7 +22,6 @@
     "ssh2": "^1.5.0",
     "tsee": "^1.3.2",
     "uuid": "^8.3.2",
-    "write-file-atomic": "^3.0.3",
     "ws": "^8.2.3"
   },
   "devDependencies": {
@@ -44,5 +50,8 @@
       "node16-macos-x64"
     ],
     "outputPath": "build"
+  },
+  "engines": {
+    "node": ">=12.13"
   }
 }

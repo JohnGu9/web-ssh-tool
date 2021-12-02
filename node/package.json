@@ -2,10 +2,14 @@
   "name": "node",
   "version": "1.0.0",
   "description": "",
+  "private": true,
+  "sideEffects": false,
   "main": "index.js",
   "scripts": {
-    "start": "",
-    "build": ""
+    "start": "npm-run-all --parallel watch:webpack watch:nodemon",
+    "watch:webpack": "npx webpack --mode=development --watch",
+    "watch:nodemon": "touch debug.js && npx nodemon debug.js --config=config.json --path=../web/build",
+    "build": "npx webpack"
   },
   "author": "",
   "license": "MIT",
@@ -41,5 +45,8 @@
   "optionalDependencies": {
     "bufferutil": "^4.0.5",
     "utf-8-validate": "^5.0.7"
+  },
+  "engines": {
+    "node": ">=16.12"
   }
 }
