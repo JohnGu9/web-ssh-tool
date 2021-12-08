@@ -9,7 +9,8 @@
     "start": "npm-run-all --parallel watch:webpack watch:nodemon",
     "watch:webpack": "npx webpack --mode=development --watch",
     "watch:nodemon": "touch debug.js && npx nodemon debug.js --config=config.json --path=../web/build",
-    "build": "npx webpack"
+    "build": "npx webpack",
+    "build:debug": "npx webpack --mode=development"
   },
   "author": "",
   "license": "MIT",

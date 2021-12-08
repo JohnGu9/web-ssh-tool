@@ -1,5 +1,4 @@
 import React from "react";
-import IntervalLimiter from "../common/IntervalLimiter";
 
 class LayoutBuilder extends React.Component<LayoutBuilder.Props, LayoutBuilder.State> {
   constructor(props: LayoutBuilder.Props) {
@@ -9,12 +8,9 @@ class LayoutBuilder extends React.Component<LayoutBuilder.Props, LayoutBuilder.S
   }
 
   readonly _ref: React.RefObject<HTMLDivElement>;
-  readonly _pipeLine = new IntervalLimiter({ interval: 10 });
   readonly _resize = () => {
-    return this._pipeLine.post(async () => {
-      const { current } = this._ref;
-      if (current) this.setState({ size: { height: current.clientHeight, width: current.clientWidth } })
-    })
+    const { current } = this._ref;
+    if (current) this.setState({ size: { height: current.clientHeight, width: current.clientWidth } })
   }
 
   componentDidMount() {

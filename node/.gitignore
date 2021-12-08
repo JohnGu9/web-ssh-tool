@@ -26,3 +26,5 @@ index.js
 debug.js
 upload-*
 .vscode
+*.log
+.test

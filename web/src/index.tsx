@@ -2,6 +2,8 @@ import 'core-js/es/map';
 import 'core-js/es/set';
 import 'raf/polyfill';
 import './index.css';
+import 'material-icons/iconfont/filled.css';
+import 'rmwc/dist/styles';
 
 import React from 'react';
 import ReactDOM from 'react-dom';

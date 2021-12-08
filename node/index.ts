@@ -1,18 +1,18 @@
 import express from 'express';
 import compression from 'compression';
+import cors from 'cors';
 import path from 'path';
 import https from 'https';
 import fs from 'fs/promises';
 import os from 'os';
 import { AddressInfo, Socket } from 'net';
+import { URL } from 'url';
 
 import { concurrent, Context, getConfiguration } from 'src/common';
 import upload from 'src/upload';
 import download from 'src/download';
 import watch from 'src/watch';
-import terminal from 'src/terminal';
-import { URL } from 'url';
-import cors from 'cors';
+import rest from 'src/rest';
 
 export { };
 
@@ -28,7 +28,7 @@ async function main() {
   app.use(express.static(path.join('web', 'build')));
 
   const [wss1, wss2] = await Promise.all([
-    terminal(context),
+    rest(context),
     watch(context),
     upload('/upload', app, context),
     download('/download', app, context),
@@ -44,16 +44,14 @@ async function main() {
     if (url) {
       const { pathname } = new URL(url, `http://${host}`); // base must be http
       switch (pathname) {
-        case '/interactive':
+        case '/rest':
           return wss1.handleUpgrade(request, socket, head,
             (ws) => wss1.emit('connection', ws, request));
-        case '/terminal':
+        case '/watch':
           return wss2.handleUpgrade(request, socket, head,
             (ws) => wss2.emit('connection', ws, request));
       }
     }
-    const { remoteAddress, remotePort } = request.socket;
-    context.logger.error(`Unknown connection from [${remoteAddress}:${remotePort}] try to connect to ws with url [${url}]`);
     socket.destroy();
   });
 

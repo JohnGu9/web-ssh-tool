@@ -1,68 +1,74 @@
-import ws from 'ws';
-import fs, { PathLike } from 'fs';
-import { Context, wsSafeClose } from './common';
+import path from 'path';
+import ws, { WebSocket } from 'ws';
+import fs, { Stats } from 'fs';
+import { Context, exists, wsSafeClose } from './common';
+import { FileType } from 'web/common/Type';
 
-type WatcherError = { error: Error };
-type WatcherFile = { file: fs.Stats, path: PathLike };
-type WatcherDirectory = { directory: fs.Stats, path: PathLike };
 
-type Watcher = { fsWatcher: fs.FSWatcher, state: WatcherError | WatcherFile | WatcherDirectory };
+type File = { path: string, content: string, lstat: Stats & { type?: FileType } }
+type Directory = { path: string, files: { [key: string]: Stats & { type?: FileType } }, lstat: Stats }
+
+function getFileType(stats: Stats) {
+  if (stats.isFile()) return FileType.file;
+  if (stats.isDirectory()) return FileType.directory;
+  if (stats.isBlockDevice()) return FileType.blockDevice;
+  if (stats.isCharacterDevice()) return FileType.characterDevice;
+  if (stats.isSymbolicLink()) return FileType.symbolicLink;
+  if (stats.isFIFO()) return FileType.fifo;
+  if (stats.isSocket()) return FileType.socket;
+}
 
 function watch(context: Context) {
   const wsServer = new ws.Server({ noServer: true });
   return wsServer.on('connection', (socket) => {
-    socket.once('message', async (data: string) => {
+    socket.once('message', (data: string) => {
       const { token, cd } = JSON.parse(data);
       if (context.token.verify(token)) {
-        let watcher: Watcher | undefined;
-        socket.once('close', () => watcher?.fsWatcher.close());
-        const buildState = async (p: PathLike) => {
-          const state = await fs.promises.lstat(p);
-          if (state.isFile()) {
-            return { file: state, path: p };
-          } else if (state.isDirectory()) {
-            return { directory: state, path: p };
+        let watcher: { watcher: fs.FSWatcher, path: string } | undefined;
+        socket.once('close', () => watcher?.watcher.close());
+        const buildState = async (p: string): Promise<File | Directory> => {
+          const lstat = await fs.promises.lstat(p);
+          const type = getFileType(lstat);
+          if (lstat.isFile()) {
+            const isExecutable = await exists(p, fs.constants.X_OK);
+            return {
+              path: p, lstat: { ...lstat, type },
+              content: isExecutable ? 'Executable not support preview' : await fs.promises.readFile(p).then(buffer => buffer.toString())
+            };
+          } else if (lstat.isDirectory()) {
+            const files: { [key: string]: Stats & { type?: FileType } } = {}
+            for await (const { name } of await fs.promises.opendir(p)) {
+              const lstat = await fs.promises.lstat(path.join(p, name));
+              const type = getFileType(lstat);
+              files[name] = { ...lstat, type };
+            }
+            return { path: p, lstat, files };
           } else {
-            throw new Error(`Unsupported path [${p}] type ${state}`);
+            throw new Error(`Unsupported path [${p}] type ${lstat}`);
           }
         }
 
-        const buildWatcher = async (p: PathLike): Promise<Watcher> => {
-          const state = await buildState(p)
-            .catch(function (error: Error) { return { error } });
+        const buildWatcher = (p: string): { watcher: fs.FSWatcher, path: string } | undefined => {
           const listener = async () => {
             const state = await buildState(p)
-              .catch(function (error: Error) { return { error } });
-            if (socket.readyState === ws.OPEN) {
-              if (watcher) watcher.state = state;
-              socket.send(JSON.stringify(state));
-            }
+              .catch(function (error) { return { error } });
+            if (socket.readyState === ws.OPEN && watcher?.path === p) socket.send(JSON.stringify(state));
           }
-          return { fsWatcher: fs.watch(p, listener), state: state, };
-        }
-        const cleanup = () => {
-          switch (socket.readyState) {
-            case ws.CLOSED:
-            case ws.CLOSING:
-              watcher?.fsWatcher.close();
-              return watcher = undefined;
-            default:
-              return socket.send(JSON.stringify(watcher?.state));
+          try {
+            const watcher = fs.watch(p, listener);
+            listener();
+            return { watcher, path: p };
+          } catch (error) {
+            if (socket.readyState === WebSocket.OPEN)
+              socket.send(JSON.stringify({ error }));
           }
         }
-        watcher = await buildWatcher(cd);
-        cleanup();
-        if (socket.readyState === ws.OPEN)
-          socket.on('message', async (data: string) => {
-            const obj = JSON.parse(data);
-            const { cd } = obj;
-            if (cd && typeof cd === 'string') {
-              watcher?.fsWatcher.close();
-              watcher = undefined;
-              watcher = await buildWatcher(cd);
-              cleanup();
-            }
-          });
+        watcher = buildWatcher(cd ?? process.cwd());
+        socket.on('message', async (data: string) => {
+          const { cd } = JSON.parse(data);
+          watcher?.watcher.close();
+          watcher = buildWatcher(cd ?? process.cwd());
+        });
       }
       else { wsSafeClose(socket) }
     })
