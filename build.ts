@@ -26,6 +26,7 @@ function checker() {
 async function main() {
   console.log('running build.ts');
 
+  // sync package
   const nodeProjectFilePath = path.resolve(__dirname, 'node', 'package.json');
   const buildProjectFilePath = path.resolve(__dirname, 'package.json');
   const [buildProjectFile, nodeProjectFile] = await Promise.all([
@@ -47,6 +48,7 @@ async function main() {
     console.warn(stderr);
   }
 
+  // bundle licenses to frontend
   const webBuiltDirectory = path.resolve(__dirname, 'web', 'build', 'static', 'js');
   for await (const { name: file } of await fs.opendir(webBuiltDirectory)) {
     if (file.endsWith('LICENSE.txt')) {
@@ -71,13 +73,16 @@ async function main() {
     }
   }
 
+  // pkg
   console.log('bundle project to executables...')
   await fs.copyFile(path.resolve(__dirname, 'node', 'index.js'), 'index.js');
   await exec('npx pkg --compress Brotli package.json');
 
+  // clean up
   console.log('clean up useless files');
   fs.unlink('index.js');
 
+  // print information
   console.log('🚚 application built! ');
   const projectName = buildProjectJson['name'];
   console.log(`📦 output executables: `);

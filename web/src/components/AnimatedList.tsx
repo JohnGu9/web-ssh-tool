@@ -12,18 +12,14 @@ class AnimatedList extends React.Component<AnimatedList.Props> {
   protected _children: Map<AnimatedList.KeyType, React.ReactNode>;
   protected _origin: Set<AnimatedList.KeyType>;
 
-  componentDidUpdate() {
-    this._origin.clear();
-    let needToUpdate = false;
-    for (const child of this.props.children) {
-      const { listId, children } = child;
-      if (needToUpdate === false) {
-        if (this._children.get(listId) !== children)
-          needToUpdate = true;
+  componentDidUpdate(oldProps: AnimatedList.Props) {
+    if (oldProps.children !== this.props.children) {
+      this._origin.clear();
+      for (const { listId, children } of this.props.children) {
+        this._children.set(listId, children);
       }
-      this._children.set(listId, children);
+      this.forceUpdate();
     }
-    if (needToUpdate) this.forceUpdate();
   }
 
   render() {

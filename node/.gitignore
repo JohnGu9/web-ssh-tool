@@ -27,4 +27,5 @@ debug.js
 upload-*
 .vscode
 *.log
+**.log
 .test

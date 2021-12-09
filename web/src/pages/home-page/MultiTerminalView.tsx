@@ -1,7 +1,7 @@
 import React from "react";
 import { Terminal } from "xterm";
 import { v1 as uuid } from 'uuid';
-import { Server, ThemeContext } from "../../common/Providers";
+import { Server, Settings, ThemeContext } from "../../common/Providers";
 import { Rest } from '../../common/Type';
 import XTerminal from "../../components/XTerminal";
 import FadeCrossTransition from "../../components/FadeCrossTransition";
@@ -13,7 +13,6 @@ import { Button } from "@rmwc/button";
 import { SharedAxisTransition } from "../../components/Transitions";
 import { SimpleListItem } from "@rmwc/list";
 import AnimatedList from "../../components/AnimatedList";
-import { Typography } from "@rmwc/typography";
 
 class MultiTerminalView extends React.Component<MultiTerminalView.Props, MultiTerminalView.State> {
   protected _controllers: Array<MultiTerminalView.Controller> = [new MultiTerminalView.Controller({ auth: this.props.auth })];
@@ -61,14 +60,14 @@ class MultiTerminalView extends React.Component<MultiTerminalView.Props, MultiTe
         <div style={{ width: 240, height: '100%' }}>
           <XTerminalNavigator
             controllers={controllers}
-            addController={() => this.add()}
             current={controller}
             setCurrent={controller => this.setState({ controller })}
+            add={() => this.add()}
             remove={value => this.removeOf(value)} />
         </div>
         <SharedAxisTransition
           id={controller?.id} type={SharedAxisTransition.Type.fromRightToLeft}
-          style={{ flex: 3, height: '100%', padding: '0 8px' }}>
+          style={{ flex: 3, height: '100%', padding: '0 24px', overflow: 'hidden' }}>
           {controller
             ? <XTerminalView
               controller={controller}
@@ -131,29 +130,38 @@ namespace MultiTerminalView {
 
 export default MultiTerminalView;
 
-function XTerminalNavigator({ controllers, addController, current, setCurrent, remove }: {
+function XTerminalNavigator({ controllers, add, current, setCurrent, remove }: {
   controllers: MultiTerminalView.Controller[],
-  addController: () => unknown,
   current: MultiTerminalView.Controller | undefined,
   setCurrent: (controller: MultiTerminalView.Controller) => unknown,
+  add: () => unknown,
   remove: (controller: MultiTerminalView.Controller) => unknown,
 }) {
   const { themeData: theme } = React.useContext(ThemeContext);
+  const auth = React.useContext(Server.Authentication.Context);
+  const settings = React.useContext(Settings.Context);
   return (
     <Theme use='onPrimary' tag='div'
       className='full-size column'
-      style={{ alignItems: 'center', background: theme.primary }}>
+      style={{ alignItems: 'center', background: theme.primary, padding: '0 0 8px' }}>
+      <div className='row' style={{ height: 56, padding: '0 0 0 24px', alignItems: 'center', verticalAlign: 'center' }}>
+        <Icon icon='code' />
+        <div style={{ flex: 1, padding: '0 16px' }} >
+
+        </div>
+        <IconButton icon='logout' onClick={() => {
+          settings.setKeepSignIn(false);
+          auth.signOut();
+        }} />
+      </div>
       <div className='expanded' style={{ overflowY: 'auto', width: '100%' }}>
-        <div style={{ height: 8 }} />
-        <Typography use='headline6' style={{ margin: 4 }}>Terminal List</Typography>
-        <div style={{ height: 8 }} />
         <AnimatedList>
           {controllers.map(value => {
             return {
               listId: value.id,
               children:
                 <AnimatedList.Wrap>
-                  <div style={{ padding: 4, width: '100%', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                  <div style={{ padding: 8, width: '100%', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                     <Theme use='onSurface' wrap>
                       <Card >
                         <SimpleListItem
@@ -174,13 +182,13 @@ function XTerminalNavigator({ controllers, addController, current, setCurrent, r
           })}
         </AnimatedList>
       </div>
-      <div style={{ padding: 4, width: '100%' }}>
+      <div style={{ padding: 8, width: '100%' }}>
         <Theme use='onSurface' wrap>
           <Card >
             <SimpleListItem
               graphic='add'
               text='NEW TERMINAL'
-              onClick={addController} />
+              onClick={add} />
           </Card>
         </Theme>
       </div>
@@ -205,6 +213,8 @@ function XTerminalView({ controller, remove }: {
     controller.xterm.options.theme = {
       background: 'rgba(0, 0, 0, 0)',
       foreground: theme.textPrimaryOnBackground,
+      cursor: theme.textPrimaryOnBackground,
+      cursorAccent: theme.secondary
     };
   return <FadeCrossTransition id={closed} className='full-size'>
     {closed
@@ -215,13 +225,17 @@ function XTerminalView({ controller, remove }: {
         <Button raised label='Close windows' onClick={() => remove(controller)} />
       </Card>
       : <div className='full-size column'>
-        <SimpleListItem disabled
-          style={{ paddingLeft: 0, paddingRight: 0 }}
-          text={controller.id} />
+        <div className='row' style={{ height: 56 }}>
+          <Button raised label='clipboard' />
+          <div className='expanded' />
+          <Button label='use system ssh tool' />
+          <Button label='clear' onClick={() => controller.xterm.clear()} />
+        </div>
+        <div style={{ height: 8 }} />
         <Card style={{ flex: 1, width: '100%', overflow: 'auto' }}>
           <XTerminal terminal={controller.xterm} className='full-size' />
         </Card>
-        <div style={{ height: 8 }} />
+        <div style={{ height: 16 }} />
       </div>}
   </FadeCrossTransition>;
 }

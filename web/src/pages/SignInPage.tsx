@@ -37,26 +37,29 @@ class Content extends React.Component<Content.Props, Content.State> {
     const usernameRef = this._usernameRef.current;
     const passwordRef = this._passwordRef.current;
     if (usernameRef && passwordRef) {
+      const { server, settings } = this.props;
       this.setState({ loading: true });
       const username = usernameRef.value;
       const password = passwordRef.value;
-      const result = await this.props.server.signIn({ username, password });
+      const result = await server.signIn({ username, password });
       if (Rest.isError(result)) {
         console.dir(result.error);
         this.setState({ loading: false });
       } else {
-        const { settings } = this.props;
         settings.setSshUserName(username);
         settings.setSshPassword(password);
-        this.setState({ auth: new Auth({ ws: this.props.server.ws }), loading: false });
+        this.setState({ auth: new Auth({ server }), loading: false });
       }
     }
+  }
 
+  componentDidMount() {
+    const { settings } = this.props;
+    if (settings.keepSignIn) this._submit();
   }
 
   render() {
-    const { settings } = this.props;
-    const { locale } = this.props.locale;
+    const { settings, locale: { locale } } = this.props;
     const { auth, loading } = this.state;
     return (
       <>
@@ -70,9 +73,11 @@ class Content extends React.Component<Content.Props, Content.State> {
               {this.props.children}
             </Server.Authentication.Context.Provider>
             : <>
-              <div style={{ flex: 3 }} />
+              <div style={{ flex: 3 }} >
+                <Title />
+              </div>
               <Card tag='form' style={{ width: '360px', minWidth: 0, padding: '24px', paddingTop: '8px' }}>
-                <Typography tag='h1' use='headline6'>SSH</Typography>
+                <Typography tag='h1' use='headline6'>{locale.signIn}</Typography>
                 <div style={{ height: '16px' }} />
                 <TextField outlined type='text' id='username' name='username'
                   label={locale.username} inputRef={this._usernameRef}
@@ -82,10 +87,13 @@ class Content extends React.Component<Content.Props, Content.State> {
                   label={locale.password} inputRef={this._passwordRef}
                   defaultValue={settings.sshPassword ?? undefined} />
                 <div style={{ height: '48px' }} />
-                <Checkbox label={locale.keepSignIn} style={{ padding: 0, margin: 0 }} />
+                <Checkbox label={locale.keepSignIn}
+                  style={{ padding: 0, margin: 0 }}
+                  checked={settings.keepSignIn}
+                  onChange={() => settings.setKeepSignIn(!settings.keepSignIn)} />
                 <div style={{ height: '16px' }} />
                 <Button raised type='submit' autoFocus
-                  label={locale.signIn} disabled={loading}
+                  label={locale.next} disabled={loading}
                   onClick={async event => {
                     event.preventDefault();
                     await this._submit();
@@ -113,11 +121,18 @@ namespace Content {
   };
 }
 
+function Title() {
+  return <div className='full-size column' style={{ justifyContent: 'center', alignItems: 'center' }}>
+    <Typography use='headline3' style={{ margin: '32px 0' }}>SSH TOOL FOR WEB</Typography>
+    <Typography use='body1'>Feature with shell terminal and file explorer</Typography>
+    <Typography use='body1'>Ease to deploy, ease to use</Typography>
+  </div>;
+}
+
 class Auth implements Server.Authentication.Type {
-  constructor(props: { ws: WebSocket }) {
-    this._ws = props.ws;
-    const { host } = new URL(this._ws.url);
-    this._host = host;
+  constructor(props: { server: Server.Type }) {
+    this._ws = props.server.ws;
+    this._host = props.server.host;
     this._ws.addEventListener('message', ({ data }) => {
       const { tag, response, event } = JSON.parse(data);
       if (tag !== undefined) {
@@ -183,5 +198,7 @@ class Auth implements Server.Authentication.Type {
     element.style.display = 'none';
     element.click();
   }
+
+  signOut() { this.ws.close() }
 
 }

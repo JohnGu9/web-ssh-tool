@@ -1,14 +1,16 @@
+import { Stats } from 'fs';
+
 export type ProcessPipeLine = ({ stdin: string } | { stdout: string } | { stderr: string })[];
 export type CommandResult = { output: ProcessPipeLine, exitCode: number | null };
 
 export const enum FileType {
-  file,
-  directory,
-  blockDevice,
-  characterDevice,
-  symbolicLink,
-  fifo,
-  socket
+  file = 'file',
+  directory = 'directory',
+  blockDevice = 'block device',
+  characterDevice = 'character device',
+  symbolicLink = 'symbolic link',
+  fifo = 'fifo',
+  socket = 'socket'
 };
 
 export namespace Rest {
@@ -32,4 +34,9 @@ export namespace Rest {
   export function isError(value: any): value is Error {
     return typeof value === 'object' && 'error' in value;
   }
+}
+
+export namespace Watch {
+  export type File = { path: string, content: string, lstat: Stats & { type?: FileType } }
+  export type Directory = { path: string, files: { [key: string]: Stats & { type?: FileType } }, lstat: Stats }
 }

@@ -7,8 +7,8 @@ export namespace Settings {
     locale: string | null,
     setLocale: (_: string | null) => void,
 
-    sshSave: boolean,
-    setSshSave: (_: boolean) => void,
+    keepSignIn: boolean,
+    setKeepSignIn: (_: boolean) => void,
 
     sshUserName: string | null,
     setSshUserName: (_: string | null) => void,
@@ -45,8 +45,8 @@ export namespace Settings {
           get locale() { return localStorage.getItem('locale') },
           setLocale: this._stringKeyCallback('locale'),
 
-          get sshSave() { return localStorage.getItem('ssh-save') !== null },
-          setSshSave: this._boolKeyCallback('ssh-save'),
+          get keepSignIn() { return localStorage.getItem('keep-sign-in') !== null },
+          setKeepSignIn: this._boolKeyCallback('keep-sign-in'),
 
           get sshUserName() { return localStorage.getItem('ssh-user-name') },
           setSshUserName: this._stringKeyCallback('ssh-user-name'),

@@ -48,7 +48,7 @@ async function rest(context: Context) {
                 for (const [key, value] of Object.entries(request)) {
                   switch (key) {
                     case 'token':
-                      return { token: context.token.generate() };
+                      return context.token.generate();
                     case 'shell':
                       if (typeof value === 'object' && value !== null && 'id' in value) {
                         if ('data' in value) {

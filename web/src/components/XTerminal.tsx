@@ -31,7 +31,7 @@ class Content extends React.Component<Content.Props> {
   protected _timer!: number;
 
   componentDidMount() {
-    this._timer = window.setInterval(() => this._fit.fit(), 100);
+    this._timer = window.setInterval(() => this._fit.fit(), 10);
     const current = this._ref.current!;
     this.props.terminal.loadAddon(this._fit);
     this.props.terminal.open(current);

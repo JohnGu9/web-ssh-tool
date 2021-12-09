@@ -1,12 +1,9 @@
 import path from 'path';
+import os from 'os';
 import ws, { WebSocket } from 'ws';
 import fs, { Stats } from 'fs';
 import { Context, exists, wsSafeClose } from './common';
-import { FileType } from 'web/common/Type';
-
-
-type File = { path: string, content: string, lstat: Stats & { type?: FileType } }
-type Directory = { path: string, files: { [key: string]: Stats & { type?: FileType } }, lstat: Stats }
+import { FileType, Watch } from 'web/common/Type';
 
 function getFileType(stats: Stats) {
   if (stats.isFile()) return FileType.file;
@@ -19,21 +16,23 @@ function getFileType(stats: Stats) {
 }
 
 function watch(context: Context) {
-  const wsServer = new ws.Server({ noServer: true });
+  const wsServer = new ws.Server({ noServer: true, perMessageDeflate: true });
   return wsServer.on('connection', (socket) => {
     socket.once('message', (data: string) => {
       const { token, cd } = JSON.parse(data);
       if (context.token.verify(token)) {
         let watcher: { watcher: fs.FSWatcher, path: string } | undefined;
         socket.once('close', () => watcher?.watcher.close());
-        const buildState = async (p: string): Promise<File | Directory> => {
+        const buildState = async (p: string): Promise<Watch.File | Watch.Directory> => {
           const lstat = await fs.promises.lstat(p);
           const type = getFileType(lstat);
           if (lstat.isFile()) {
             const isExecutable = await exists(p, fs.constants.X_OK);
             return {
               path: p, lstat: { ...lstat, type },
-              content: isExecutable ? 'Executable not support preview' : await fs.promises.readFile(p).then(buffer => buffer.toString())
+              content: isExecutable
+                ? 'Executable not support preview'
+                : await fs.promises.readFile(p).then(buffer => buffer.toString('base64'))
             };
           } else if (lstat.isDirectory()) {
             const files: { [key: string]: Stats & { type?: FileType } } = {}
@@ -42,7 +41,7 @@ function watch(context: Context) {
               const type = getFileType(lstat);
               files[name] = { ...lstat, type };
             }
-            return { path: p, lstat, files };
+            return { path: p, lstat: { ...lstat, type }, files };
           } else {
             throw new Error(`Unsupported path [${p}] type ${lstat}`);
           }
@@ -52,7 +51,13 @@ function watch(context: Context) {
           const listener = async () => {
             const state = await buildState(p)
               .catch(function (error) { return { error } });
-            if (socket.readyState === ws.OPEN && watcher?.path === p) socket.send(JSON.stringify(state));
+            if (socket.readyState === ws.OPEN && watcher?.path === p) {
+              try {
+                socket.send(JSON.stringify(state));
+              } catch (error) {
+                socket.send(JSON.stringify({ error }));
+              }
+            }
           }
           try {
             const watcher = fs.watch(p, listener);
@@ -63,16 +68,23 @@ function watch(context: Context) {
               socket.send(JSON.stringify({ error }));
           }
         }
-        watcher = buildWatcher(cd ?? process.cwd());
+        watcher = buildWatcher(cd ?? os.homedir());
         socket.on('message', async (data: string) => {
           const { cd } = JSON.parse(data);
+          if (watcher && cd === watcher.path) return;
           watcher?.watcher.close();
-          watcher = buildWatcher(cd ?? process.cwd());
+          watcher = buildWatcher(cd ?? os.homedir());
         });
       }
-      else { wsSafeClose(socket) }
+      else {
+        wsSafeClose(socket);
+        context.logger.error(`watch token [${token}] verify failed`);
+      }
     })
-    socket.once('error', () => wsSafeClose(socket));
+    socket.once('error', (error) => {
+      wsSafeClose(socket);
+      context.logger.error(`watch websocket error [${error}]`);
+    });
   });
 }
 

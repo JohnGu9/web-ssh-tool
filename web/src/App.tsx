@@ -29,6 +29,8 @@ function App() {
 export default App;
 
 const isDebug = process.env.NODE_ENV !== 'production'; // do not export this variable
+const { host, hostname } = document.location;
+const remoteHost = isDebug ? `${hostname}:7200` : host;
 
 class AppServer implements Server.Type {
   constructor(props: { ws: WebSocket }) {
@@ -37,6 +39,7 @@ class AppServer implements Server.Type {
 
   protected _ws: WebSocket;
   get ws() { return this._ws }
+  readonly host = remoteHost;
 
   async signIn(props: { username: string, password: string }): Promise<{ token: string; } | { error: Error; }> {
     const config: ConnectConfig = { ...props };
@@ -52,8 +55,6 @@ class AppServer implements Server.Type {
   };
 }
 
-const { host, hostname } = document.location;
-const remoteHost = isDebug ? `${hostname}:7200` : host;
 
 class Service extends React.Component<Service.Props, Service.State> {
   constructor(props: Service.Props) {
@@ -72,19 +73,19 @@ class Service extends React.Component<Service.Props, Service.State> {
   protected readonly _onClose = async () => {
     if (this.ws) wsSafeClose(this.ws);
     this.setState({ server: undefined });
-    await delay(3000);
+    await delay(1000);
     await this._debugFetch();
     this.ws = new WebSocket(`wss://${remoteHost}/rest`);
-    this.ws.onerror = this._onError;
-    this.ws.onclose = this._onClose;
-    this.ws.onopen = this._onOpen;
+    this.ws.addEventListener('error', this._onError, { once: true });
+    this.ws.addEventListener('close', this._onClose);
+    this.ws.addEventListener('open', this._onOpen);
   }
 
   componentDidMount() {
     this.ws = new WebSocket(`wss://${remoteHost}/rest`);
-    this.ws.onerror = this._onError;
-    this.ws.onclose = this._onClose;
-    this.ws.onopen = this._onOpen;
+    this.ws.addEventListener('error', this._onError, { once: true });
+    this.ws.addEventListener('close', this._onClose);
+    this.ws.addEventListener('open', this._onOpen);
   }
 
   componentWillUnmount() {
