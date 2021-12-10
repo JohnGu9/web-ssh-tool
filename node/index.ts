@@ -25,7 +25,7 @@ async function main() {
   const app = express();
   if (isDebug) app.use(cors({ origin: '*' }));
   app.use(compression());
-  app.use(express.static(path.join('web', 'build')));
+  app.use(express.static(path.join(__dirname, 'web', 'build')));
 
   const [wss1, wss2] = await Promise.all([
     rest(context),
@@ -35,8 +35,8 @@ async function main() {
   ]);
 
   const server = https.createServer(await concurrent({
-    key: fs.readFile(httpsKey ?? path.join('node', 'https', 'server.key')),
-    cert: fs.readFile(httpsCert ?? path.join('node', 'https', 'server.crt')),
+    key: fs.readFile(httpsKey ?? path.join(__dirname, 'node', 'https', 'server.key')),
+    cert: fs.readFile(httpsCert ?? path.join(__dirname, 'node', 'https', 'server.crt')),
   }), app);
 
   server.on('upgrade', (request, socket: Socket, head) => {

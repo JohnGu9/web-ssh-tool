@@ -21,6 +21,7 @@ function watch(context: Context) {
     socket.once('message', (data: string) => {
       const { token, cd } = JSON.parse(data);
       if (context.token.verify(token)) {
+        const pipeline = new PipeLine();
         let watcher: { watcher: fs.FSWatcher, path: string } | undefined;
         socket.once('close', () => watcher?.watcher.close());
         const buildState = async (p: string): Promise<Watch.File | Watch.Directory> => {
@@ -48,7 +49,7 @@ function watch(context: Context) {
         }
 
         const buildWatcher = (p: string): { watcher: fs.FSWatcher, path: string } | undefined => {
-          const listener = async () => {
+          const listener = () => pipeline.post(async () => {
             const state = await buildState(p)
               .catch(function (error) { return { error } });
             if (socket.readyState === ws.OPEN && watcher?.path === p) {
@@ -58,7 +59,7 @@ function watch(context: Context) {
                 socket.send(JSON.stringify({ error }));
               }
             }
-          }
+          });
           try {
             const watcher = fs.watch(p, listener);
             listener();
@@ -89,3 +90,24 @@ function watch(context: Context) {
 }
 
 export default watch;
+
+class PipeLine {
+  protected _running: boolean = false;
+  protected _queue: Array<() => Promise<any>> = [];
+
+  public post(fn: () => Promise<any>): void {
+    this._queue.push(fn);
+    if (this._running === true) return;
+    // start event loop
+    this._running = true;
+    const run = async () => {
+      while (true) {
+        const fn = this._queue.shift();
+        if (fn) await fn();
+        else break;
+      };
+      this._running = false;
+    };
+    run();
+  }
+}

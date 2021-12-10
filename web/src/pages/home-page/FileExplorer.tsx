@@ -1,3 +1,4 @@
+import React from "react";
 import { Button } from "@rmwc/button";
 import { CircularProgress } from "@rmwc/circular-progress";
 import { Elevation } from "@rmwc/elevation";
@@ -5,10 +6,9 @@ import { IconButton } from "@rmwc/icon-button";
 import { LinearProgress } from "@rmwc/linear-progress";
 import { SimpleListItem } from "@rmwc/list";
 import { Tooltip } from "@rmwc/tooltip";
+import { Dialog, DialogActions, DialogButton } from "@rmwc/dialog";
 import { Stats } from "fs";
 import path from 'path';
-import React from "react";
-import { Dialog, DialogActions, DialogButton } from "rmwc";
 
 import { wsSafeClose } from "../../common/DomTools";
 import { Server, ThemeContext } from "../../common/Providers";
@@ -126,10 +126,39 @@ namespace FileExplorer {
     config: Config,
   };
 
-  export const enum SortType { none, date, alphabetically };
+  export const enum SortType { none = 'none', date = 'date', alphabetically = 'alphabetically' };
   export type Config = { showAll: boolean, sort: SortType };
+  export function switchSortType(current: SortType) {
+    switch (current) {
+      case SortType.none:
+        return SortType.date;
+      case SortType.date:
+        return SortType.alphabetically;
+      case SortType.alphabetically:
+        return SortType.none;
+    }
+  }
+  export function sortArray(array: Array<[string, Stats]>, type: SortType) {
+    switch (type) {
+      case SortType.none:
+        return array;
+      case SortType.date:
+        const dateCompare = (nameA: Date, nameB: Date) => {
+          if (nameA < nameB) return -1;
+          if (nameA > nameB) return 1;
+          return 0;
+        }
+        return array.sort(([_, stats0], [__, stats1]) => dateCompare(stats0.mtime, stats1.mtime));
+      case SortType.alphabetically:
+        const stringCompare = (nameA: string, nameB: string) => {
+          if (nameA < nameB) return -1;
+          if (nameA > nameB) return 1;
+          return 0;
+        }
+        return array.sort(([key0], [key1]) => stringCompare(key0, key1));
+    }
+  }
 }
-
 
 function LostConnection({ reconnect }: { reconnect: () => Promise<unknown> }) {
   const [connecting, setConnecting] = React.useState(false);
@@ -155,6 +184,7 @@ function Content({ state, cd, config, setConfig }: {
   config: FileExplorer.Config,
   setConfig: (config: FileExplorer.Config) => unknown,
 }) {
+  const auth = React.useContext(Server.Authentication.Context);
   const { themeData: theme } = React.useContext(ThemeContext);
   const [dialog, setDialog] = React.useState<{ open: boolean, stats: Stats, path: string }>({ open: false, path: '', stats: {} as Stats });
   const goHome = () => cd();
@@ -179,22 +209,18 @@ function Content({ state, cd, config, setConfig }: {
     if (dirname !== state.path) cd(path.dirname(state.path))
   };
   if ('content' in state) {
-    const { path: name, content } = state;
+    const { path, content } = state;
     return (
       <div className='full-size column' style={{ alignItems: 'center', justifyContent: 'center' }}>
         <div className='row' style={{ height: 56, padding: '0 8px 0 0' }}>
           <IconButton icon='arrow_back' onClick={back} />
           <div className='expanded' />
-          <Button label='edit' />
-          <Button label='download' />
+          <Button label='download' onClick={() => auth.download(path)} />
         </div>
-        <code style={{ flex: 1, width: '100%', margin: '16px 0', overflow: 'auto', whiteSpace: 'pre' }}>
-          <FilePreview name={name} content={content} />
-        </code>
-        <Tooltip content={name}>
-          <SimpleListItem graphic='map' secondaryText={name} disabled />
-        </Tooltip>
-        <div style={{ height: 8 }} />
+        <FilePreview name={path} content={content} />
+        <div style={{ height: 16 }} />
+        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'pre', width: '100%' }}>{path}</div>
+        <div style={{ height: 24 }} />
       </div>
     );
   } else if ('files' in state) {
@@ -211,14 +237,20 @@ function Content({ state, cd, config, setConfig }: {
               ? <Button label='hide' onClick={() => setConfig({ ...config, showAll: false })} />
               : <Button label='show all' onClick={() => setConfig({ ...config, showAll: true })} />}
           </SharedAxisTransition>
-          <Button label='new' />
-          <Button label='sort' />
+          <Tooltip content={config.sort}>
+            <Button label='sort'
+              onClick={() => setConfig({
+                ...config,
+                sort: FileExplorer.switchSortType(config.sort),
+              })} />
+          </Tooltip>
         </div>
         <div style={{ flex: 1, width: '100%', overflowY: 'auto' }}>
-          {Object.entries(files)
+          {FileExplorer.sortArray(Object.entries(files)
             .filter(config.showAll
               ? () => true
-              : ([key]) => !key.startsWith('.'))
+              : ([key]) => !key.startsWith('.')),
+            config.sort)
             .map(([key, value]) => {
               return <FileListTile
                 key={key}
@@ -230,8 +262,9 @@ function Content({ state, cd, config, setConfig }: {
           <div className='row' style={{ padding: '32px 0', justifyContent: 'center', opacity: 0.5 }}>
           </div>
         </div>
-        <SimpleListItem graphic='map' secondaryText={dir} disabled />
-        <div style={{ height: 8 }} />
+        <div style={{ height: 16 }} />
+        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'pre', width: '100%' }}>{dir}</div>
+        <div style={{ height: 24 }} />
         <Dialog open={dialog.open} onClose={() => setDialog({ ...dialog, open: false })}>
           <DialogTitle>File Information</DialogTitle>
           <DialogContent style={{ overflow: 'auto' }}>
@@ -345,8 +378,8 @@ function Center({ children }: { children: React.ReactNode }) {
 function FilePreview({ name, content }: { name: string, content: string }) {
   const chips = name.split('.').filter(value => value.length > 0);
   if (chips.length > 1) {
-    const last = chips[chips.length - 1];
-    switch (last.toLowerCase()) {
+    const last = chips[chips.length - 1].toLowerCase();
+    switch (last) {
       case 'jpg':
       case 'jpeg':
         return <Center><img src={`data:image/jpeg;base64,${content}`} alt='Loading' /></Center>;
@@ -362,11 +395,7 @@ function FilePreview({ name, content }: { name: string, content: string }) {
       case 'tiff':
         return <Center><img src={`data:image/tiff;base64,${content}`} alt='Loading' /></Center>;
       case 'raw':
-      case 'mp4':
-      case 'flv':
-      case 'avi':
-      case 'mkv':
-        return <Center><img src={`data:base64,${content}`} alt='Loading' /></Center>;
+        return <Center><img src={`data:image/${last};base64,${content}`} alt='Loading' /></Center>;
     }
   }
   return <code style={{ flex: 1, width: '100%', overflow: 'auto', whiteSpace: 'pre' }}>

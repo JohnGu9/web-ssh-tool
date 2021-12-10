@@ -11,8 +11,11 @@ import { Theme } from "@rmwc/theme";
 import { Card } from "@rmwc/card";
 import { Button } from "@rmwc/button";
 import { SharedAxisTransition } from "../../components/Transitions";
-import { SimpleListItem } from "@rmwc/list";
+import { ListDivider, SimpleListItem } from "@rmwc/list";
 import AnimatedList from "../../components/AnimatedList";
+import { Dialog, DialogActions, DialogButton, LinearProgress, Typography } from "rmwc";
+import { DialogContent, DialogTitle } from "../../components/Dialog";
+import { FixedSizeList } from "../../components/AdaptedWindow";
 
 class MultiTerminalView extends React.Component<MultiTerminalView.Props, MultiTerminalView.State> {
   protected _controllers: Array<MultiTerminalView.Controller> = [new MultiTerminalView.Controller({ auth: this.props.auth })];
@@ -144,15 +147,10 @@ function XTerminalNavigator({ controllers, add, current, setCurrent, remove }: {
     <Theme use='onPrimary' tag='div'
       className='full-size column'
       style={{ alignItems: 'center', background: theme.primary, padding: '0 0 8px' }}>
-      <div className='row' style={{ height: 56, padding: '0 0 0 24px', alignItems: 'center', verticalAlign: 'center' }}>
-        <Icon icon='code' />
-        <div style={{ flex: 1, padding: '0 16px' }} >
-
-        </div>
-        <IconButton icon='logout' onClick={() => {
-          settings.setKeepSignIn(false);
-          auth.signOut();
-        }} />
+      <div className='row' style={{ height: 56, justifyContent: 'center', alignItems: 'center', padding: '0 8px' }}>
+        <div className='expanded'><Icon icon='menu' /></div>
+        <div className='expanded row' style={{ justifyContent: 'center' }}>SHELL</div>
+        <div className='expanded'></div>
       </div>
       <div className='expanded' style={{ overflowY: 'auto', width: '100%' }}>
         <AnimatedList>
@@ -161,7 +159,7 @@ function XTerminalNavigator({ controllers, add, current, setCurrent, remove }: {
               listId: value.id,
               children:
                 <AnimatedList.Wrap>
-                  <div style={{ padding: 8, width: '100%', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                  <div style={{ padding: '4px 8px', width: '100%', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                     <Theme use='onSurface' wrap>
                       <Card >
                         <SimpleListItem
@@ -182,7 +180,9 @@ function XTerminalNavigator({ controllers, add, current, setCurrent, remove }: {
           })}
         </AnimatedList>
       </div>
-      <div style={{ padding: 8, width: '100%' }}>
+      <div style={{ height: 32 }} />
+      <ListDivider />
+      <div style={{ padding: '4px 8px', width: '100%' }}>
         <Theme use='onSurface' wrap>
           <Card >
             <SimpleListItem
@@ -192,6 +192,27 @@ function XTerminalNavigator({ controllers, add, current, setCurrent, remove }: {
           </Card>
         </Theme>
       </div>
+      <div style={{ padding: '4px 8px', width: '100%' }}>
+        <Theme use='onSurface' wrap>
+          <Card >
+            <AboutButton />
+          </Card>
+        </Theme>
+      </div>
+      <div style={{ padding: '4px 8px', width: '100%' }}>
+        <Theme use='onSurface' wrap>
+          <Card >
+            <SimpleListItem
+              graphic='logout'
+              text='SIGN OUT'
+              onClick={() => {
+                settings.setKeepSignIn(false);
+                auth.signOut();
+              }} />
+          </Card>
+        </Theme>
+      </div>
+      <div style={{ height: 4 }} />
     </Theme>
   );
 }
@@ -226,10 +247,15 @@ function XTerminalView({ controller, remove }: {
       </Card>
       : <div className='full-size column'>
         <div className='row' style={{ height: 56 }}>
-          <Button raised label='clipboard' />
+          <Button raised label='clipboard'
+            onClick={() => { }} />
           <div className='expanded' />
-          <Button label='use system ssh tool' />
-          <Button label='clear' onClick={() => controller.xterm.clear()} />
+          <Button label='use system ssh tool' onClick={() => {
+            const { hostname } = document.location;
+            window.open(`ssh://${hostname}`);
+          }} />
+          <Button label='clear'
+            onClick={() => controller.xterm.clear()} />
         </div>
         <div style={{ height: 8 }} />
         <Card style={{ flex: 1, width: '100%', overflow: 'auto' }}>
@@ -238,4 +264,76 @@ function XTerminalView({ controller, remove }: {
         <div style={{ height: 16 }} />
       </div>}
   </FadeCrossTransition>;
+}
+
+
+function AboutButton() {
+  const [open, setOpen] = React.useState(false);
+  const close = () => setOpen(false)
+  return (
+    <>
+      <SimpleListItem
+        graphic='info'
+        text='ABOUT'
+        onClick={() => setOpen(true)} />
+      <Dialog open={open} onClose={close}>
+        <DialogTitle>ABOUT</DialogTitle>
+        <DialogContent >
+          <div className='column' style={{ width: 480, height: 480 }}>
+            <div style={{ height: 16 }} />
+            <Typography use='subtitle1'>Version</Typography>
+            <div style={{ height: 8 }} />
+            <Typography use='body1'>v0.1.0</Typography>
+            <div style={{ height: 32 }} />
+            <Typography use='subtitle1'>License</Typography>
+            <div style={{ flex: 1 }}>
+              <License />
+            </div>
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <DialogButton onClick={close}>close</DialogButton>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+}
+
+class License extends React.Component<{}, { value?: string[] }> {
+  static _cache?: string[];
+  constructor(props: {}) {
+    super(props);
+    this.state = { value: License._cache };
+  }
+
+  _mounted = true;
+
+  componentDidMount() {
+    if (this.state.value === undefined)
+      fetch('/LICENSE')
+        .then(response => response.text())
+        .then(text => {
+          License._cache = ['', ...text.split('\n'), ''];
+          if (this._mounted) this.setState({ value: License._cache })
+        });
+  }
+
+  componentWillUnmount() {
+    this._mounted = false;
+  }
+
+  render() {
+    const { value } = this.state;
+    return <FadeCrossTransition id={value === undefined} className='full-size'>
+      {value === undefined
+        ? <LinearProgress></LinearProgress>
+        : <FixedSizeList
+          itemCount={value.length}
+          itemSize={16}
+          className='full-size'>
+          {({ index, style }) => {
+            return <code style={{ ...style, padding: '0 1em', opacity: 0.5 }}>{value[index]}</code>;
+          }}</FixedSizeList>}
+    </FadeCrossTransition>;
+  }
 }
