@@ -40,15 +40,17 @@ async function main() {
     ([value, version]) => buildProjectJson["dependencies"]?.[value] !== version)
     || any(Object.entries(nodeProjectJson["optionalDependencies"]),
       ([value, version]) => buildProjectJson["optionalDependencies"]?.[value] !== version)) {
-    console.log('Sync node_modules...');
+    console.log('synchronize packages...');
     buildProjectJson["dependencies"] = nodeProjectJson["dependencies"];
     buildProjectJson["optionalDependencies"] = nodeProjectJson["optionalDependencies"];
+    await fs.writeFile(buildProjectFilePath, JSON.stringify(buildProjectJson, null, 2));
     const { stdout, stderr } = await exec('npm i');
     console.log(stdout);
     console.warn(stderr);
   }
 
   // bundle licenses to frontend
+  console.log('checking licenses...');
   const webBuiltDirectory = path.resolve(__dirname, 'web', 'build', 'static', 'js');
   for await (const { name: file } of await fs.opendir(webBuiltDirectory)) {
     if (file.endsWith('LICENSE.txt')) {
@@ -60,11 +62,11 @@ async function main() {
           await fs.writeFile(target, buffer);
         })(),
       ]);
-      for (const [name, value] of Object.entries(licenses)) {
-        if (value.licenseFile) {
+      for (const [name, { licenseFile }] of Object.entries(licenses)) {
+        if (licenseFile) {
           const buffer0 = Buffer.from(`\n${name}\n`);
-          const buffer1 = await fs.readFile(value.licenseFile);
-          const buffer2 = Buffer.from('\n');
+          const buffer1 = await fs.readFile(licenseFile);
+          const buffer2 = Buffer.from('\n\n');
           const buffer = Buffer.concat([buffer0, buffer1, buffer2]);
           await fs.appendFile(target, buffer);
         }

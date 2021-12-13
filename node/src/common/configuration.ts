@@ -7,7 +7,9 @@ export const configEnvVariable = 'WEB_SSH_TOOL_CONFIG';
 export type Configuration = {
   address?: string,
   port?: number,
-  uploadPath?: string,
+  home?: string,
+  upload?: string,
+  log?: string,
 
   httpsKey?: string,
   httpsCert?: string,
@@ -23,7 +25,9 @@ export async function getConfiguration(): Promise<Configuration> {
       return {
         address: data['address'],
         port: data['port'],
-        uploadPath: data['upload'],
+        home: data['home'],
+        upload: data['upload'],
+        log: data['log'],
         httpsKey: data['https-key'],
         httpsCert: data['https-cert'],
       };
@@ -44,11 +48,23 @@ export async function getConfiguration(): Promise<Configuration> {
   if (config.port && Number.isNaN(config.port))
     throw new Error('"port" parameter type error (require Number type parameter)');
 
+  // home 
+  const home = getArgv('-h', '--home');
+  if (home) config.home = home;
+  if (config.home && typeof config.home !== 'string')
+    throw new Error('"home" parameter type error (require String type parameter)');
+
   // upload 
-  const uploadPath = getArgv('-u', '--upload');
-  if (uploadPath) config.uploadPath = uploadPath;
-  if (config.uploadPath && typeof config.uploadPath !== 'string')
+  const upload = getArgv('-u', '--upload');
+  if (upload) config.upload = upload;
+  if (config.upload && typeof config.upload !== 'string')
     throw new Error('"upload" parameter type error (require String type parameter)');
+
+  // log 
+  const log = getArgv('-l', '--log');
+  if (log) config.log = log;
+  if (config.log && typeof config.log !== 'string')
+    throw new Error('"log" parameter type error (require String type parameter)');
 
   // https key
   const httpsKey = getArgv('-hk', '--https-key');

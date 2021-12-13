@@ -32,7 +32,7 @@ function watch(context: Context) {
             return {
               path: p, lstat: { ...lstat, type },
               content: isExecutable
-                ? 'Executable not support preview'
+                ? Buffer.from('Executable not support preview').toString('base64')
                 : await fs.promises.readFile(p).then(buffer => buffer.toString('base64'))
             };
           } else if (lstat.isDirectory()) {
@@ -69,12 +69,12 @@ function watch(context: Context) {
               socket.send(JSON.stringify({ error }));
           }
         }
-        watcher = buildWatcher(cd ?? os.homedir());
+        watcher = buildWatcher(cd ?? context.home ?? os.homedir());
         socket.on('message', async (data: string) => {
           const { cd } = JSON.parse(data);
           if (watcher && cd === watcher.path) return;
           watcher?.watcher.close();
-          watcher = buildWatcher(cd ?? os.homedir());
+          watcher = buildWatcher(cd ?? context.home ?? os.homedir());
         });
       }
       else {

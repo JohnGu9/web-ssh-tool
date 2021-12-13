@@ -10,7 +10,8 @@
     "clean:web": "cd web && npm ci",
     "clean:node": "cd node && npm ci",
     "clean": "npm run clean:web && npm run clean:node && npm ci",
-    "rebuild": "npm run clean && npm run build"
+    "rebuild": "npm run clean && npm run build",
+    "deploy": "npx ts-node deploy.ts"
   },
   "author": "JohnGu9",
   "license": "MIT",

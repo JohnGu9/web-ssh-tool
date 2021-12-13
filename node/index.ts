@@ -8,19 +8,19 @@ import os from 'os';
 import { AddressInfo, Socket } from 'net';
 import { URL } from 'url';
 
-import { concurrent, Context, getConfiguration } from 'src/common';
-import upload from 'src/upload';
-import download from 'src/download';
-import watch from 'src/watch';
-import rest from 'src/rest';
+import { concurrent, Context, getConfiguration } from './src/common';
+import upload from './src/upload';
+import download from './src/download';
+import watch from './src/watch';
+import rest from './src/rest';
 
 export { };
 
 const isDebug = process.env.NODE_ENV !== 'production'; // do not export this variable
 
 async function main() {
-  const { port, address, uploadPath, httpsCert, httpsKey } = await getConfiguration();
-  const context = new Context({ uploadPath });
+  const { port, address, upload: uploadPath, home, log, httpsCert, httpsKey } = await getConfiguration();
+  const context = new Context({ upload: uploadPath, home, log });
 
   const app = express();
   if (isDebug) app.use(cors({ origin: '*' }));
