@@ -124,9 +124,7 @@ namespace MultiTerminalView {
 
     protected async open() {
       const result = await this.auth.rest('shell', this.id);
-      if (Rest.isError(result)) {
-        this.onClose.invoke();
-      }
+      if (Rest.isError(result)) this.onClose.invoke();
     }
   }
 }

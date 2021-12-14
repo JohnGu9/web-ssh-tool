@@ -12,6 +12,7 @@ import { Button } from '@rmwc/button';
 import { SharedAxisTransition } from '../components/Transitions';
 import { LocaleContext, LocaleContextType, Server, Settings } from '../common/Providers';
 import { Rest } from '../common/Type';
+import { wsSafeClose } from '../common/DomTools';
 
 function SignInPage({ children }: { children: React.ReactNode }) {
   const settings = React.useContext(Settings.Context);
@@ -124,6 +125,7 @@ namespace Content {
 function Title() {
   return <div className='full-size column' style={{ justifyContent: 'center', alignItems: 'center' }}>
     <Typography use='headline3' style={{ margin: '32px 0' }}>SSH TOOL FOR WEB</Typography>
+    <Typography use='body1'>On browser, everywhere, anytime</Typography>
     <Typography use='body1'>Feature with shell terminal and file explorer</Typography>
     <Typography use='body1'>Ease to deploy, ease to use</Typography>
   </div>;
@@ -137,8 +139,9 @@ class Auth implements Server.Authentication.Type {
       const { tag, response, event } = JSON.parse(data);
       if (tag !== undefined) {
         const callback = this._callbacks.get(tag);
+        this._callbacks.delete(tag);
         callback?.(response);
-      } else if (event) {
+      } else if (event !== undefined) {
         if ('shell' in event) this.shell.invoke(event.shell);
       }
     });
@@ -199,6 +202,6 @@ class Auth implements Server.Authentication.Type {
     element.click();
   }
 
-  signOut() { this.ws.close() }
+  signOut() { wsSafeClose(this.ws) }
 
 }

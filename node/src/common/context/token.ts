@@ -6,9 +6,8 @@ class Token {
   generate(options?: { timeout: number }) {
     const value = uuid();
     this._cache.add(value);
-    setTimeout(() => {
-      if (this._cache.has(value)) this._cache.delete(value);
-    }, options?.timeout ?? 10 * 1000);
+    setTimeout(() => this._cache.delete(value),
+      options?.timeout ?? 10 * 1000);
     return value;
   }
 

@@ -45,16 +45,12 @@ class AppServer implements Server.Type {
     const config: ConnectConfig = { ...props };
     return new Promise(resolve => {
       const ws = this._ws;
-      const onMessage = ({ data }: MessageEvent) => {
-        ws.removeEventListener('message', onMessage);
-        resolve(JSON.parse(data));
-      };
-      ws.addEventListener('message', onMessage);
+      const onMessage = ({ data }: MessageEvent) => resolve(JSON.parse(data));
+      ws.addEventListener('message', onMessage, { once: true });
       ws.send(JSON.stringify(config));
     });
   };
 }
-
 
 class Service extends React.Component<Service.Props, Service.State> {
   constructor(props: Service.Props) {
@@ -62,8 +58,9 @@ class Service extends React.Component<Service.Props, Service.State> {
     this.state = {};
     this._debugFetch();
   }
+  ws!: WebSocket;
 
-  ws?: WebSocket;
+  protected _mounted = true;
   protected async _debugFetch() {
     if (isDebug) { await fetch(`https://${remoteHost}/`, { mode: 'cors' }).catch(error => { }) }
   }
@@ -72,9 +69,11 @@ class Service extends React.Component<Service.Props, Service.State> {
   protected readonly _onError = () => { if (this.ws) wsSafeClose(this.ws) }
   protected readonly _onClose = async () => {
     if (this.ws) wsSafeClose(this.ws);
+    if (!this._mounted) return;
     this.setState({ server: undefined });
-    await delay(1000);
+    await delay(300);
     await this._debugFetch();
+    if (!this._mounted) return;
     this.ws = new WebSocket(`wss://${remoteHost}/rest`);
     this.ws.addEventListener('error', this._onError, { once: true });
     this.ws.addEventListener('close', this._onClose);
@@ -89,7 +88,8 @@ class Service extends React.Component<Service.Props, Service.State> {
   }
 
   componentWillUnmount() {
-    if (this.ws) wsSafeClose(this.ws);
+    this._mounted = false;
+    wsSafeClose(this.ws);
   }
 
   render() {

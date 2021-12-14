@@ -11,14 +11,14 @@ export class Context {
     logger?: Logger,
     token?: Token,
   }) {
-    this.uploadPath = props.upload;
+    this.upload = props.upload;
     this.home = props.home;
     this.log = props.log;
     this.logger = props.logger ?? new FileLogger({ path: this.log ?? 'web_ssh_tool.log' });
     this.token = props.token ?? new Token();
   }
 
-  readonly uploadPath?: string;
+  readonly upload?: string;
   readonly home?: string;
   readonly log?: string;
 

@@ -16,7 +16,8 @@ export class FileLogger implements Logger {
 
   log(message: string) { return this._fileStream.write(`${new Date()} [INFO]  ${message.replace(/(\r\n|\n|\r)/gm, '\\n')}\r\n`); }
   error(message: string) {
-    console.warn(message);
-    return this._fileStream.write(`${new Date()} [ERROR] ${message.replace(/(\r\n|\n|\r)/gm, '\\n')}\r\n`);
+    const date = new Date();
+    console.warn(`${date} [ERROR] ${message}`);
+    return this._fileStream.write(`${date} [ERROR] ${message.replace(/(\r\n|\n|\r)/gm, '\\n')}\r\n`);
   }
 }
