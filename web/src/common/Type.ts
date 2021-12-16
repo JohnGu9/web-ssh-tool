@@ -1,4 +1,5 @@
 import { Stats } from 'fs';
+import fs from 'fs/promises';
 
 export type ProcessPipeLine = ({ stdin: string } | { stdout: string } | { stderr: string })[];
 export type CommandResult = { output: ProcessPipeLine, exitCode: number | null };
@@ -15,7 +16,11 @@ export const enum FileType {
 
 export namespace Rest {
   export type Map = {
-    'token': { parameter: any, return: string }
+    'token': { parameter: any, return: string },
+    'fs.rename': { parameter: Parameters<typeof fs.rename>, return: Awaited<ReturnType<typeof fs.rename>> },
+    'fs.unlink': { parameter: Parameters<typeof fs.unlink>, return: Awaited<ReturnType<typeof fs.unlink>> },
+    'fs.rmdir': { parameter: Parameters<typeof fs.rmdir>, return: Awaited<ReturnType<typeof fs.rmdir>> },
+    'fs.exists': { parameter: Parameters<typeof fs.access>, return: boolean },
     'shell': {
       parameter:
       { id: string, data: string } | // request close

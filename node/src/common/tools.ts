@@ -1,10 +1,10 @@
 import { spawn } from 'child_process';
 import process from 'process';
 
-import { ProcessPipeLine, CommandResult } from 'web/common/Type';
+import { ProcessPipeLine, CommandResult, FileType } from 'web/common/Type';
 import { sliceOutput } from 'web/common/Tools';
 import { WebSocket } from 'ws';
-import { promises as fs } from 'fs';
+import { promises as fs, Stats } from 'fs';
 
 export * from 'web/common/Tools';
 
@@ -84,4 +84,14 @@ export function wsSafeClose(ws: WebSocket) {
       return;
   }
   ws.close();
+}
+
+export function getFileType(stats: Stats) {
+  if (stats.isFile()) return FileType.file;
+  if (stats.isDirectory()) return FileType.directory;
+  if (stats.isBlockDevice()) return FileType.blockDevice;
+  if (stats.isCharacterDevice()) return FileType.characterDevice;
+  if (stats.isSymbolicLink()) return FileType.symbolicLink;
+  if (stats.isFIFO()) return FileType.fifo;
+  if (stats.isSocket()) return FileType.socket;
 }

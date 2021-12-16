@@ -1,6 +1,7 @@
-import { Context, wsSafeClose } from "./common";
+import { Context, exists, wsSafeClose } from "./common";
 import ws, { RawData, WebSocket } from 'ws';
 import { Client, ClientChannel } from 'ssh2';
+import fs from 'fs/promises';
 
 async function rest(context: Context) {
   const wsServer = new ws.Server({ noServer: true });
@@ -8,15 +9,16 @@ async function rest(context: Context) {
   return wsServer.on('connection', (ws, req) => {
     const onHangOn = (message: RawData) => {
       const client = new Client();
-
       client
         .once('error', (error) => {
           client.removeAllListeners();
-          client.end();
+          if (ws.readyState !== WebSocket.OPEN) {
+            client.end();
+            return;
+          }
 
           // notify sign in failed
-          if (ws.readyState === WebSocket.OPEN)
-            ws.send(stringify({ error }));
+          ws.send(stringify({ error }));
         })
         .once('ready', () => {
           // sign in
@@ -49,6 +51,14 @@ async function rest(context: Context) {
                   switch (key) {
                     case 'token':
                       return context.token.generate();
+                    case 'fs.unlink':
+                      return fs.unlink(...value as Parameters<typeof fs.unlink>);
+                    case 'fs.rmdir':
+                      return fs.rmdir(...value as Parameters<typeof fs.rmdir>);
+                    case 'fs.rename':
+                      return fs.rename(...value as Parameters<typeof fs.rename>);
+                    case 'fs.exists':
+                      return exists(...value as Parameters<typeof fs.access>);
                     case 'shell':
                       if (typeof value === 'object' && value !== null && 'id' in value) {
                         if ('data' in value) {
@@ -100,7 +110,7 @@ async function rest(context: Context) {
         })
         .connect({
           port: 22,
-          ...JSON.parse(message.toString()),
+          ...JSON.parse(message.toString()), // port can be override but host can't
           host: 'localhost',
         });
     };

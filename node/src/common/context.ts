@@ -1,5 +1,3 @@
-import path from 'path';
-
 import { FileLogger, Logger } from './context/logger';
 import Token from './context/token';
 

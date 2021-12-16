@@ -1,15 +1,17 @@
 import React from "react";
 import path from "path";
-import { Button, IconButton } from "rmwc";
+import { Button, IconButton, Tooltip } from "rmwc";
 import { Server } from "../../../common/Providers";
 import { Watch } from "../../../common/Type";
+import FileExplorer from "./Common";
 
-function FilePreview({ state, cd }: { state: Watch.File, cd: (path?: string) => unknown }) {
+function FilePreview({ state }: { state: Watch.File }) {
+  const { cd } = React.useContext(FileExplorer.Context);
   const auth = React.useContext(Server.Authentication.Context);
   const { path: filePath, content } = state;
   const back = () => {
-    const dirname = path.dirname(state.path);
-    if (dirname !== state.path) cd(path.dirname(state.path))
+    const dirname = path.dirname(filePath);
+    if (dirname !== filePath) cd(path.dirname(filePath))
   };
   return (
     <div className='full-size column' style={{ alignItems: 'center', justifyContent: 'center' }}>
@@ -20,8 +22,9 @@ function FilePreview({ state, cd }: { state: Watch.File, cd: (path?: string) => 
       </div>
       <PreviewWindow name={filePath} content={content} />
       <div style={{ height: 16 }} />
-      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'pre', width: '100%' }}>{filePath}</div>
-      <div style={{ height: 24 }} />
+      <Tooltip content={filePath}>
+        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'pre', width: '100%' }}>{filePath}</div>
+      </Tooltip>
     </div>
   );
 }
@@ -47,7 +50,7 @@ function PreviewWindow({ name, content }: { name: string, content: string }) {
         return <Center><img src={`data:image/${last};base64,${content}`} alt='Loading' /></Center>;
     }
   }
-  return <code style={{ flex: 1, width: '100%', overflow: 'auto', whiteSpace: 'pre' }}>
+  return <code style={{ flex: 1, width: '100%', overflow: 'auto', whiteSpace: 'pre', padding: 8 }}>
     {Buffer.from(content, 'base64').toString()}
   </code>;
 }

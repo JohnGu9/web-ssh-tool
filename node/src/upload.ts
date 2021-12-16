@@ -45,6 +45,10 @@ async function upload(urlPath: string, app: express.Express, context: Context) {
       else if (file === undefined) return res.status(400).json({ error: 'No files were uploaded.' });
       context.logger.log(`uploaded file [${file.path} ] from [${forward ?? req.socket.remoteAddress}]`);
       res.json(file);
+      setTimeout(async () => {
+        const { path } = file;
+        if (await exists(path)) await fs.unlink(path);
+      }, 10 * 1000); // auto clean up unused files
     });
 }
 

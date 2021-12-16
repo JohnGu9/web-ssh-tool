@@ -2,18 +2,8 @@ import path from 'path';
 import os from 'os';
 import ws, { WebSocket } from 'ws';
 import fs, { Stats } from 'fs';
-import { Context, exists, wsSafeClose } from './common';
+import { Context, exists, getFileType, wsSafeClose } from './common';
 import { FileType, Watch } from 'web/common/Type';
-
-function getFileType(stats: Stats) {
-  if (stats.isFile()) return FileType.file;
-  if (stats.isDirectory()) return FileType.directory;
-  if (stats.isBlockDevice()) return FileType.blockDevice;
-  if (stats.isCharacterDevice()) return FileType.characterDevice;
-  if (stats.isSymbolicLink()) return FileType.symbolicLink;
-  if (stats.isFIFO()) return FileType.fifo;
-  if (stats.isSocket()) return FileType.socket;
-}
 
 function watch(context: Context) {
   const wsServer = new ws.Server({ noServer: true, perMessageDeflate: true });

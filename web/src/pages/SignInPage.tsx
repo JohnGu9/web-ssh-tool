@@ -13,6 +13,7 @@ import { SharedAxisTransition } from '../components/Transitions';
 import { LocaleContext, LocaleContextType, Server, Settings } from '../common/Providers';
 import { Rest } from '../common/Type';
 import { wsSafeClose } from '../common/DomTools';
+import Scaffold from './home-page/Scaffold';
 
 function SignInPage({ children }: { children: React.ReactNode }) {
   const settings = React.useContext(Settings.Context);
@@ -63,7 +64,7 @@ class Content extends React.Component<Content.Props, Content.State> {
     const { settings, locale: { locale } } = this.props;
     const { auth, loading } = this.state;
     return (
-      <>
+      <Scaffold>
         <LinearProgress closed={!loading} style={{ position: 'absolute' }} />
         <SharedAxisTransition
           className='full-size row'
@@ -104,7 +105,7 @@ class Content extends React.Component<Content.Props, Content.State> {
               <div style={{ flex: 1 }} />
             </>}
         </SharedAxisTransition>
-      </>
+      </Scaffold>
     );
   }
 }
@@ -169,7 +170,7 @@ class Auth implements Server.Authentication.Type {
     });
   }
 
-  async upload(data: File | File[] | FormData): Promise<Express.Multer.File> {
+  async upload(data: File | File[] | FormData, init?: RequestInit): Promise<Express.Multer.File> {
     const token = await this.rest('token', []);
     if (Rest.isError(token)) throw token.error;
     const formData: FormData = (() => {
@@ -188,7 +189,7 @@ class Auth implements Server.Authentication.Type {
       throw new Error('upload data type error');
     })();
     const response = await fetch(`https://${this._host}/upload?t=${token}`,
-      { method: 'POST', body: formData });
+      { ...init, method: 'POST', body: formData });
     return response.json();
   }
 
