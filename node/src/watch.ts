@@ -7,7 +7,7 @@ import { FileType, Watch } from 'web/common/Type';
 
 function watch(context: Context) {
   const wsServer = new ws.Server({ noServer: true, perMessageDeflate: true });
-  return wsServer.on('connection', (socket) => {
+  return wsServer.on('connection', (socket, req) => {
     socket.once('message', (data: string) => {
       const { token, cd } = JSON.parse(data);
       if (context.token.verify(token)) {
@@ -18,12 +18,9 @@ function watch(context: Context) {
           const lstat = await fs.promises.lstat(p);
           const type = getFileType(lstat);
           if (lstat.isFile()) {
-            const isExecutable = await exists(p, fs.constants.X_OK);
             return {
               path: p, lstat: { ...lstat, type },
-              content: isExecutable
-                ? Buffer.from('Executable not support preview').toString('base64')
-                : await fs.promises.readFile(p).then(buffer => buffer.toString('base64'))
+              content: await fs.promises.readFile(p).then(buffer => buffer.toString('base64'))
             };
           } else if (lstat.isDirectory()) {
             const files: { [key: string]: Stats & { type?: FileType } } = {}
@@ -69,12 +66,12 @@ function watch(context: Context) {
       }
       else {
         wsSafeClose(socket);
-        context.logger.error(`watch token [${token}] verify failed`);
+        context.logger.error(`watch token from [${req.socket.remoteAddress}] verify failed`);
       }
     })
     socket.once('error', (error) => {
       wsSafeClose(socket);
-      context.logger.error(`watch websocket error [${error}]`);
+      context.logger.error(`watch websocket error [${error}] from [${req.socket.remoteAddress}]`);
     });
   });
 }

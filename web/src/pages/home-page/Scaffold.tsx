@@ -1,4 +1,4 @@
-import { createSnackbarQueue, SnackbarQueue } from "@rmwc/snackbar";
+import { createSnackbarQueue, SnackbarAction, SnackbarQueue } from "@rmwc/snackbar";
 import React from "react";
 
 function Scaffold({ children }: { children: React.ReactNode }) {
@@ -22,7 +22,7 @@ function Snackbar({ children }: { children: React.ReactNode }) {
       <Scaffold.Snackbar.Context.Provider value={{ showMessage: notify }}>
         {children}
       </Scaffold.Snackbar.Context.Provider>
-      <SnackbarQueue messages={messages} dismissesOnAction></SnackbarQueue>
+      <SnackbarQueue messages={messages} dismissesOnAction action={[<SnackbarAction label='close' />] as any}></SnackbarQueue>
     </>
   );
 }

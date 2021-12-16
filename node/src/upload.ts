@@ -32,8 +32,8 @@ async function upload(urlPath: string, app: express.Express, context: Context) {
   const config = multer({ dest });
   app.post(urlPath,
     function (req, res, next) {
-      const tokenComponent = req.query['t'];
-      if (typeof tokenComponent !== 'string' || !context.token.verify(tokenComponent))
+      const token = req.query['t'];
+      if (typeof token !== 'string' || !context.token.verify(token))
         return res.status(400).send('Bad request');
       next();
     },

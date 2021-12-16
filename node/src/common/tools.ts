@@ -87,11 +87,12 @@ export function wsSafeClose(ws: WebSocket) {
 }
 
 export function getFileType(stats: Stats) {
-  if (stats.isFile()) return FileType.file;
   if (stats.isDirectory()) return FileType.directory;
-  if (stats.isBlockDevice()) return FileType.blockDevice;
-  if (stats.isCharacterDevice()) return FileType.characterDevice;
-  if (stats.isSymbolicLink()) return FileType.symbolicLink;
-  if (stats.isFIFO()) return FileType.fifo;
-  if (stats.isSocket()) return FileType.socket;
+  else if (stats.isFile()) return FileType.file;
+  else if (stats.isSymbolicLink()) return FileType.symbolicLink;
+
+  else if (stats.isBlockDevice()) return FileType.blockDevice;
+  else if (stats.isCharacterDevice()) return FileType.characterDevice;
+  else if (stats.isSocket()) return FileType.socket;
+  else if (stats.isFIFO()) return FileType.fifo;
 }

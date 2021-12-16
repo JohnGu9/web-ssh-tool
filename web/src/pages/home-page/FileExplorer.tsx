@@ -74,14 +74,21 @@ class FileExplorer extends React.Component<FileExplorer.Props, FileExplorer.Stat
   protected _upload(file: File, dest: string) {
     const { auth } = this.props;
     const abort = new AbortController();
+    const target = path.join(dest, file.name);
+    const checkFileExists = async () => {
+      const exists = await auth.rest('fs.exists', [target]);
+      if (Rest.isError(exists)) throw exists.error;
+      if (exists) throw new Error(`File [${target}] already exists. `);
+    }
+
     const controller = new UploadItem.Controller({
       id: uuid(), file, dest,
-      upload: async () => auth.upload(file, { signal: abort.signal }),
+      upload: async () => {
+        await checkFileExists();
+        return auth.upload(file, { signal: abort.signal })
+      },
       operate: async (multer) => {
-        const target = path.join(dest, file.name);
-        const exists = await auth.rest('fs.exists', [target]);
-        if (Rest.isError(exists)) throw exists.error;
-        if (exists) throw new Error(`File [${target}] already exists. `);
+        await checkFileExists();
         const result = await auth.rest('fs.rename', [multer.path, target]);
         if (Rest.isError(result)) throw result.error;
       },
@@ -218,7 +225,8 @@ function UploadItem(props: { controller: UploadItem.Controller }) {
             case UploadItem.State.close:
               return <Icon icon='checked' />;
             case UploadItem.State.error:
-              return <Tooltip content={props.controller.detail.error?.message ?? 'Unknown error'}>
+              const { error } = props.controller.detail;
+              return <Tooltip content={error?.message ?? error?.name ?? 'Unknown error'}>
                 <Theme use='error'><Icon icon='error' /></Theme>
               </Tooltip>;
             case UploadItem.State.cancel:
@@ -242,9 +250,6 @@ function UploadItem(props: { controller: UploadItem.Controller }) {
         type={SharedAxisTransition.Type.fromTopToBottom}>
         {(() => {
           switch (state) {
-            case UploadItem.State.operate:
-            case UploadItem.State.close:
-              return <></>;
             case UploadItem.State.upload:
             case UploadItem.State.error:
               return <IconButton icon='close' onClick={() => props.controller.cleanup()} />;

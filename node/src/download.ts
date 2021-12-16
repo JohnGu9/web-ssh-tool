@@ -8,9 +8,9 @@ import { FileType } from 'web/common/Type';
 
 async function download(urlPath: string, app: express.Express, context: Context) {
   app.get(urlPath, function (req, res, next) {
-    const tokenComponent = req.query['t'];
-    if (typeof tokenComponent !== 'string' || !context.token.verify(tokenComponent))
-      return res.status(404).send('Unknown operation');
+    const token = req.query['t'];
+    if (typeof token !== 'string' || !context.token.verify(token))
+      return res.status(400).send('Bad request');
     next();
   }, async function (req, res) {
     const pathComponent = req.query['p'];

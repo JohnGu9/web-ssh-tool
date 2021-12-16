@@ -126,7 +126,7 @@ namespace Content {
 function Title() {
   return <div className='full-size column' style={{ justifyContent: 'center', alignItems: 'center' }}>
     <Typography use='headline3' style={{ margin: '32px 0' }}>SSH TOOL FOR WEB</Typography>
-    <Typography use='body1'>On browser, everywhere, anytime</Typography>
+    <Typography use='body1'>On browser, nothing to install, everywhere, anytime</Typography>
     <Typography use='body1'>Feature with shell terminal and file explorer</Typography>
     <Typography use='body1'>Ease to deploy, ease to use</Typography>
   </div>;
@@ -170,18 +170,13 @@ class Auth implements Server.Authentication.Type {
     });
   }
 
-  async upload(data: File | File[] | FormData, init?: RequestInit): Promise<Express.Multer.File> {
+  async upload(data: File | FormData, init?: RequestInit): Promise<Express.Multer.File> {
     const token = await this.rest('token', []);
     if (Rest.isError(token)) throw token.error;
     const formData: FormData = (() => {
       if (data instanceof File) {
         const formData = new FormData();
         formData.append('file', data);
-        return formData;
-      } else if (data instanceof Array) {
-        const formData = new FormData();
-        for (const file of data)
-          formData.append('file', file);
         return formData;
       } else if (data instanceof FormData) {
         return data;

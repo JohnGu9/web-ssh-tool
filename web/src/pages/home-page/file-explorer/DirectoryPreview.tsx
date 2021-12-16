@@ -1,19 +1,28 @@
 import { Stats } from "fs";
 import path from "path";
 import React from "react";
-import { Dialog, DialogActions, DialogButton, IconButton, SimpleListItem, Tooltip, Typography } from "rmwc";
-import { Server, ThemeContext } from "../../../common/Providers";
+import { IconButton, SimpleListItem, Tooltip } from "rmwc";
+import { ThemeContext } from "../../../common/Providers";
 import { FileType, Watch } from "../../../common/Type";
-import { DialogContent, DialogTitle } from "../../../components/Dialog";
 import { SharedAxisTransition } from "../../../components/Transitions";
 import FileExplorer from "./Common";
+import InformationDialog from "./directory-preview/InformationDialog";
+import MoveDialog from "./directory-preview/MoveDialog";
+import RenameDialog from "./directory-preview/RenameDialog";
 
 function DirectoryPreView({ state }: { state: Watch.Directory }) {
   const { cd, config, setConfig } = React.useContext(FileExplorer.Context);
   const { themeData: theme } = React.useContext(ThemeContext);
-  const auth = React.useContext(Server.Authentication.Context);
-  const [dialog, setDialog] = React.useState<{ open: boolean, stats: Stats & { type?: FileType }, path: string }>({ open: false, path: '', stats: {} as Stats });
-  const close = () => setDialog({ ...dialog, open: false });
+
+  const [information, setInformation] = React.useState<InformationDialog.State>({ open: false, path: '', stats: {} as Stats });
+  const closeInformation = () => setInformation({ ...information, open: false });
+
+  const [rename, setRename] = React.useState<RenameDialog.State>({ open: false, path: '' });
+  const closeRename = () => setRename({ ...rename, open: false });
+
+  const [move, setMove] = React.useState<MoveDialog.State>({ open: false, path: '' });
+  const closeMove = () => setMove({ ...rename, open: false });
+
   const { path: dir, files } = state;
   const back = () => {
     const dirname = path.dirname(state.path);
@@ -31,89 +40,61 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
         <SortButton config={config} setConfig={setConfig} />
         <ShowAndHideButton config={config} setConfig={setConfig} />
       </div>
-      <div style={{ flex: 1, width: '100%', overflowY: 'auto' }}>
+      <DropZone style={{ flex: 1, width: '100%', overflowY: 'auto' }} dirname={dir}>
         {fileList.length === 0
-          ? <div className='column' style={{ height: '100%', justifyContent: 'center', alignItems: 'center' }}>
+          ? <div className='column' style={{ width: '100%', justifyContent: 'center', alignItems: 'center' }}>
             Nothing here...
           </div>
-          : FileExplorer.sortArray(fileList, config.sort)
+          : <>{FileExplorer.sortArray(fileList, config.sort)
             .map(([key, value]) => {
               return <FileListTile
                 key={key}
+                dirname={dir}
                 name={key}
                 stats={value}
                 onClick={() => cd(path.join(dir, key))}
-                onDetail={(stats) => setDialog({ open: true, stats, path: path.join(dir, key) })} />
+                onDetail={(stats, path) => setInformation({ open: true, stats, path })} />
             })}
-        <div className='row' style={{ padding: '32px 0', justifyContent: 'center', opacity: 0.5 }}>
-        </div>
-      </div>
+            <div className='row' style={{ height: 64 }} />
+          </>}
+      </DropZone>
       <div style={{ height: 16 }} />
       <Tooltip content={dir}>
         <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'pre', width: '100%', padding: '0 8px' }}>{dir}</div>
       </Tooltip>
-      <Dialog open={dialog.open} onClose={close}>
-        <DialogTitle>Information</DialogTitle>
-        <DialogContent style={{ overflow: 'auto' }}>
-          <div style={{ margin: '0 0 16px' }}><Typography use='button'>path</Typography>: {dialog.path}</div>
-          {Object.entries(dialog.stats)
-            .map(([key, value]) => {
-              return <div key={key}><Typography use='button'>{key}</Typography>: {value}</div>;
-            })}
-          <div style={{ height: 32 }} />
-        </DialogContent>
-        <DialogActions style={{ paddingLeft: 16, flexDirection: 'row', width: 560 }}>
-          {(() => {
-            const { type } = dialog.stats;
-            switch (type) {
-              case FileType.file:
-                return <DeleteButton onLongPress={() => {
-                  close();
-                  return auth.rest('fs.unlink', [dialog.path])
-                }} />;
-              case FileType.directory:
-                return <DeleteButton onLongPress={() => {
-                  close();
-                  return auth.rest('fs.rmdir', [dialog.path, { maxRetries: 7 }]);
-                }} />;
-            }
-          })()}
-          <div style={{ minWidth: 32, flex: 1 }} />
-          {(() => {
-            const { type } = dialog.stats;
-            switch (type) {
-              case FileType.file:
-              case FileType.directory:
-                return (
-                  <>
-                    <Tooltip content='move'>
-                      <IconButton style={{ color: theme.primary }} icon='drag_handle' onClick={() => {
-                        close();
-                      }} />
-                    </Tooltip>
-                    <Tooltip content='rename'>
-                      <IconButton style={{ color: theme.primary }} icon='drive_file_rename_outline' onClick={() => {
-                        close();
-                      }} />
-                    </Tooltip>
-                    <Tooltip content='download'>
-                      <IconButton style={{ color: theme.primary }} icon='download' onClick={() => auth.download(dialog.path)} />
-                    </Tooltip>
-                  </>
-                );
-            }
-          })()}
-          <DialogButton onClick={close}>close</DialogButton>
-        </DialogActions>
-      </Dialog>
+      <InformationDialog
+        key={information.path}
+        state={information}
+        close={closeInformation}
+        move={path => setMove({ open: true, path })}
+        rename={path => setRename({ open: true, path })} />
+      <RenameDialog
+        key={rename.path}
+        state={rename} close={closeRename} />
+      <MoveDialog
+        key={move.path}
+        state={move} close={closeMove} />
     </div>
   );
 }
 
-namespace DirectoryPreView {
-}
-
 export default DirectoryPreView;
+
+function DropZone({ children, style, dirname }: { children: React.ReactNode, dirname: string, style?: React.CSSProperties }) {
+  const { upload } = React.useContext(FileExplorer.Context);
+  const [drag, setDrag] = React.useState(false);
+  return <div style={{ ...style, opacity: drag ? 0.5 : 1, transition: 'opacity 300ms' }}
+    onDragEnter={() => setDrag(true)}
+    onDragLeave={() => setDrag(false)}
+    onDragOver={event => event.preventDefault()}
+    onDrop={event => {
+      event.preventDefault();
+      setDrag(false);
+      for (const file of Array.from(event.dataTransfer.files))
+        upload(file, dirname);
+    }}
+  >{children}</div>;
+}
 
 function ShowAndHideButton({ config, setConfig }: {
   config: FileExplorer.Config,
@@ -167,35 +148,6 @@ function UploadButton({ dest }: { dest: string }) {
   );
 }
 
-function DeleteButton({ onLongPress }: { onLongPress: () => unknown }) {
-  const { themeData: theme } = React.useContext(ThemeContext);
-  const [tooltip, setTooltip] = React.useState(false);
-  const [down, setDown] = React.useState<number | undefined>(undefined);
-  const clear = () => {
-    window.clearTimeout(down);
-    setDown(undefined);
-    setTooltip(false);
-  }
-  return (
-    <Tooltip content='Long press to delete' open={tooltip}>
-      <DialogButton
-        icon='delete'
-        style={{
-          color: theme.error,
-          backgroundColor: down === undefined ? undefined : theme.error,
-          transition: 'background-color 1s'
-        }}
-        onMouseDown={() => {
-          setTooltip(true);
-          const id = window.setTimeout(onLongPress, 1000);
-          setDown(id);
-        }}
-        onMouseUp={clear}
-        onMouseLeave={clear}>delete</DialogButton>
-    </Tooltip>
-  );
-}
-
 function FileIcon(name: string, { type }: { type?: FileType, }) {
   switch (type) {
     case FileType.directory:
@@ -245,12 +197,14 @@ function FileIcon(name: string, { type }: { type?: FileType, }) {
   }
 }
 
-function FileListTile({ name, stats, onClick, onDetail }: {
+function FileListTile({ dirname, name, stats, onClick, onDetail }: {
+  dirname: string,
   name: string,
   stats: Stats & { type?: FileType },
   onClick?: () => unknown,
-  onDetail: (stats: Stats & { type?: FileType }) => unknown,
+  onDetail: (stats: Stats & { type?: FileType }, path: string) => unknown,
 }) {
+  const targetPath = path.join(dirname, name);
   const [hover, setHover] = React.useState(false);
   const disabled = (() => {
     switch (stats.type) {
@@ -263,6 +217,8 @@ function FileListTile({ name, stats, onClick, onDetail }: {
     return true;
   })();
   return <SimpleListItem
+    draggable
+    onDragStart={event => event.dataTransfer.setData('text', targetPath)}
     graphic={FileIcon(name, stats)}
     text={name}
     meta={<IconButton
@@ -270,7 +226,7 @@ function FileListTile({ name, stats, onClick, onDetail }: {
       style={{ opacity: hover ? 1 : 0, transition: 'opacity 300ms' }}
       onClick={event => {
         event.stopPropagation();
-        onDetail(stats);
+        onDetail(stats, targetPath);
       }} />}
     onClick={disabled ? undefined : onClick}
     disabled={disabled}

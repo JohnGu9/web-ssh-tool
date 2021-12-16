@@ -1,19 +1,20 @@
 import React from "react";
 import { Terminal } from "xterm";
 import { v1 as uuid } from 'uuid';
-import { Server, Settings, ThemeContext } from "../../common/Providers";
-import { Rest } from '../../common/Type';
-import XTerminal from "../../components/XTerminal";
-import FadeCrossTransition from "../../components/FadeCrossTransition";
 import { Icon } from "@rmwc/icon";
 import { IconButton } from "@rmwc/icon-button";
 import { Theme } from "@rmwc/theme";
 import { Card } from "@rmwc/card";
 import { Button } from "@rmwc/button";
-import { SharedAxisTransition } from "../../components/Transitions";
 import { ListDivider, SimpleListItem } from "@rmwc/list";
-import AnimatedList from "../../components/AnimatedList";
 import { Dialog, DialogActions, DialogButton, LinearProgress, Typography } from "rmwc";
+
+import { Server, Settings, ThemeContext } from "../../common/Providers";
+import { Rest } from '../../common/Type';
+import XTerminal from "../../components/XTerminal";
+import FadeCrossTransition from "../../components/FadeCrossTransition";
+import { SharedAxisTransition } from "../../components/Transitions";
+import AnimatedList from "../../components/AnimatedList";
 import { DialogContent, DialogTitle } from "../../components/Dialog";
 import { FixedSizeList } from "../../components/AdaptedWindow";
 
@@ -256,7 +257,14 @@ function XTerminalView({ controller, remove }: {
             onClick={() => controller.xterm.clear()} />
         </div>
         <div style={{ height: 8 }} />
-        <Card style={{ flex: 1, width: '100%', overflow: 'auto' }}>
+        <Card style={{ flex: 1, width: '100%', overflow: 'auto' }}
+          onDragOver={event => event.preventDefault()}
+          onDrop={event => {
+            event.preventDefault();
+            const data = event.dataTransfer.getData('text');
+            controller.xterm.paste(data);
+            controller.xterm.focus();
+          }}>
           <XTerminal terminal={controller.xterm} className='full-size' />
         </Card>
         <div style={{ height: 16 }} />
