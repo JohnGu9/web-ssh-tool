@@ -1,9 +1,9 @@
 import { Stats } from "fs";
 import path from "path";
 import React from "react";
-import { IconButton, MenuItem, MenuSurface, MenuSurfaceAnchor, SimpleListItem, Tooltip } from "rmwc";
-import { ThemeContext } from "../../../common/Providers";
-import { FileType, Watch } from "../../../common/Type";
+import { IconButton, MenuItem, MenuSurface, MenuSurfaceAnchor, Tooltip } from "rmwc";
+import { Server, ThemeContext } from "../../../common/Providers";
+import { Rest, Watch } from "../../../common/Type";
 import { SharedAxisTransition } from "../../../components/Transitions";
 import FileExplorer from "./Common";
 import GoToDialog from "./directory-preview/GoToDialog";
@@ -11,6 +11,7 @@ import InformationDialog from "./directory-preview/InformationDialog";
 import MoveDialog from "./directory-preview/MoveDialog";
 import { NewDirectoryDialog, NewFileDialog } from "./directory-preview/NewDialog";
 import RenameDialog from "./directory-preview/RenameDialog";
+import FileListTile from "./FileListTile";
 
 function DirectoryPreView({ state }: { state: Watch.Directory }) {
   const { cd, config, setConfig } = React.useContext(FileExplorer.Context);
@@ -85,6 +86,7 @@ export default DirectoryPreView;
 function DropZone({ children, style, dirname }: { children: React.ReactNode, dirname: string, style?: React.CSSProperties }) {
   const { upload } = React.useContext(FileExplorer.Context);
   const [drag, setDrag] = React.useState(false);
+  const auth = React.useContext(Server.Authentication.Context);
   return <div style={{ ...style, opacity: drag ? 0.5 : 1, transition: 'opacity 300ms' }}
     onDragEnter={() => setDrag(true)}
     onDragLeave={() => setDrag(false)}
@@ -92,10 +94,43 @@ function DropZone({ children, style, dirname }: { children: React.ReactNode, dir
     onDrop={event => {
       event.preventDefault();
       setDrag(false);
-      for (const file of Array.from(event.dataTransfer.files))
+      const { items, files } = event.dataTransfer;
+      if (items && items.length > 0 && 'webkitGetAsEntry' in items[0]) {
+        try {
+          for (let i = 0; i < items.length; i++) {
+            const entry = items[i].webkitGetAsEntry();
+            if (entry) uploadItem(dirname, entry, upload, auth);
+          }
+          return;
+        } catch (error) {
+          // browser not support webkit
+        }
+      }
+      for (const file of Array.from(files))
         upload(file, dirname);
     }}
   >{children}</div>;
+}
+
+async function uploadItem(dest: string, entry: FileSystemEntry, upload: (file: File, dest: string) => void, auth: Server.Authentication.Type): Promise<unknown> {
+  if (entry.isFile) {
+    const file = await new Promise<File>(resolve => (entry as unknown as any).file(resolve));
+    return upload(file, dest);
+  } else if (entry.isDirectory) {
+    const newDest = path.join(dest, entry.name);
+    const dirReader = (entry as unknown as any).createReader();
+    const [result, entries] = await Promise.all([
+      auth.rest('fs.mkdir', [newDest]),
+      new Promise<FileSystemEntry[]>(resolve => dirReader.readEntries(resolve)),
+    ]);
+    if (Rest.isError(result)) return;
+    const list = [];
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i];
+      list.push(uploadItem(newDest, entry, upload, auth));
+    }
+    return Promise.all(list);
+  }
 }
 
 function Navigator({ dir }: { dir: string }) {
@@ -199,91 +234,4 @@ function NewButton({ dest }: { dest: string }) {
       <NewDirectoryDialog state={directory} close={closeDirectory} />
     </>
   );
-}
-
-function FileIcon(name: string, { type }: { type?: FileType, }) {
-  switch (type) {
-    case FileType.directory:
-      return 'folder';
-    case FileType.file: {
-      const chips = name.split('.').filter(value => value.length > 0);
-      if (chips.length > 1) {
-        const last = chips[chips.length - 1];
-        switch (last.toLowerCase()) {
-          case 'jpg':
-          case 'jpeg':
-          case 'png':
-          case 'svg':
-          case 'tif':
-          case 'tiff':
-          case 'bmp':
-          case 'gif':
-          case 'raw':
-            return 'image';
-          case 'mp4':
-          case 'flv':
-          case 'avi':
-          case 'mkv':
-            return 'videocam';
-          case 'zip':
-          case '7z':
-          case 'tar':
-          case 'txz':
-          case 'tgz':
-          case 'bz2':
-          case 'tbz2':
-          case 'gz':
-          case 'xz':
-          case 'rar':
-          case 'z':
-            return 'folder_zip';
-        }
-      }
-      return 'text_snippet';
-    }
-    case FileType.symbolicLink:
-      return 'link';
-    case FileType.socket:
-      return 'electrical_services';
-    default:
-      return 'browser_not_supported';
-  }
-}
-
-function FileListTile({ dirname, name, stats, onClick, onDetail }: {
-  dirname: string,
-  name: string,
-  stats: Stats & { type?: FileType },
-  onClick?: () => unknown,
-  onDetail: (stats: Stats & { type?: FileType }, path: string) => unknown,
-}) {
-  const targetPath = path.join(dirname, name);
-  const [hover, setHover] = React.useState(false);
-  const disabled = (() => {
-    switch (stats.type) {
-      case FileType.file:
-        if (stats.size < 1 * 1024 * 1024) return false; // limit to 1MB for preview
-        break;
-      case FileType.directory:
-        return false;
-    }
-    return true;
-  })();
-  return <SimpleListItem
-    draggable
-    onDragStart={event => event.dataTransfer.setData('text', targetPath)}
-    graphic={FileIcon(name, stats)}
-    text={name}
-    meta={<IconButton
-      icon='more_horiz'
-      style={{ opacity: hover ? 1 : 0, transition: 'opacity 300ms' }}
-      onClick={event => {
-        event.stopPropagation();
-        onDetail(stats, targetPath);
-      }} />}
-    onClick={disabled ? undefined : onClick}
-    disabled={disabled}
-    style={{ opacity: disabled ? 0.5 : 1 }}
-    onMouseEnter={() => setHover(true)}
-    onMouseLeave={() => setHover(false)} />
 }
