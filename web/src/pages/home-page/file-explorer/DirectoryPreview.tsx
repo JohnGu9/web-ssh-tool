@@ -1,13 +1,15 @@
 import { Stats } from "fs";
 import path from "path";
 import React from "react";
-import { IconButton, SimpleListItem, Tooltip } from "rmwc";
+import { IconButton, MenuItem, MenuSurface, MenuSurfaceAnchor, SimpleListItem, Tooltip } from "rmwc";
 import { ThemeContext } from "../../../common/Providers";
 import { FileType, Watch } from "../../../common/Type";
 import { SharedAxisTransition } from "../../../components/Transitions";
 import FileExplorer from "./Common";
+import GoToDialog from "./directory-preview/GoToDialog";
 import InformationDialog from "./directory-preview/InformationDialog";
 import MoveDialog from "./directory-preview/MoveDialog";
+import { NewDirectoryDialog, NewFileDialog } from "./directory-preview/NewDialog";
 import RenameDialog from "./directory-preview/RenameDialog";
 
 function DirectoryPreView({ state }: { state: Watch.Directory }) {
@@ -21,7 +23,7 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
   const closeRename = () => setRename({ ...rename, open: false });
 
   const [move, setMove] = React.useState<MoveDialog.State>({ open: false, path: '' });
-  const closeMove = () => setMove({ ...rename, open: false });
+  const closeMove = () => setMove({ ...move, open: false });
 
   const { path: dir, files } = state;
   const back = () => {
@@ -36,6 +38,7 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
       <div className='row' style={{ height: 56, padding: '0 8px 0 0' }}>
         <IconButton style={{ color: theme.primary }} icon='arrow_back' onClick={back} />
         <div className='expanded' />
+        <NewButton dest={dir} />
         <UploadButton dest={dir} />
         <SortButton config={config} setConfig={setConfig} />
         <ShowAndHideButton config={config} setConfig={setConfig} />
@@ -45,23 +48,22 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
           ? <div className='column' style={{ width: '100%', justifyContent: 'center', alignItems: 'center' }}>
             Nothing here...
           </div>
-          : <>{FileExplorer.sortArray(fileList, config.sort)
-            .map(([key, value]) => {
-              return <FileListTile
-                key={key}
-                dirname={dir}
-                name={key}
-                stats={value}
-                onClick={() => cd(path.join(dir, key))}
-                onDetail={(stats, path) => setInformation({ open: true, stats, path })} />
-            })}
+          : <>
+            {FileExplorer.sortArray(fileList, config.sort)
+              .map(([key, value]) => {
+                return <FileListTile
+                  key={key}
+                  dirname={dir}
+                  name={key}
+                  stats={value}
+                  onClick={() => cd(path.join(dir, key))}
+                  onDetail={(stats, path) => setInformation({ open: true, stats, path })} />
+              })}
             <div className='row' style={{ height: 64 }} />
           </>}
       </DropZone>
       <div style={{ height: 16 }} />
-      <Tooltip content={dir}>
-        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'pre', width: '100%', padding: '0 8px' }}>{dir}</div>
-      </Tooltip>
+      <Navigator dir={dir} />
       <InformationDialog
         key={information.path}
         state={information}
@@ -69,10 +71,10 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
         move={path => setMove({ open: true, path })}
         rename={path => setRename({ open: true, path })} />
       <RenameDialog
-        key={rename.path}
+        key={`rename: ${rename.path}`}
         state={rename} close={closeRename} />
       <MoveDialog
-        key={move.path}
+        key={`move: ${move.path}`}
         state={move} close={closeMove} />
     </div>
   );
@@ -94,6 +96,20 @@ function DropZone({ children, style, dirname }: { children: React.ReactNode, dir
         upload(file, dirname);
     }}
   >{children}</div>;
+}
+
+function Navigator({ dir }: { dir: string }) {
+  const [dialog, setDialog] = React.useState<GoToDialog.State>({ open: false, path: dir });
+  const close = () => setDialog({ ...dialog, open: false });
+  return (
+    <>
+      <Tooltip content={dir}>
+        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'pre', width: '100%', padding: '0 8px' }}
+          onClick={() => setDialog({ open: true, path: dir })}>{dir}</div>
+      </Tooltip>
+      <GoToDialog state={dialog} close={close} />
+    </>
+  );
 }
 
 function ShowAndHideButton({ config, setConfig }: {
@@ -145,6 +161,43 @@ function UploadButton({ dest }: { dest: string }) {
           input.click();
         }} />
     </Tooltip>
+  );
+}
+
+function NewButton({ dest }: { dest: string }) {
+  const [open, setOpen] = React.useState(false);
+  const close = () => setOpen(false);
+
+  const [file, setFile] = React.useState<NewFileDialog.State>({ open: false, path: dest });
+  const closeFile = () => setFile({ ...file, open: false });
+
+  const [directory, setDirectory] = React.useState<NewDirectoryDialog.State>({ open: false, path: dest });
+  const closeDirectory = () => setDirectory({ ...directory, open: false });
+
+  return (
+    <>
+      <MenuSurfaceAnchor>
+        <MenuSurface anchorCorner='bottomStart'
+          open={open}
+          onClose={close}>
+          <MenuItem onClick={() => {
+            close();
+            setFile({ open: true, path: dest });
+          }}>File</MenuItem>
+          <MenuItem onClick={() => {
+            close();
+            setDirectory({ open: true, path: dest });
+          }}>Directory</MenuItem>
+        </MenuSurface>
+        <Tooltip content='new' open={open ? false : undefined}>
+          <IconButton
+            icon='add'
+            onClick={event => setOpen(true)} />
+        </Tooltip>
+      </MenuSurfaceAnchor>
+      <NewFileDialog state={file} close={closeFile} />
+      <NewDirectoryDialog state={directory} close={closeDirectory} />
+    </>
   );
 }
 

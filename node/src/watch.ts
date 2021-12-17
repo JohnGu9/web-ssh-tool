@@ -59,7 +59,17 @@ function watch(context: Context) {
         watcher = buildWatcher(cd ?? context.home ?? os.homedir());
         socket.on('message', async (data: string) => {
           const { cd } = JSON.parse(data);
-          if (watcher && cd === watcher.path) return;
+          if (watcher && cd === watcher.path) return pipeline.post(async () => {
+            const state = await buildState(cd)
+              .catch(function (error) { return { error } });
+            if (socket.readyState === ws.OPEN && watcher?.path === cd) {
+              try {
+                socket.send(JSON.stringify(state));
+              } catch (error) {
+                socket.send(JSON.stringify({ error }));
+              }
+            }
+          });
           watcher?.watcher.close();
           watcher = buildWatcher(cd ?? context.home ?? os.homedir());
         });

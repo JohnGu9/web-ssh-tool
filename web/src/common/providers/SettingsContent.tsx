@@ -16,6 +16,8 @@ export namespace Settings {
     sshPassword: string | null,
     setSshPassword: (_: string | null) => void,
 
+    lastPath: string | null,
+    setLastPath: (_: string | null) => void,
   };
 
   export class Service extends React.Component<Service.Props> {
@@ -53,6 +55,9 @@ export namespace Settings {
 
           get sshPassword() { return localStorage.getItem('ssh-password') },
           setSshPassword: this._stringKeyCallback('ssh-password'),
+
+          get lastPath() { return localStorage.getItem('last-path') },
+          setLastPath: this._stringKeyCallback('last-path'),
         }}>
           {this.props.children}
         </Context.Provider>

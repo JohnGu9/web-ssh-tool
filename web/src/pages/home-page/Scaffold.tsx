@@ -1,4 +1,4 @@
-import { createSnackbarQueue, SnackbarAction, SnackbarQueue } from "@rmwc/snackbar";
+import { createSnackbarQueue, SnackbarQueue } from "@rmwc/snackbar";
 import React from "react";
 
 function Scaffold({ children }: { children: React.ReactNode }) {
@@ -7,8 +7,8 @@ function Scaffold({ children }: { children: React.ReactNode }) {
 
 namespace Scaffold {
   export namespace Snackbar {
-    export const { messages, notify } = createSnackbarQueue();
-    export type Type = { showMessage: typeof notify };
+    export const { messages, notify, clearAll } = createSnackbarQueue();
+    export type Type = { showMessage: typeof notify, clearAll: typeof clearAll };
     export const Context = React.createContext<Type>(undefined as unknown as Type);
   }
 }
@@ -16,13 +16,13 @@ namespace Scaffold {
 export default Scaffold;
 
 function Snackbar({ children }: { children: React.ReactNode }) {
-  const { messages, notify } = Scaffold.Snackbar;
+  const { messages, notify, clearAll } = Scaffold.Snackbar;
   return (
     <>
-      <Scaffold.Snackbar.Context.Provider value={{ showMessage: notify }}>
+      <Scaffold.Snackbar.Context.Provider value={{ showMessage: notify, clearAll }}>
         {children}
       </Scaffold.Snackbar.Context.Provider>
-      <SnackbarQueue messages={messages} dismissesOnAction action={[<SnackbarAction label='close' />] as any}></SnackbarQueue>
+      <SnackbarQueue messages={messages} dismissesOnAction></SnackbarQueue>
     </>
   );
 }

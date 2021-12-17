@@ -19,8 +19,10 @@ export namespace Rest {
     'token': { parameter: any, return: string },
     'fs.rename': { parameter: Parameters<typeof fs.rename>, return: Awaited<ReturnType<typeof fs.rename>> },
     'fs.unlink': { parameter: Parameters<typeof fs.unlink>, return: Awaited<ReturnType<typeof fs.unlink>> },
-    'fs.rmdir': { parameter: Parameters<typeof fs.rmdir>, return: Awaited<ReturnType<typeof fs.rmdir>> },
+    'fs.rm': { parameter: Parameters<typeof fs.rm>, return: Awaited<ReturnType<typeof fs.rm>> },
     'fs.exists': { parameter: Parameters<typeof fs.access>, return: boolean },
+    'fs.mkdir': { parameter: Parameters<typeof fs.mkdir>, return: Awaited<ReturnType<typeof fs.mkdir>> },
+    'fs.writeFile': { parameter: Parameters<typeof fs.writeFile>, return: Awaited<ReturnType<typeof fs.writeFile>> },
     'shell': {
       parameter:
       { id: string, data: string } | // request close

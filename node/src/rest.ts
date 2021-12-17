@@ -53,12 +53,16 @@ async function rest(context: Context) {
                       return context.token.generate();
                     case 'fs.unlink':
                       return fs.unlink(...value as Parameters<typeof fs.unlink>);
-                    case 'fs.rmdir':
-                      return fs.rmdir(...value as Parameters<typeof fs.rmdir>);
+                    case 'fs.rm':
+                      return fs.rm(...value as Parameters<typeof fs.rm>);
                     case 'fs.rename':
                       return fs.rename(...value as Parameters<typeof fs.rename>);
                     case 'fs.exists':
                       return exists(...value as Parameters<typeof fs.access>);
+                    case 'fs.mkdir':
+                      return fs.mkdir(...value as Parameters<typeof fs.mkdir>);
+                    case 'fs.writeFile':
+                      return fs.writeFile(...value as Parameters<typeof fs.writeFile>);
                     case 'shell':
                       if (typeof value === 'object' && value !== null && 'id' in value) {
                         if ('data' in value) {

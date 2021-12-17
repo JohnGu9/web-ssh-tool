@@ -1,8 +1,9 @@
 import React from "react";
 import { SnackbarQueueMessage, TextField } from "rmwc";
+import { Dialog, DialogActions, DialogButton } from "@rmwc/dialog";
+
 import { Server, ThemeContext } from "../../../../common/Providers";
 import Scaffold from "../../Scaffold";
-import { Dialog, DialogActions, DialogButton } from "@rmwc/dialog";
 import { DialogContent, DialogTitle } from "../../../../components/Dialog";
 import { Rest } from "../../../../common/Type";
 import LongPressButton from "../../../../components/LongPressButton";
@@ -22,7 +23,8 @@ function MoveDialog({ state, close }: { state: MoveDialog.State, close: () => un
         <TextField autoFocus required inputRef={input} defaultValue={state.path} style={{ width: 480 }} />
       </DialogContent>
       <DialogActions style={{ paddingLeft: 16, flexDirection: 'row' }}>
-        <LongPressButton label='overwrite'
+        <LongPressButton
+          label='overwrite'
           style={{ color: theme.error }}
           onLongPress={async () => {
             const target = input.current?.value ?? '';
@@ -34,18 +36,20 @@ function MoveDialog({ state, close }: { state: MoveDialog.State, close: () => un
             showMessage({ icon: 'checked', title: 'Overwritten', actions: [{ label: 'close' }] });
           }} />
         <div className='expanded' />
-        <DialogButton onClick={async () => {
-          const target = input.current?.value ?? '';
-          if (target.length === 0) return onError({ title: 'Error', body: "Path can't be empty" });
-          const exists = await auth.rest('fs.exists', [target]);
-          if (Rest.isError(exists)) return onError({ title: exists.error?.name, body: exists.error?.message });
-          if (exists) return onError({ title: 'Error', body: `File [${target}] already exists. ` });
-          const result = await auth.rest('fs.rename', [state.path, target]);
-          if (Rest.isError(result)) return onError({ title: result.error?.name, body: result.error?.message });
-          close();
-          await delay(150);
-          showMessage({ icon: 'checked', title: 'Moved', actions: [{ label: 'close' }] });
-        }}>move</DialogButton>
+        <DialogButton
+          icon='drag_handle'
+          onClick={async () => {
+            const target = input.current?.value ?? '';
+            if (target.length === 0) return onError({ title: 'Error', body: "Path can't be empty" });
+            const exists = await auth.rest('fs.exists', [target]);
+            if (Rest.isError(exists)) return onError({ title: exists.error?.name, body: exists.error?.message });
+            if (exists) return onError({ title: 'Error', body: `File [${target}] already exists. ` });
+            const result = await auth.rest('fs.rename', [state.path, target]);
+            if (Rest.isError(result)) return onError({ title: result.error?.name, body: result.error?.message });
+            close();
+            await delay(150);
+            showMessage({ icon: 'checked', title: 'Moved', actions: [{ label: 'close' }] });
+          }}>move</DialogButton>
         <DialogButton onClick={close}>close</DialogButton>
       </DialogActions>
     </Dialog>

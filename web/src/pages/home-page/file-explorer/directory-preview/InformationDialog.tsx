@@ -2,6 +2,7 @@ import { Dialog, DialogActions, DialogButton } from "@rmwc/dialog";
 import { Stats } from "fs";
 import React from "react";
 import { IconButton, Tooltip, Typography } from "rmwc";
+
 import { Server, ThemeContext } from "../../../../common/Providers";
 import { delay } from "../../../../common/Tools";
 import { FileType, Rest } from "../../../../common/Type";
@@ -45,7 +46,7 @@ function InformationDialog({ state: dialog, close, move, rename }: {
             case FileType.directory:
               return <DeleteButton onLongPress={async () => {
                 close();
-                const result = auth.rest('fs.rmdir', [path, { maxRetries: 7 }]);
+                const result = auth.rest('fs.rm', [path, { recursive: true }]);
                 if (Rest.isError(result)) return onError(result.error);
                 onDeleted(path);
               }} />;

@@ -8,7 +8,7 @@ import { v1 as uuid } from 'uuid';
 import path from "path";
 
 import { wsSafeClose } from "../../common/DomTools";
-import { Server } from "../../common/Providers";
+import { Server, Settings } from "../../common/Providers";
 import { Rest, Watch } from "../../common/Type";
 import { SharedAxisTransition } from "../../components/Transitions";
 
@@ -22,6 +22,7 @@ import AnimatedList from "../../components/AnimatedList";
 import { Icon } from "@rmwc/icon";
 import { Tooltip } from "@rmwc/tooltip";
 import { Theme } from "@rmwc/theme";
+import { SimpleListItem } from "rmwc";
 
 class FileExplorer extends React.Component<FileExplorer.Props, FileExplorer.State> {
   constructor(props: FileExplorer.Props) {
@@ -45,7 +46,10 @@ class FileExplorer extends React.Component<FileExplorer.Props, FileExplorer.Stat
       // unexpected case
     } else if (this._ws.readyState === WebSocket.OPEN) {
       this._ws.addEventListener('message', this._onMessage);
-      this._ws.send(JSON.stringify({ token }));
+      if (this.props.settings.lastPath === null)
+        this._ws.send(JSON.stringify({ token }));
+      else
+        this._ws.send(JSON.stringify({ token, cd: this.props.settings.lastPath }));
     }
   }
   protected _onMessage = ({ data }: MessageEvent<string>) => {
@@ -69,6 +73,8 @@ class FileExplorer extends React.Component<FileExplorer.Props, FileExplorer.Stat
   protected _cd(cd?: string) {
     this.setState({ loading: true });
     this._ws.send(JSON.stringify({ cd }));
+    if (cd === undefined) this.props.settings.setLastPath(null);
+    else this.props.settings.setLastPath(cd);
   }
 
   protected _upload(file: File, dest: string) {
@@ -135,7 +141,7 @@ class FileExplorer extends React.Component<FileExplorer.Props, FileExplorer.Stat
         <Elevation className='column' z={2} style={{ width: 320 }}>
           <SharedAxisTransition
             className='expanded'
-            style={{ width: '100%', minHeight: 480 }}
+            style={{ width: '100%' }}
             type={SharedAxisTransition.Type.fromRightToLeft}
             id={closed}>
             {closed
@@ -159,18 +165,39 @@ class FileExplorer extends React.Component<FileExplorer.Props, FileExplorer.Stat
                   position: 'relative'
                 }}>
                 <Content state={state} />
-                <LinearProgress style={{ position: 'absolute' }} closed={!loading} />
+                <LinearProgress style={{ position: 'absolute', top: 0 }} closed={!loading} />
               </SharedAxisTransition>}
           </SharedAxisTransition>
-          <AnimatedList>
-            {this._controllers.map(value => {
-              return {
-                listId: value.detail.id,
-                children: <AnimatedList.Wrap><UploadItem controller={value} /></AnimatedList.Wrap>,
+          <div style={{ maxHeight: 240, overflowY: 'auto' }}>
+            <AnimatedList>
+              {this._controllers.map(value => {
+                return {
+                  listId: value.detail.id,
+                  children: <AnimatedList.Wrap><UploadItem controller={value} /></AnimatedList.Wrap>,
+                }
+              })}
+            </AnimatedList>
+          </div>
+          <div style={{ height: 8 }} />
+          <SimpleListItem text='Cancel all' metaIcon='clear_all'
+            style={this._controllers.length > 2
+              ? {
+                height: 48,
+                opacity: 1,
+                transition: 'height 300ms, opacity 300ms',
               }
-            })}
-          </AnimatedList>
-          <div style={{ height: 24 }} />
+              : {
+                pointerEvents: 'none',
+                height: 0,
+                opacity: 0,
+                transition: 'height 300ms, opacity 210ms',
+              }}
+            onClick={() => {
+              for (const value of Array.from(this._controllers)) value.cancel();
+              this._controllers.splice(0, this._controllers.length);
+              this.forceUpdate();
+            }} />
+          <div style={{ height: 16 }} />
         </Elevation>
       </Common.Context.Provider>
     );
@@ -181,6 +208,7 @@ export default FileExplorer;
 
 namespace FileExplorer {
   export type Props = {
+    readonly settings: Settings.Type,
     readonly server: Server.Type,
     readonly auth: Server.Authentication.Type,
   };
