@@ -9,7 +9,7 @@ function LongPressButton(props: {
   onLongPressEnd?: () => unknown,
   timeout?: number,
   tooltip?: string,
-} & ButtonProps) {
+} & ButtonProps & React.HTMLProps<HTMLElement>) {
   const [tooltip, setTooltip] = React.useState(false);
   const [down, setDown] = React.useState<number | undefined>(undefined);
   const clear = () => {

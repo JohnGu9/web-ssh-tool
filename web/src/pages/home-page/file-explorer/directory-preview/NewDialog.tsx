@@ -42,7 +42,7 @@ export function NewFileDialog({ state, close }: { state: NewFileDialog.State, cl
       </DialogContent>
       <DialogActions>
         <Button type='submit' label='new' />
-        <Button label='close' onClick={close} />
+        <Button type='button' label='close' onClick={close} />
       </DialogActions>
     </Dialog>
   );
@@ -85,7 +85,7 @@ export function NewDirectoryDialog({ state, close }: { state: NewFileDialog.Stat
       </DialogContent>
       <DialogActions>
         <Button type='submit' label='new' />
-        <Button label='close' onClick={close} />
+        <Button type='button' label='close' onClick={close} />
       </DialogActions>
     </Dialog>
   );

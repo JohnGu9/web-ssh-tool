@@ -37,6 +37,7 @@ function MoveDialog({ state, close }: { state: MoveDialog.State, close: () => un
       </DialogContent>
       <DialogActions style={{ paddingLeft: 16, flexDirection: 'row' }}>
         <LongPressButton
+          type='button'
           label='overwrite'
           style={{ color: theme.error }}
           onLongPress={async () => {
@@ -50,7 +51,7 @@ function MoveDialog({ state, close }: { state: MoveDialog.State, close: () => un
           }} />
         <div className='expanded' />
         <Button type='submit' icon='drag_handle' label='move' />
-        <Button onClick={close} label='close' />
+        <Button type='button' onClick={close} label='close' />
       </DialogActions>
     </Dialog>
   );

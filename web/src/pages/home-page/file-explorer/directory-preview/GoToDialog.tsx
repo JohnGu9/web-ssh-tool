@@ -31,7 +31,7 @@ function GoToDialog({ state: { open, path }, close }: { state: GoToDialog.State,
       </DialogContent>
       <DialogActions>
         <Button type='submit' label='go' />
-        <Button label='close' onClick={close} />
+        <Button type='button' label='close' onClick={close} />
       </DialogActions>
     </Dialog>
   );

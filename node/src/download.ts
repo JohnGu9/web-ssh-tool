@@ -31,9 +31,8 @@ async function download(urlPath: string, app: express.Express, context: Context)
             const zip = archiver('zip');
             zip.pipe(res);
             zip.directory(filePath, false);
-            zip.finalize();
             res.on('end', () => zip.destroy())
-            return;
+            return zip.finalize();
           }
         }
       } catch (error) {

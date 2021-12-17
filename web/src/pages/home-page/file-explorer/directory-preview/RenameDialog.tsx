@@ -41,6 +41,7 @@ function RenameDialog({ state, close }: { state: RenameDialog.State, close: () =
       </DialogContent>
       <DialogActions style={{ paddingLeft: 16, flexDirection: 'row' }}>
         <LongPressButton
+          type='button'
           label='overwrite'
           style={{ color: theme.error }}
           onLongPress={async () => {
@@ -56,7 +57,7 @@ function RenameDialog({ state, close }: { state: RenameDialog.State, close: () =
           }} />
         <div className='expanded' />
         <Button type='submit' icon='drive_file_rename_outline' label='rename' />
-        <Button onClick={close} label='close' />
+        <Button type='button' label='close' onClick={close} />
       </DialogActions>
     </Dialog>
   );
