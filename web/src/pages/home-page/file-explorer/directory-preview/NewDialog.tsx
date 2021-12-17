@@ -17,7 +17,21 @@ export function NewFileDialog({ state, close }: { state: NewFileDialog.State, cl
   const onError = (message: SnackbarQueueMessage) =>
     showMessage({ icon: 'error', actions: [{ label: 'close' }], ...message, });
   return (
-    <Dialog open={state.open} onClose={close}>
+    <Dialog tag='form' open={state.open} onClose={close}
+      onSubmit={async event => {
+        event.preventDefault();
+        const newName = nameInput.current?.value ?? '';
+        if (newName.length === 0) return onError({ title: 'Error', body: "File name can't be empty" });
+        const target = path.join(state.path, newName);
+        const exists = await auth.rest('fs.exists', [target]);
+        if (Rest.isError(exists)) return onError({ title: exists.error?.name, body: exists.error?.message });
+        if (exists) return onError({ title: 'Error', body: `File [${target}] already exists. ` });
+        const result = await auth.rest('fs.writeFile', [target, contentInput.current?.value ?? '']);
+        if (Rest.isError(result)) return onError({ title: result.error?.name, body: result.error?.message });
+        close();
+        await delay(150);
+        showMessage({ icon: 'checked', title: 'Created', body: target, actions: [{ label: 'close' }] });
+      }}>
       <DialogTitle>
         New File
       </DialogTitle>
@@ -27,19 +41,7 @@ export function NewFileDialog({ state, close }: { state: NewFileDialog.State, cl
         <TextField autoFocus inputRef={contentInput} textarea outlined fullwidth rows={8} label='content' style={{ width: 480 }} />
       </DialogContent>
       <DialogActions>
-        <Button label='new' onClick={async () => {
-          const newName = nameInput.current?.value ?? '';
-          if (newName.length === 0) return onError({ title: 'Error', body: "File name can't be empty" });
-          const target = path.join(state.path, newName);
-          const exists = await auth.rest('fs.exists', [target]);
-          if (Rest.isError(exists)) return onError({ title: exists.error?.name, body: exists.error?.message });
-          if (exists) return onError({ title: 'Error', body: `File [${target}] already exists. ` });
-          const result = await auth.rest('fs.writeFile', [target, contentInput.current?.value ?? '']);
-          if (Rest.isError(result)) return onError({ title: result.error?.name, body: result.error?.message });
-          close();
-          await delay(150);
-          showMessage({ icon: 'checked', title: 'Created', body: target, actions: [{ label: 'close' }] });
-        }} />
+        <Button type='submit' label='new' />
         <Button label='close' onClick={close} />
       </DialogActions>
     </Dialog>
@@ -60,7 +62,21 @@ export function NewDirectoryDialog({ state, close }: { state: NewFileDialog.Stat
   const onError = (message: SnackbarQueueMessage) =>
     showMessage({ icon: 'error', actions: [{ label: 'close' }], ...message, });
   return (
-    <Dialog open={state.open} onClose={close}>
+    <Dialog tag='form' open={state.open} onClose={close}
+      onSubmit={async event => {
+        event.preventDefault();
+        const newName = nameInput.current?.value ?? '';
+        if (newName.length === 0) return onError({ title: 'Error', body: "File name can't be empty" });
+        const target = path.join(state.path, newName);
+        const exists = await auth.rest('fs.exists', [target]);
+        if (Rest.isError(exists)) return onError({ title: exists.error?.name, body: exists.error?.message });
+        if (exists) return onError({ title: 'Error', body: `File [${target}] already exists. ` });
+        const result = await auth.rest('fs.mkdir', [target]);
+        if (Rest.isError(result)) return onError({ title: result.error?.name, body: result.error?.message });
+        close();
+        await delay(150);
+        showMessage({ icon: 'checked', title: 'Created', body: target, actions: [{ label: 'close' }] });
+      }}>
       <DialogTitle>
         New Directory
       </DialogTitle>
@@ -68,19 +84,7 @@ export function NewDirectoryDialog({ state, close }: { state: NewFileDialog.Stat
         <TextField autoFocus required inputRef={nameInput} label='name' />
       </DialogContent>
       <DialogActions>
-        <Button label='new' onClick={async () => {
-          const newName = nameInput.current?.value ?? '';
-          if (newName.length === 0) return onError({ title: 'Error', body: "File name can't be empty" });
-          const target = path.join(state.path, newName);
-          const exists = await auth.rest('fs.exists', [target]);
-          if (Rest.isError(exists)) return onError({ title: exists.error?.name, body: exists.error?.message });
-          if (exists) return onError({ title: 'Error', body: `File [${target}] already exists. ` });
-          const result = await auth.rest('fs.mkdir', [target]);
-          if (Rest.isError(result)) return onError({ title: result.error?.name, body: result.error?.message });
-          close();
-          await delay(150);
-          showMessage({ icon: 'checked', title: 'Created', body: target, actions: [{ label: 'close' }] });
-        }} />
+        <Button type='submit' label='new' />
         <Button label='close' onClick={close} />
       </DialogActions>
     </Dialog>

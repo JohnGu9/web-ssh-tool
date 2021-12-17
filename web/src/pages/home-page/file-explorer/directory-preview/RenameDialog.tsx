@@ -1,7 +1,7 @@
 import path from "path";
 import React from "react";
-import { SnackbarQueueMessage, TextField } from "rmwc";
-import { Dialog, DialogActions, DialogButton } from "@rmwc/dialog";
+import { Button, SnackbarQueueMessage, TextField } from "rmwc";
+import { Dialog, DialogActions } from "@rmwc/dialog";
 
 import { Server, ThemeContext } from "../../../../common/Providers";
 import Scaffold from "../../Scaffold";
@@ -19,7 +19,22 @@ function RenameDialog({ state, close }: { state: RenameDialog.State, close: () =
   const onError = (message: SnackbarQueueMessage) =>
     showMessage({ ...message, icon: 'error', actions: [{ label: 'close' }] });
   return (
-    <Dialog open={state.open} onClose={close}>
+    <Dialog tag='form' open={state.open} onClose={close}
+      onSubmit={async event => {
+        event.preventDefault();
+        const dirname = path.dirname(state.path);
+        const newName = input.current?.value ?? '';
+        if (newName.length === 0) return onError({ title: 'Error', body: "File name can't be empty" });
+        const target = path.join(dirname, newName);
+        const exists = await auth.rest('fs.exists', [target]);
+        if (Rest.isError(exists)) return onError({ title: exists.error?.name, body: exists.error?.message });
+        if (exists) return onError({ title: 'Error', body: `File [${target}] already exists. ` });
+        const result = await auth.rest('fs.rename', [state.path, target]);
+        if (Rest.isError(result)) return onError({ title: result.error?.name, body: result.error?.message });
+        close();
+        await delay(150);
+        showMessage({ icon: 'checked', title: 'Renamed', actions: [{ label: 'close' }] });
+      }}>
       <DialogTitle>Rename</DialogTitle>
       <DialogContent>
         <TextField autoFocus required inputRef={input} defaultValue={basename} style={{ width: 360 }} />
@@ -40,24 +55,8 @@ function RenameDialog({ state, close }: { state: RenameDialog.State, close: () =
             showMessage({ icon: 'checked', title: 'Overwritten', actions: [{ label: 'close' }] });
           }} />
         <div className='expanded' />
-        <DialogButton
-          icon='drive_file_rename_outline'
-          onClick={async () => {
-            const dirname = path.dirname(state.path);
-            const newName = input.current?.value ?? '';
-            if (newName.length === 0) return onError({ title: 'Error', body: "File name can't be empty" });
-            const target = path.join(dirname, newName);
-            const exists = await auth.rest('fs.exists', [target]);
-            if (Rest.isError(exists)) return onError({ title: exists.error?.name, body: exists.error?.message });
-            if (exists) return onError({ title: 'Error', body: `File [${target}] already exists. ` });
-            const result = await auth.rest('fs.rename', [state.path, target]);
-            if (Rest.isError(result)) return onError({ title: result.error?.name, body: result.error?.message });
-            close();
-            await delay(150);
-            showMessage({ icon: 'checked', title: 'Renamed', actions: [{ label: 'close' }] });
-          }}>rename</DialogButton>
-
-        <DialogButton onClick={close}>close</DialogButton>
+        <Button type='submit' icon='drive_file_rename_outline' label='rename' />
+        <Button onClick={close} label='close' />
       </DialogActions>
     </Dialog>
   );

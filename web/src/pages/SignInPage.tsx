@@ -78,7 +78,11 @@ class Content extends React.Component<Content.Props, Content.State> {
               <div style={{ flex: 3 }} >
                 <Title />
               </div>
-              <Card tag='form' style={{ width: '360px', minWidth: 0, padding: '24px', paddingTop: '8px' }}>
+              <Card tag='form' style={{ width: '360px', minWidth: 0, padding: '24px', paddingTop: '8px' }}
+                onSubmit={event => {
+                  event.preventDefault();
+                  this._submit();
+                }}>
                 <Typography tag='h1' use='headline6'>{locale.signIn}</Typography>
                 <div style={{ height: '16px' }} />
                 <TextField outlined type='text' id='username' name='username'
@@ -95,11 +99,7 @@ class Content extends React.Component<Content.Props, Content.State> {
                   onChange={() => settings.setKeepSignIn(!settings.keepSignIn)} />
                 <div style={{ height: '16px' }} />
                 <Button raised type='submit' autoFocus
-                  label={locale.next} disabled={loading}
-                  onClick={async event => {
-                    event.preventDefault();
-                    await this._submit();
-                  }} />
+                  label={locale.next} disabled={loading} />
                 <div style={{ height: '8px' }} />
               </Card>
               <div style={{ flex: 1 }} />

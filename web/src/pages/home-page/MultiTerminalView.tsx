@@ -7,7 +7,7 @@ import { Theme } from "@rmwc/theme";
 import { Card } from "@rmwc/card";
 import { Button } from "@rmwc/button";
 import { ListDivider, SimpleListItem } from "@rmwc/list";
-import { Dialog, DialogActions, DialogButton, LinearProgress, Typography } from "rmwc";
+import { Dialog, DialogActions, LinearProgress, Typography } from "rmwc";
 
 import { Server, Settings, ThemeContext } from "../../common/Providers";
 import { Rest } from '../../common/Type';
@@ -298,7 +298,7 @@ function AboutButton() {
           </div>
         </DialogContent>
         <DialogActions>
-          <DialogButton onClick={close}>close</DialogButton>
+          <Button onClick={close} label='close' />
         </DialogActions>
       </Dialog>
     </>

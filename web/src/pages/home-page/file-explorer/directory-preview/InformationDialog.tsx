@@ -1,7 +1,7 @@
-import { Dialog, DialogActions, DialogButton } from "@rmwc/dialog";
+import { Dialog, DialogActions } from "@rmwc/dialog";
 import { Stats } from "fs";
 import React from "react";
-import { IconButton, Tooltip, Typography } from "rmwc";
+import { Button, IconButton, Tooltip, Typography } from "rmwc";
 
 import { Server, ThemeContext } from "../../../../common/Providers";
 import { delay } from "../../../../common/Tools";
@@ -24,7 +24,7 @@ function InformationDialog({ state: dialog, close, move, rename }: {
   return (
     <Dialog open={dialog.open} onClose={close}>
       <DialogTitle>Information</DialogTitle>
-      <DialogContent style={{ overflow: 'auto' }}>
+      <DialogContent style={{ overflow: 'auto', maxHeight: 360 }}>
         <div style={{ margin: '0 0 16px' }}><Typography use='button'>path</Typography>: {dialog.path}</div>
         {Object.entries(dialog.stats)
           .map(([key, value]) => {
@@ -81,7 +81,7 @@ function InformationDialog({ state: dialog, close, move, rename }: {
               );
           }
         })()}
-        <DialogButton onClick={close}>close</DialogButton>
+        <Button onClick={close} label='close' />
       </DialogActions>
     </Dialog>
   );

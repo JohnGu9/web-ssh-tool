@@ -6,14 +6,21 @@ import { DialogContent, DialogTitle } from "../../../../components/Dialog";
 import Scaffold from "../../Scaffold";
 import FileExplorer from "../Common";
 
-function GoToDialog({ state: { open, path }, close }: { state: GoToDialog.State, close: () => unknown}) {
+function GoToDialog({ state: { open, path }, close }: { state: GoToDialog.State, close: () => unknown }) {
   const input = React.useRef<HTMLInputElement>(null);
   const { cd } = React.useContext(FileExplorer.Context);
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
   const onError = (message: SnackbarQueueMessage) =>
     showMessage({ icon: 'error', actions: [{ label: 'close' }], ...message, });
   return (
-    <Dialog key={path} open={open} onClose={close}>
+    <Dialog tag='form' key={path} open={open} onClose={close}
+      onSubmit={event => {
+        event.preventDefault();
+        const newPath = input.current?.value ?? '';
+        if (newPath.length === 0) return onError({ title: 'Error', body: "File name can't be empty" });
+        close();
+        cd(newPath);
+      }}>
       <DialogTitle>
         Go To
       </DialogTitle>
@@ -23,12 +30,7 @@ function GoToDialog({ state: { open, path }, close }: { state: GoToDialog.State,
           style={{ width: 480 }} />
       </DialogContent>
       <DialogActions>
-        <Button label='go' onClick={() => {
-          const newPath = input.current?.value ?? '';
-          if (newPath.length === 0) return onError({ title: 'Error', body: "File name can't be empty" });
-          close();
-          cd(newPath);
-        }} />
+        <Button type='submit' label='go' />
         <Button label='close' onClick={close} />
       </DialogActions>
     </Dialog>
