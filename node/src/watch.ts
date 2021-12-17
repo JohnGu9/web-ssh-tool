@@ -2,7 +2,7 @@ import path from 'path';
 import os from 'os';
 import ws, { WebSocket } from 'ws';
 import fs, { Stats } from 'fs';
-import { Context, exists, getFileType, wsSafeClose } from './common';
+import { Context, getFileType, wsSafeClose } from './common';
 import { FileType, Watch } from 'web/common/Type';
 
 function watch(context: Context) {

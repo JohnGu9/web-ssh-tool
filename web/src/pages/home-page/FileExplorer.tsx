@@ -193,8 +193,7 @@ class FileExplorer extends React.Component<FileExplorer.Props, FileExplorer.Stat
                 transition: 'height 300ms, opacity 210ms',
               }}
             onClick={() => {
-              for (const value of Array.from(this._controllers)) value.cancel();
-              this._controllers.splice(0, this._controllers.length);
+              for (const item of Array.from(this._controllers)) item.cancel();
               this.forceUpdate();
             }} />
           <div style={{ height: 16 }} />

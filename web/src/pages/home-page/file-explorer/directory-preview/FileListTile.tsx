@@ -2,7 +2,7 @@ import { Stats } from "fs";
 import path from "path";
 import React from "react";
 import { IconButton, SimpleListItem } from "rmwc";
-import { FileType } from "../../../common/Type";
+import { FileType } from "../../../../common/Type";
 
 function FileIcon(name: string, { type }: { type?: FileType, }) {
   switch (type) {

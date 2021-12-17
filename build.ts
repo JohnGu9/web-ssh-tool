@@ -1,18 +1,26 @@
 import path from 'path';
 import { promises as fs } from 'fs';
-import { exec as execCallback } from 'child_process';
-import util from 'util';
+import { spawn } from 'child_process';
 import licenseChecker, { ModuleInfos } from 'license-checker';
 
 export { };
 
-const exec = util.promisify(execCallback);
 
 function any<T>(array: Array<T>, test: (value: T) => boolean) {
   for (const value of array) {
     if (test(value)) return true;
   }
   return false;
+}
+
+function run(command: string) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, { shell: true });
+    child.stdout.on('data', (data) => console.log(data.toString()));
+    child.stderr.on('data', (data) => console.warn(data.toString()));
+    child.on('error', reject);
+    child.on('exit', resolve);
+  });
 }
 
 function checker() {
@@ -44,9 +52,7 @@ async function main() {
     buildProjectJson["dependencies"] = nodeProjectJson["dependencies"];
     buildProjectJson["optionalDependencies"] = nodeProjectJson["optionalDependencies"];
     await fs.writeFile(buildProjectFilePath, JSON.stringify(buildProjectJson, null, 2));
-    const { stdout, stderr } = await exec('npm i');
-    console.log(stdout);
-    console.warn(stderr);
+    await run('npm i');
   }
 
   // bundle licenses to frontend
@@ -78,7 +84,7 @@ async function main() {
   // pkg
   console.log('bundle project to executables...')
   await fs.copyFile(path.resolve(__dirname, 'node', 'index.js'), 'index.js');
-  await exec('npx pkg --compress Brotli package.json');
+  await run('npx pkg --compress Brotli package.json');
 
   // clean up
   console.log('clean up useless files');

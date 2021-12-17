@@ -11,7 +11,7 @@ import InformationDialog from "./directory-preview/InformationDialog";
 import MoveDialog from "./directory-preview/MoveDialog";
 import { NewDirectoryDialog, NewFileDialog } from "./directory-preview/NewDialog";
 import RenameDialog from "./directory-preview/RenameDialog";
-import FileListTile from "./FileListTile";
+import FileListTile from "./directory-preview/FileListTile";
 
 function DirectoryPreView({ state }: { state: Watch.Directory }) {
   const { cd, config, setConfig } = React.useContext(FileExplorer.Context);

@@ -32,7 +32,8 @@ async function download(urlPath: string, app: express.Express, context: Context)
             zip.pipe(res);
             zip.directory(filePath, false);
             zip.finalize();
-            return res.on('end', () => zip.destroy());
+            res.on('end', () => zip.destroy())
+            return;
           }
         }
       } catch (error) {
