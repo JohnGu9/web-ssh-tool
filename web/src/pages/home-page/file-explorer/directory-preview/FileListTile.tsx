@@ -1,8 +1,10 @@
 import { Stats } from "fs";
 import path from "path";
 import React from "react";
-import { IconButton, SimpleListItem } from "rmwc";
+import { Checkbox, Icon, IconButton, SimpleListItem } from "rmwc";
 import { FileType } from "../../../../common/Type";
+import { SharedAxisTransition } from "../../../../components/Transitions";
+import DropZone from "./DropZone";
 
 function FileIcon(name: string, { type }: { type?: FileType, }) {
   switch (type) {
@@ -53,16 +55,21 @@ function FileIcon(name: string, { type }: { type?: FileType, }) {
   }
 }
 
-function FileListTile({ dirname, name, stats, onClick, onDetail }: {
+function FileListTile({ dirname, name, stats, selected, onSelect, onSelected, onClick, onDetail }: {
   dirname: string,
   name: string,
   stats: Stats & { type?: FileType },
+  selected: boolean,
+  onSelect: boolean,
+  onSelected: (selected: boolean) => unknown,
   onClick?: () => unknown,
   onDetail: (stats: Stats & { type?: FileType }, path: string) => unknown,
 }) {
+  const { setDisabled } = React.useContext(DropZone.Context);
   const targetPath = path.join(dirname, name);
   const [hover, setHover] = React.useState(false);
   const disabled = (() => {
+    if (onSelect) return false;
     switch (stats.type) {
       case FileType.file:
         if (stats.size < 1 * 1024 * 1024) return false; // limit to 1MB for preview
@@ -74,8 +81,20 @@ function FileListTile({ dirname, name, stats, onClick, onDetail }: {
   })();
   return <SimpleListItem
     draggable
-    onDragStart={event => event.dataTransfer.setData('text', targetPath)}
-    graphic={FileIcon(name, stats)}
+    onDragStart={event => {
+      setDisabled(true);
+      event.dataTransfer.setData('text', targetPath);
+      event.dataTransfer.dropEffect = 'copy';
+    }}
+    onDragEnd={event => setDisabled(false)}
+    graphic={<SharedAxisTransition
+      type={SharedAxisTransition.Type.fromLeftToRight} id={onSelect}
+      className='column'
+      style={{ justifyContent: 'center', alignItems: 'center' }}>
+      {onSelect
+        ? <Checkbox readOnly checked={selected} style={{ height: 24 }}></Checkbox>
+        : <Icon icon={FileIcon(name, stats)}></Icon>}
+    </SharedAxisTransition>}
     text={name}
     meta={<IconButton
       icon='more_horiz'
@@ -84,7 +103,15 @@ function FileListTile({ dirname, name, stats, onClick, onDetail }: {
         event.stopPropagation();
         onDetail(stats, targetPath);
       }} />}
-    onClick={disabled ? undefined : onClick}
+    onClick={disabled
+      ? undefined
+      : (onSelect
+        ? () => {
+          const value = !selected;
+          onSelected(value);
+        }
+        : onClick)}
+    activated={selected && onSelect}
     disabled={disabled}
     style={{ opacity: disabled ? 0.5 : 1 }}
     onMouseEnter={() => setHover(true)}

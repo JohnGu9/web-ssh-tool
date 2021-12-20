@@ -173,7 +173,7 @@ class Auth implements Server.Authentication.Type {
   async upload(data: File | FormData, init?: RequestInit): Promise<Express.Multer.File> {
     const token = await this.rest('token', []);
     if (Rest.isError(token)) throw token.error;
-    const formData: FormData = (() => {
+    const formData = (() => {
       if (data instanceof File) {
         const formData = new FormData();
         formData.append('file', data);
@@ -188,12 +188,20 @@ class Auth implements Server.Authentication.Type {
     return response.json();
   }
 
-  async download(filePath: string): Promise<void> {
-    const token = await this.rest('token', []);
-    if (Rest.isError(token)) throw token.error;
+  async download(filePath: string | string[]): Promise<void> {
     const element = document.createElement('a');
-    element.setAttribute('href', `https://${this._host}/download?t=${token}&p=${encodeURIComponent(filePath)}`);
-    element.setAttribute('download', path.basename(filePath));
+    if (typeof filePath === 'string') {
+      const token = await this.rest('token', []);
+      if (Rest.isError(token)) throw token.error;
+      element.setAttribute('href', `https://${this._host}/download?t=${token}&p=${encodeURIComponent(filePath)}`);
+      element.setAttribute('download', path.basename(filePath));
+    } else {
+      if (filePath.length === 0) return;
+      const token = await this.rest('token', []);
+      if (Rest.isError(token)) throw token.error;
+      element.setAttribute('href', `https://${this._host}/download?t=${token}${filePath.map(value => `&p=${encodeURIComponent(value)}`).join('')}`);
+      element.setAttribute('download', 'bundle.zip');
+    }
     element.style.display = 'none';
     element.click();
   }

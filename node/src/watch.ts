@@ -15,12 +15,13 @@ function watch(context: Context) {
         let watcher: { watcher: fs.FSWatcher, path: string } | undefined;
         socket.once('close', () => watcher?.watcher.close());
         const buildState = async (p: string): Promise<Watch.File | Watch.Directory> => {
-          const lstat = await fs.promises.lstat(p);
+          const lstat = await fs.promises.lstat(await fs.promises.realpath(p));
           const type = getFileType(lstat);
           if (lstat.isFile()) {
             return {
               path: p, lstat: { ...lstat, type },
-              content: await fs.promises.readFile(p).then(buffer => buffer.toString('base64'))
+              content: await fs.promises.readFile(p)
+                .then(buffer => buffer.toString('base64')),
             };
           } else if (lstat.isDirectory()) {
             const files: { [key: string]: Stats & { type?: FileType } } = {}

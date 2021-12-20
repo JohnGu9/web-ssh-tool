@@ -30,12 +30,14 @@ async function upload(urlPath: string, app: express.Express, context: Context) {
     }
   })();
   const config = multer({ dest });
-  app.post(urlPath,
+  return app.post(urlPath,
     function (req, res, next) {
       const token = req.query['t'];
-      if (typeof token !== 'string' || !context.token.verify(token))
+      if (typeof token !== 'string' || !context.token.verify(token)) {
+        context.logger.error(`upload request token verify failed from [${req.socket.remoteAddress}]`);
         return res.status(400).send('Bad request');
-      next();
+      }
+      return next();
     },
     config.single('file'),
     async (req, res) => {

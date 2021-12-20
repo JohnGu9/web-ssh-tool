@@ -1,9 +1,9 @@
 import { Stats } from "fs";
 import path from "path";
 import React from "react";
-import { IconButton, MenuItem, MenuSurface, MenuSurfaceAnchor, Tooltip } from "rmwc";
+import { Button, IconButton, MenuItem, MenuSurface, MenuSurfaceAnchor, Tooltip } from "rmwc";
 import { Server, ThemeContext } from "../../../common/Providers";
-import { Rest, Watch } from "../../../common/Type";
+import { FileType, Rest, Watch } from "../../../common/Type";
 import { SharedAxisTransition } from "../../../components/Transitions";
 import FileExplorer from "./Common";
 import GoToDialog from "./directory-preview/GoToDialog";
@@ -12,39 +12,70 @@ import MoveDialog from "./directory-preview/MoveDialog";
 import { NewDirectoryDialog, NewFileDialog } from "./directory-preview/NewDialog";
 import RenameDialog from "./directory-preview/RenameDialog";
 import FileListTile from "./directory-preview/FileListTile";
+import LongPressButton from "../../../components/LongPressButton";
+import DropZone from "./directory-preview/DropZone";
+import Scaffold from "../Scaffold";
 
-function DirectoryPreView({ state }: { state: Watch.Directory }) {
-  const { cd, config, setConfig } = React.useContext(FileExplorer.Context);
+function DirectoryPreView({ state: { path: dir, files } }: { state: Watch.Directory }) {
+  const auth = React.useContext(Server.Authentication.Context);
+  const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
+  const { cd, config } = React.useContext(FileExplorer.Context);
   const { themeData: theme } = React.useContext(ThemeContext);
-
+  const [onSelect, setOnSelect] = React.useState(false);
+  const [selected, setSelected] = React.useState(new Set<string>());
   const [information, setInformation] = React.useState<InformationDialog.State>({ open: false, path: '', stats: {} as Stats });
-  const closeInformation = () => setInformation({ ...information, open: false });
-
-  const [rename, setRename] = React.useState<RenameDialog.State>({ open: false, path: '' });
-  const closeRename = () => setRename({ ...rename, open: false });
-
-  const [move, setMove] = React.useState<MoveDialog.State>({ open: false, path: '' });
-  const closeMove = () => setMove({ ...move, open: false });
-
-  const { path: dir, files } = state;
-  const back = () => {
-    const dirname = path.dirname(state.path);
-    if (dirname !== state.path) cd(path.dirname(state.path))
-  };
   const fileList = Object.entries(files).filter(config.showAll
     ? () => true
     : ([key]) => !key.startsWith('.'));
+  const disabled = path.dirname(dir) === dir;
   return (
     <div className='full-size column' >
-      <div className='row' style={{ height: 56, padding: '0 8px 0 0' }}>
-        <IconButton style={{ color: theme.primary }} icon='arrow_back' onClick={back} />
-        <div className='expanded' />
-        <NewButton dest={dir} />
-        <UploadButton dest={dir} />
-        <SortButton config={config} setConfig={setConfig} />
-        <ShowAndHideButton config={config} setConfig={setConfig} />
-      </div>
-      <DropZone style={{ flex: 1, width: '100%', overflowY: 'auto' }} dirname={dir}>
+      <SharedAxisTransition className='row' style={{ height: 56, padding: '0 8px 0 0' }}
+        type={SharedAxisTransition.Type.fromTopToBottom} id={onSelect}>
+        {onSelect
+          ? <>
+            <div style={{ width: 8 }} />
+            <Button icon='download' label='download'
+              onClick={() => auth.download(Array.from(selected).map(value => path.join(dir, value)))} />
+            <LongPressButton icon='delete' label='delete'
+              style={{ color: theme.error }}
+              onLongPress={async () => {
+                const onError = (error: any) => showMessage({ icon: 'error', title: 'Delete failed', body: error?.message ?? error?.name ?? 'Unknown issue', actions: [{ label: 'close' }] });
+                const onDeleted = () => showMessage({ icon: 'checked', title: 'Deleted', actions: [{ label: 'close' }] });
+                const value = await Promise.all(Array.from(selected).map(async value => {
+                  const { type } = files[value];
+                  switch (type) {
+                    case FileType.file: {
+                      const result = await auth.rest('fs.unlink', [path.join(dir, value)]);
+                      if (Rest.isError(result)) return onError(result.error);
+                      return;
+                    }
+                    case FileType.directory: {
+                      const result = await auth.rest('fs.rm', [path.join(dir, value), { recursive: true }]);
+                      if (Rest.isError(result)) return onError(result.error);
+                      return;
+                    }
+                  }
+                }));
+                if (value.length === 0) return;
+                onDeleted();
+              }} />
+            <div className='expanded' />
+            <IconButton icon='close' onClick={event => setOnSelect(false)} />
+          </>
+          : <>
+            <IconButton style={{ color: disabled ? undefined : theme.primary }} icon='arrow_back'
+              disabled={disabled}
+              onClick={() => cd(path.dirname(dir))} />
+            <div className='expanded' />
+            <NewButton dest={dir} />
+            <UploadButton dest={dir} />
+            <SortButton />
+            <ShowAndHideButton />
+            <CheckListButton setOnSelect={setOnSelect} />
+          </>}
+      </SharedAxisTransition>
+      <DropZone style={{ flex: 1, width: '100%', minHeight: 0, overflowY: 'auto' }} dirname={dir}>
         {fileList.length === 0
           ? <div className='column' style={{ width: '100%', justifyContent: 'center', alignItems: 'center' }}>
             Nothing here...
@@ -55,6 +86,17 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
                 return <FileListTile
                   key={key}
                   dirname={dir}
+                  selected={selected.has(key)}
+                  onSelect={onSelect}
+                  onSelected={value => {
+                    if (value) {
+                      selected.add(key);
+                      setSelected(new Set(selected));
+                    } else {
+                      selected.delete(key);
+                      setSelected(new Set(selected));
+                    }
+                  }}
                   name={key}
                   stats={value}
                   onClick={() => cd(path.join(dir, key))}
@@ -65,73 +107,12 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
       </DropZone>
       <div style={{ height: 16 }} />
       <Navigator dir={dir} />
-      <InformationDialog
-        key={information.path}
-        state={information}
-        close={closeInformation}
-        move={path => setMove({ open: true, path })}
-        rename={path => setRename({ open: true, path })} />
-      <RenameDialog
-        key={`rename: ${rename.path}`}
-        state={rename} close={closeRename} />
-      <MoveDialog
-        key={`move: ${move.path}`}
-        state={move} close={closeMove} />
+      <Dialogs information={information} setInformation={setInformation} />
     </div>
   );
 }
 
 export default DirectoryPreView;
-
-function DropZone({ children, style, dirname }: { children: React.ReactNode, dirname: string, style?: React.CSSProperties }) {
-  const { upload } = React.useContext(FileExplorer.Context);
-  const [drag, setDrag] = React.useState(false);
-  const auth = React.useContext(Server.Authentication.Context);
-  return <div style={{ ...style, opacity: drag ? 0.5 : 1, transition: 'opacity 300ms' }}
-    onDragEnter={() => setDrag(true)}
-    onDragLeave={() => setDrag(false)}
-    onDragOver={event => event.preventDefault()}
-    onDrop={event => {
-      event.preventDefault();
-      setDrag(false);
-      const { items, files } = event.dataTransfer;
-      if (items && items.length > 0 && 'webkitGetAsEntry' in items[0]) {
-        try {
-          for (let i = 0; i < items.length; i++) {
-            const entry = items[i].webkitGetAsEntry();
-            if (entry) uploadItem(dirname, entry, upload, auth);
-          }
-          return;
-        } catch (error) {
-          // browser not support webkit
-        }
-      }
-      for (const file of Array.from(files))
-        upload(file, dirname);
-    }}
-  >{children}</div>;
-}
-
-async function uploadItem(dest: string, entry: FileSystemEntry, upload: (file: File, dest: string) => void, auth: Server.Authentication.Type): Promise<unknown> {
-  if (entry.isFile) {
-    const file = await new Promise<File>(resolve => (entry as unknown as any).file(resolve));
-    return upload(file, dest);
-  } else if (entry.isDirectory) {
-    const newDest = path.join(dest, entry.name);
-    const dirReader = (entry as unknown as any).createReader();
-    const [result, entries] = await Promise.all([
-      auth.rest('fs.mkdir', [newDest]),
-      new Promise<FileSystemEntry[]>(resolve => dirReader.readEntries(resolve)),
-    ]);
-    if (Rest.isError(result)) return;
-    const list = [];
-    for (let i = 0; i < entries.length; i++) {
-      const entry = entries[i];
-      list.push(uploadItem(newDest, entry, upload, auth));
-    }
-    return Promise.all(list);
-  }
-}
 
 function Navigator({ dir }: { dir: string }) {
   const [dialog, setDialog] = React.useState<GoToDialog.State>({ open: false, path: dir });
@@ -147,10 +128,8 @@ function Navigator({ dir }: { dir: string }) {
   );
 }
 
-function ShowAndHideButton({ config, setConfig }: {
-  config: FileExplorer.Config,
-  setConfig: (config: FileExplorer.Config) => unknown,
-}) {
+function ShowAndHideButton() {
+  const { config, setConfig } = React.useContext(FileExplorer.Context);
   return (
     <SharedAxisTransition
       id={config.showAll}
@@ -162,10 +141,8 @@ function ShowAndHideButton({ config, setConfig }: {
   );
 }
 
-function SortButton({ config, setConfig }: {
-  config: FileExplorer.Config,
-  setConfig: (config: FileExplorer.Config) => unknown,
-}) {
+function SortButton() {
+  const { config, setConfig } = React.useContext(FileExplorer.Context);
   return (
     <Tooltip content={`sort: ${config.sort}`}>
       <IconButton icon='sort'
@@ -232,6 +209,46 @@ function NewButton({ dest }: { dest: string }) {
       </MenuSurfaceAnchor>
       <NewFileDialog state={file} close={closeFile} />
       <NewDirectoryDialog state={directory} close={closeDirectory} />
+    </>
+  );
+}
+
+function CheckListButton({ setOnSelect }: { setOnSelect: (value: boolean) => unknown }) {
+  return (
+    <Tooltip content='select'>
+      <IconButton
+        icon='checklist'
+        onClick={event => setOnSelect(true)} />
+    </Tooltip>
+  );
+}
+
+
+function Dialogs({ children, information, setInformation }: {
+  children?: React.ReactNode,
+  information: InformationDialog.State,
+  setInformation: (state: InformationDialog.State) => unknown,
+}) {
+  const closeInformation = () => setInformation({ ...information, open: false });
+  const [rename, setRename] = React.useState<RenameDialog.State>({ open: false, path: '' });
+  const closeRename = () => setRename({ ...rename, open: false });
+  const [move, setMove] = React.useState<MoveDialog.State>({ open: false, path: '' });
+  const closeMove = () => setMove({ ...move, open: false });
+  return (
+    <>
+      {children}
+      <InformationDialog
+        key={information.path}
+        state={information}
+        close={closeInformation}
+        move={path => setMove({ open: true, path })}
+        rename={path => setRename({ open: true, path })} />
+      <RenameDialog
+        key={`rename: ${rename.path}`}
+        state={rename} close={closeRename} />
+      <MoveDialog
+        key={`move: ${move.path}`}
+        state={move} close={closeMove} />
     </>
   );
 }
