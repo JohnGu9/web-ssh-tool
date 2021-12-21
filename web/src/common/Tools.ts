@@ -18,10 +18,14 @@ export function sliceOutput(output: ProcessPipeLine) {
 
 export { default as delay } from './Delay';
 
-// typescript 4.5 offer built-in Awaited to unwrap PromiseLike type
-// ready to remove when project upgrade to typescript 4.5
-export type Await<T> = T extends PromiseLike<infer U> ? U : T;
-export type AwaitProps<T> = { [P in keyof T]: Await<T[P]> }
+export function any<T>(array: Array<T>, test: (value: T) => boolean) {
+  for (const value of array) {
+    if (test(value)) return true;
+  }
+  return false;
+}
+
+export type AwaitProps<T> = { [P in keyof T]: Awaited<T[P]> }
 
 export async function concurrent<T extends object>(obj: T): Promise<AwaitProps<T>> {
   const result: { [key: string]: unknown } = {};

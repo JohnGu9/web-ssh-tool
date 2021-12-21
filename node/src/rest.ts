@@ -63,6 +63,8 @@ async function rest(context: Context) {
                       return fs.mkdir(...value as Parameters<typeof fs.mkdir>);
                     case 'fs.writeFile':
                       return fs.writeFile(...value as Parameters<typeof fs.writeFile>);
+                    case 'fs.cp':
+                      return fs.cp(...value as Parameters<typeof fs.cp>);
                     case 'shell':
                       if (typeof value === 'object' && value !== null && 'id' in value) {
                         if ('data' in value) {

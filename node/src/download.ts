@@ -17,11 +17,10 @@ async function download(urlPath: string, app: express.Express, context: Context)
       return next();
     },
     async (req, res) => {
-      const component = req.query['p'];
-      context.logger.log(`download request [${component}] from [${req.socket.remoteAddress}]`);
+      const target = req.query['p'];
+      context.logger.log(`download request [${target}] from [${req.socket.remoteAddress}]`);
       res.on('error', error => context.logger.error(`download response cause error [${error}]`))
-      if (typeof component === 'string') {
-        const target = decodeURIComponent(component);
+      if (typeof target === 'string') {
         try {
           const lstat = await fs.lstat(target);
           const type = getFileType(lstat);
@@ -47,11 +46,11 @@ async function download(urlPath: string, app: express.Express, context: Context)
         } catch (error) {
           context.logger.error(`download cause error [${error}]`);
         }
-      } else if (component instanceof Array) {
+      } else if (target instanceof Array) {
         res.attachment(`bundle.zip`);
         const zip = archiver('zip');
         zip.pipe(res);
-        for (const item of component as string[]) {
+        for (const item of target as string[]) {
           const target = decodeURIComponent(item);
           try {
             const lstat = await fs.lstat(target);

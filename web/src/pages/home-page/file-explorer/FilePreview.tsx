@@ -3,7 +3,7 @@ import path from "path";
 import { IconButton, Tooltip } from "rmwc";
 import { Server, ThemeContext } from "../../../common/Providers";
 import { Watch } from "../../../common/Type";
-import FileExplorer from "./Common";
+import FileExplorer, { NavigatorBar } from "./Common";
 
 function FilePreview({ state }: { state: Watch.File }) {
   const { cd } = React.useContext(FileExplorer.Context);
@@ -28,9 +28,7 @@ function FilePreview({ state }: { state: Watch.File }) {
       </div>
       <PreviewWindow name={filePath} content={content} />
       <div style={{ height: 16 }} />
-      <Tooltip content={filePath}>
-        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'pre', width: '100%' }}>{filePath}</div>
-      </Tooltip>
+      <NavigatorBar path={filePath} />
     </div>
   );
 }

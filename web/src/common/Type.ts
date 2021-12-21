@@ -23,6 +23,7 @@ export namespace Rest {
     'fs.exists': { parameter: Parameters<typeof fs.access>, return: boolean },
     'fs.mkdir': { parameter: Parameters<typeof fs.mkdir>, return: Awaited<ReturnType<typeof fs.mkdir>> },
     'fs.writeFile': { parameter: Parameters<typeof fs.writeFile>, return: Awaited<ReturnType<typeof fs.writeFile>> },
+    'fs.cp': { parameter: Parameters<typeof fs.cp>, return: Awaited<ReturnType<typeof fs.cp>> },
     'shell': {
       parameter:
       { id: string, data: string } | // request close

@@ -42,3 +42,6 @@ namespace FileExplorer {
 }
 
 export default FileExplorer;
+
+export * from "./common/NavigatorBar";
+export * from "./common/GoToDialog";

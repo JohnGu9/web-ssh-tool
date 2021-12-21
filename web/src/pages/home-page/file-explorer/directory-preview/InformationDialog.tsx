@@ -10,9 +10,8 @@ import { DialogContent, DialogTitle } from "../../../../components/Dialog";
 import LongPressButton from "../../../../components/LongPressButton";
 import Scaffold from "../../Scaffold";
 
-function InformationDialog({ state: dialog, close, move, rename }: {
+function InformationDialog({ state: dialog, close, rename }: {
   close: () => unknown,
-  move: (path: string) => unknown,
   rename: (path: string) => unknown,
   state: InformationDialog.State
 }) {
@@ -60,13 +59,6 @@ function InformationDialog({ state: dialog, close, move, rename }: {
             case FileType.directory:
               return (
                 <>
-                  <Tooltip content='move'>
-                    <IconButton style={{ color: theme.primary }} icon='drag_handle' onClick={async () => {
-                      close();
-                      await delay(150);
-                      move(dialog.path);
-                    }} />
-                  </Tooltip>
                   <Tooltip content='rename'>
                     <IconButton style={{ color: theme.primary }} icon='drive_file_rename_outline' onClick={async () => {
                       close();

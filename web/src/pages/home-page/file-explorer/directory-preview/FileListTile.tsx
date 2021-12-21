@@ -69,9 +69,9 @@ function FileListTile({ dirname, name, stats, selected, onSelect, onSelected, on
   const targetPath = path.join(dirname, name);
   const [hover, setHover] = React.useState(false);
   const disabled = (() => {
-    if (onSelect) return false;
     switch (stats.type) {
       case FileType.file:
+        if (onSelect) return false;
         if (stats.size < 1 * 1024 * 1024) return false; // limit to 1MB for preview
         break;
       case FileType.directory:
@@ -79,8 +79,7 @@ function FileListTile({ dirname, name, stats, selected, onSelect, onSelected, on
     }
     return true;
   })();
-  return <SimpleListItem
-    draggable
+  return <SimpleListItem draggable
     onDragStart={event => {
       setDisabled(true);
       event.dataTransfer.setData('text', targetPath);

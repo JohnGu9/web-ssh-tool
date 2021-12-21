@@ -1,7 +1,7 @@
 import React from "react";
 import { Button } from "rmwc";
 import FileExplorer from "./Common";
-import GoToDialog from "./directory-preview/GoToDialog";
+import GoToDialog from "./common/GoToDialog";
 
 function ErrorPreview({ state: { error } }: { state: { error: any } }) {
   const { cd } = React.useContext(FileExplorer.Context);
