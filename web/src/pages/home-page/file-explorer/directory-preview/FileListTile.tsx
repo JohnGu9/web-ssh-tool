@@ -55,7 +55,7 @@ function FileIcon(name: string, { type }: { type?: FileType, }) {
   }
 }
 
-function FileListTile({ dirname, name, stats, selected, onSelect, onSelected, onClick, onDetail }: {
+function FileListTile({ dirname, name, stats, selected, onSelect, onSelected, onClick, onDetail, style }: {
   dirname: string,
   name: string,
   stats: Stats & { type?: FileType },
@@ -64,6 +64,7 @@ function FileListTile({ dirname, name, stats, selected, onSelect, onSelected, on
   onSelected: (selected: boolean) => unknown,
   onClick?: () => unknown,
   onDetail: (stats: Stats & { type?: FileType }, path: string) => unknown,
+  style?: React.CSSProperties,
 }) {
   const { setDisabled } = React.useContext(DropZone.Context);
   const targetPath = path.join(dirname, name);
@@ -112,7 +113,7 @@ function FileListTile({ dirname, name, stats, selected, onSelect, onSelected, on
         : onClick)}
     activated={selected && onSelect}
     disabled={disabled}
-    style={{ opacity: disabled ? 0.5 : 1 }}
+    style={{ ...style, opacity: disabled ? 0.5 : 1 }}
     onMouseEnter={() => setHover(true)}
     onMouseLeave={() => setHover(false)} />
 }
