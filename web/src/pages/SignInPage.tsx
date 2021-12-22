@@ -1,19 +1,14 @@
 import '../components/Layout.css';
 import React from "react";
 import path from 'path';
-
-import { Card } from "@rmwc/card";
-import { TextField } from '@rmwc/textfield';
-import { Checkbox } from '@rmwc/checkbox';
-import { Typography } from '@rmwc/typography';
-import { LinearProgress } from '@rmwc/linear-progress';
-import { Button } from '@rmwc/button';
-
+import { Card, TextField, Checkbox, Typography, LinearProgress, Button } from 'rmwc';
 import { SharedAxisTransition } from '../components/Transitions';
 import { LocaleContext, LocaleContextType, Server, Settings } from '../common/Providers';
 import { Rest } from '../common/Type';
 import { wsSafeClose } from '../common/DomTools';
 import Scaffold from './home-page/Scaffold';
+
+const { host } = document.location;
 
 function SignInPage({ children }: { children: React.ReactNode }) {
   const settings = React.useContext(Settings.Context);
@@ -135,7 +130,6 @@ function Title() {
 class Auth implements Server.Authentication.Type {
   constructor(props: { server: Server.Type }) {
     this._ws = props.server.ws;
-    this._host = props.server.host;
     this._ws.addEventListener('message', ({ data }) => {
       const { tag, response, event } = JSON.parse(data);
       if (tag !== undefined) {
@@ -149,7 +143,6 @@ class Auth implements Server.Authentication.Type {
   }
 
   protected _ws: WebSocket;
-  protected _host: string;
   protected _tag = 0;
   protected _callbacks = new Map<number, (response: any) => unknown>();
 
@@ -183,7 +176,7 @@ class Auth implements Server.Authentication.Type {
       }
       throw new Error('upload data type error');
     })();
-    const response = await fetch(`https://${this._host}/upload?t=${token}`,
+    const response = await fetch(`https://${host}/upload?t=${token}`,
       { ...init, method: 'POST', body: formData });
     return response.json();
   }
@@ -193,13 +186,13 @@ class Auth implements Server.Authentication.Type {
     if (typeof filePath === 'string') {
       const token = await this.rest('token', []);
       if (Rest.isError(token)) throw token.error;
-      element.setAttribute('href', `https://${this._host}/download?t=${token}&p=${encodeURIComponent(filePath)}`);
+      element.setAttribute('href', `https://${host}/download?t=${token}&p=${encodeURIComponent(filePath)}`);
       element.setAttribute('download', path.basename(filePath));
     } else {
       if (filePath.length === 0) return;
       const token = await this.rest('token', []);
       if (Rest.isError(token)) throw token.error;
-      element.setAttribute('href', `https://${this._host}/download?t=${token}${filePath.map(value => `&p=${encodeURIComponent(value)}`).join('')}`);
+      element.setAttribute('href', `https://${host}/download?t=${token}${filePath.map(value => `&p=${encodeURIComponent(value)}`).join('')}`);
       element.setAttribute('download', 'bundle.zip');
     }
     element.style.display = 'none';

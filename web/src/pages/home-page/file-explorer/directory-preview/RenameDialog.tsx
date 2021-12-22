@@ -1,7 +1,6 @@
 import path from "path";
 import React from "react";
-import { Button, SnackbarQueueMessage, TextField } from "rmwc";
-import { Dialog, DialogActions } from "@rmwc/dialog";
+import { Button, SnackbarQueueMessage, TextField, Dialog, DialogActions } from "rmwc";
 
 import { Server, ThemeContext } from "../../../../common/Providers";
 import Scaffold from "../../Scaffold";

@@ -52,6 +52,7 @@ async function main() {
             (ws) => wss2.emit('connection', ws, request));
       }
     }
+    context.logger.error(`websocket upgrade failed [${url}] from [${request.socket.remoteAddress}]`)
     socket.destroy();
   });
 

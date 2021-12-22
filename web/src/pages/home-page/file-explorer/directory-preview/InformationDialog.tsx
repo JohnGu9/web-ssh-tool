@@ -1,7 +1,6 @@
-import { Dialog, DialogActions } from "@rmwc/dialog";
 import { Stats } from "fs";
 import React from "react";
-import { Button, IconButton, Tooltip, Typography } from "rmwc";
+import { Button, IconButton, Tooltip, Typography, Dialog, DialogActions } from "rmwc";
 
 import { Server, ThemeContext } from "../../../../common/Providers";
 import { delay } from "../../../../common/Tools";

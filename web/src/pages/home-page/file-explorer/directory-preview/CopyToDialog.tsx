@@ -1,6 +1,5 @@
 import React from "react";
-import { Button, TextField } from "rmwc";
-import { Dialog, DialogActions } from "@rmwc/dialog";
+import { Button, TextField, Dialog, DialogActions } from "rmwc";
 import { DialogContent, DialogTitle } from "../../../../components/Dialog";
 
 function CopyToDialog({ state, close }: { state: CopyToDialog.State, close: () => unknown }) {

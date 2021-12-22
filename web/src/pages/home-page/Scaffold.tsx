@@ -1,4 +1,4 @@
-import { createSnackbarQueue, SnackbarQueue } from "@rmwc/snackbar";
+import { createSnackbarQueue, SnackbarQueue } from "rmwc";
 import React from "react";
 
 function Scaffold({ children }: { children: React.ReactNode }) {

@@ -1,9 +1,5 @@
 import React from "react";
-import { Elevation } from "@rmwc/elevation";
-import { LinearProgress } from "@rmwc/linear-progress";
-import { CircularProgress } from "@rmwc/circular-progress";
-import { Typography } from "@rmwc/typography";
-import { IconButton } from "@rmwc/icon-button";
+import { Elevation, LinearProgress, CircularProgress, Typography, IconButton, Icon, Tooltip, Theme } from 'rmwc';
 import { v1 as uuid } from 'uuid';
 import path from "path";
 
@@ -19,10 +15,9 @@ import Loading from "./file-explorer/Loading";
 import ErrorPreview, { UnknownErrorPreview } from "./file-explorer/ErrorPreview";
 import Common from './file-explorer/Common';
 import AnimatedList from "../../components/AnimatedList";
-import { Icon } from "@rmwc/icon";
-import { Tooltip } from "@rmwc/tooltip";
-import { Theme } from "@rmwc/theme";
 import { SimpleListItem } from "rmwc";
+
+const { host } = document.location;
 
 class FileExplorer extends React.Component<FileExplorer.Props, FileExplorer.State> {
   constructor(props: FileExplorer.Props) {
@@ -119,7 +114,7 @@ class FileExplorer extends React.Component<FileExplorer.Props, FileExplorer.Stat
   }
 
   componentDidMount() {
-    this._ws = new WebSocket(`wss://${this.props.server.host}/watch`);
+    this._ws = new WebSocket(`wss://${host}/watch`);
     this._bind(this._ws);
   }
 
@@ -147,7 +142,7 @@ class FileExplorer extends React.Component<FileExplorer.Props, FileExplorer.Stat
             {closed
               ? <LostConnection reconnect={() => {
                 return new Promise(resolve => {
-                  this._ws = new WebSocket(`wss://${this.props.server.host}/watch`);
+                  this._ws = new WebSocket(`wss://${host}/watch`);
                   this._bind(this._ws);
                   this._ws.addEventListener('open', resolve, { once: true });
                   this._ws.addEventListener('close', resolve, { once: true });

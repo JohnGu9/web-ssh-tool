@@ -1,13 +1,7 @@
 import React from "react";
 import { Terminal } from "xterm";
 import { v1 as uuid } from 'uuid';
-import { Icon } from "@rmwc/icon";
-import { IconButton } from "@rmwc/icon-button";
-import { Theme } from "@rmwc/theme";
-import { Card } from "@rmwc/card";
-import { Button } from "@rmwc/button";
-import { ListDivider, SimpleListItem } from "@rmwc/list";
-import { Dialog, DialogActions, LinearProgress, Typography } from "rmwc";
+import { Icon, IconButton, Theme, Card, Button, ListDivider, SimpleListItem, Dialog, DialogActions, LinearProgress, Typography } from 'rmwc';
 
 import { Server, Settings, ThemeContext } from "../../common/Providers";
 import { Rest } from '../../common/Type';

@@ -1,5 +1,5 @@
-import { CircularProgress } from '@rmwc/circular-progress';
 import React from 'react';
+import { CircularProgress } from 'rmwc';
 import { ConnectConfig } from 'ssh2';
 import delay from './common/Delay';
 import { wsSafeClose } from './common/DomTools';
@@ -29,8 +29,6 @@ function App() {
 export default App;
 
 const isDebug = process.env.NODE_ENV !== 'production'; // do not export this variable
-const { host, hostname } = document.location;
-const remoteHost = isDebug ? `${hostname}:7200` : host;
 
 class AppServer implements Server.Type {
   constructor(props: { ws: WebSocket }) {
@@ -39,7 +37,6 @@ class AppServer implements Server.Type {
 
   protected _ws: WebSocket;
   get ws() { return this._ws }
-  readonly host = remoteHost;
 
   async signIn(props: { username: string, password: string }): Promise<{ token: string; } | { error: Error; }> {
     const config: ConnectConfig = { ...props };
@@ -52,6 +49,8 @@ class AppServer implements Server.Type {
   };
 }
 
+const { host, hostname } = document.location;
+
 class Service extends React.Component<Service.Props, Service.State> {
   constructor(props: Service.Props) {
     super(props);
@@ -62,7 +61,7 @@ class Service extends React.Component<Service.Props, Service.State> {
 
   protected _mounted = true;
   protected async _debugFetch() {
-    if (isDebug) { await fetch(`https://${remoteHost}/`, { mode: 'cors' }).catch(error => { }) }
+    if (isDebug) { await fetch(`https://${hostname}:7200/`, { mode: 'cors' }).catch(error => { }) }
   }
 
   protected readonly _onOpen = () => this.setState({ server: new AppServer({ ws: this.ws! }) })
@@ -74,14 +73,14 @@ class Service extends React.Component<Service.Props, Service.State> {
     await delay(300);
     await this._debugFetch();
     if (!this._mounted) return;
-    this.ws = new WebSocket(`wss://${remoteHost}/rest`);
+    this.ws = new WebSocket(`wss://${host}/rest`);
     this.ws.addEventListener('error', this._onError, { once: true });
     this.ws.addEventListener('close', this._onClose);
     this.ws.addEventListener('open', this._onOpen);
   }
 
   componentDidMount() {
-    this.ws = new WebSocket(`wss://${remoteHost}/rest`);
+    this.ws = new WebSocket(`wss://${host}/rest`);
     this.ws.addEventListener('error', this._onError, { once: true });
     this.ws.addEventListener('close', this._onClose);
     this.ws.addEventListener('open', this._onOpen);
