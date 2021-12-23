@@ -28,6 +28,7 @@ export namespace Rest {
       parameter:
       { id: string, data: string } | // request close
       { id: string, close: any } | // send data
+      { id: string, resize: { rows: number, cols: number, height: number, width: number } } | // resize window
       string, // request open new shell with id
       return: { open: string } | void
     }

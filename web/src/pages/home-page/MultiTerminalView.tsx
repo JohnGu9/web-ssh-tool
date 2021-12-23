@@ -86,8 +86,8 @@ namespace MultiTerminalView {
     controllers: MultiTerminalView.Controller[],
   }
   export class Controller {
-    constructor(props: { auth: Server.Authentication.Type }) {
-      this.auth = props.auth;
+    constructor({ auth }: { auth: Server.Authentication.Type }) {
+      this.auth = auth;
       this.xterm.onData(data => this.auth.rest('shell', { id: this.id, data }));
       this.auth.shell.addEventListener(this.id, this._listener);
       this.onClose.addEventListener('close', () => {
@@ -103,7 +103,13 @@ namespace MultiTerminalView {
       invoke() { this.dispatchEvent(new Event('close')) }
     })();
 
-    close() { this.auth.rest('shell', { id: this.id, close: {} }); }
+    resize(resize: { rows: number, cols: number, height: number, width: number }) {
+      return this.auth.rest('shell', { id: this.id, resize });
+    }
+
+    close() {
+      return this.auth.rest('shell', { id: this.id, close: {} });
+    }
     closed = false;
 
     dispose() {
@@ -259,7 +265,8 @@ function XTerminalView({ controller, remove }: {
             controller.xterm.paste(data);
             controller.xterm.focus();
           }}>
-          <XTerminal terminal={controller.xterm} className='full-size' />
+          <XTerminal terminal={controller.xterm} className='full-size'
+            onResize={resize => controller.resize(resize)} />
         </Card>
         <div style={{ height: 16 }} />
       </div>}

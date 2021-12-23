@@ -6,39 +6,25 @@ import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import LayoutBuilder from "./LayoutBuilder";
 
-function XTerminal({ style, className, terminal }: {
-  style?: React.CSSProperties,
-  className?: string,
-  terminal: Terminal,
-}) {
-  return <Content
-    style={style}
-    className={className}
-    terminal={terminal} />;
-}
-
-export default XTerminal;
-
-class Content extends React.Component<Content.Props> {
-  constructor(props: Content.Props) {
-    super(props);
-    this._ref = React.createRef();
-    this._fit = new FitAddon();
+class XTerminal extends React.Component<XTerminal.Props> {
+  protected readonly _ref: React.RefObject<HTMLDivElement> = React.createRef();
+  protected _fit!: FitAddon;
+  protected fit = () => {
+    this._fit.fit();
+    const { onResize, terminal } = this.props;
+    const { clientHeight, clientWidth } = this._ref.current!;
+    onResize?.({ height: clientHeight, width: clientWidth, cols: terminal.cols, rows: terminal.rows });
   }
 
-  readonly _ref: React.RefObject<HTMLDivElement>;
-  _fit: FitAddon;
-  protected _timer!: number;
-
   override componentDidMount() {
-    this._timer = window.setInterval(() => this._fit.fit(), 10);
+    this._fit = new FitAddon();
     const current = this._ref.current!;
     this.props.terminal.loadAddon(this._fit);
     this.props.terminal.open(current);
     this.props.terminal.focus();
   }
 
-  override componentDidUpdate(oldProps: Content.Props) {
+  override componentDidUpdate(oldProps: XTerminal.Props) {
     if (oldProps.terminal !== this.props.terminal) {
       this._fit.dispose();
       this._fit = new FitAddon();
@@ -50,7 +36,6 @@ class Content extends React.Component<Content.Props> {
   }
 
   override componentWillUnmount() {
-    window.clearInterval(this._timer);
     this._fit.dispose();
   }
 
@@ -60,6 +45,7 @@ class Content extends React.Component<Content.Props> {
       style={style}
       className={className}
       builder={() => {
+        window.setTimeout(this.fit, 0);
         return <div
           key={this.props.terminal as any}
           ref={this._ref}
@@ -68,10 +54,13 @@ class Content extends React.Component<Content.Props> {
   }
 }
 
-namespace Content {
+namespace XTerminal {
   export type Props = {
     readonly style?: React.CSSProperties,
     readonly className?: string,
     readonly terminal: Terminal,
+    readonly onResize?: (resize: { rows: number, cols: number, height: number, width: number }) => unknown,
   };
 }
+
+export default XTerminal;
