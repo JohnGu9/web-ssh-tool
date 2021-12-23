@@ -1,9 +1,9 @@
 import path from 'path';
 import os from 'os';
 import ws, { WebSocket } from 'ws';
-import fs, { Stats } from 'fs';
+import fs from 'fs';
 import { Context, getFileType, wsSafeClose } from './common';
-import { FileType, Watch } from 'web/common/Type';
+import { FileType, Lstat, Watch } from 'web/common/Type';
 
 function watch(context: Context) {
   const wsServer = new ws.Server({ noServer: true, perMessageDeflate: true });
@@ -17,29 +17,47 @@ function watch(context: Context) {
         const buildState = async (p: string): Promise<Watch.File | Watch.Directory> => {
           const lstat = await fs.promises.lstat(await fs.promises.realpath(p));
           const type = getFileType(lstat);
-          if (lstat.isFile()) {
-            return {
-              path: p, lstat: { ...lstat, type },
-              content: await fs.promises.readFile(p)
-                .then(buffer => buffer.toString('base64')),
-            };
-          } else if (lstat.isDirectory()) {
-            const files: { [key: string]: Stats & { type?: FileType } } = {}
-            for await (const { name } of await fs.promises.opendir(p)) {
-              const lstat = await fs.promises.lstat(path.join(p, name));
-              const type = getFileType(lstat);
-              files[name] = { ...lstat, type };
+          switch (type) {
+            case FileType.file: {
+              return {
+                path: p, lstat: { ...lstat, type },
+                content: await fs.promises.readFile(p)
+                  .then(buffer => buffer.toString('base64')),
+              };
             }
-            return { path: p, lstat: { ...lstat, type }, files };
-          } else {
-            throw new Error(`Unsupported path [${p}] type ${lstat}`);
+            case FileType.directory: {
+              const files: { [key: string]: Lstat } = {}
+              for await (const { name } of await fs.promises.opendir(p)) {
+                const fullPath = path.join(p, name);
+                const lstat = await fs.promises.lstat(fullPath);
+                const type = getFileType(lstat);
+                switch (type) {
+                  case FileType.symbolicLink: {
+                    try {
+                      const realPath = await fs.promises.realpath(fullPath);
+                      const realLstat = await fs.promises.lstat(realPath);
+                      const realType = getFileType(realLstat);
+                      files[name] = { ...lstat, type, realPath, realType };
+                    } catch {
+                      files[name] = { ...lstat, type };
+                    }
+                    break;
+                  }
+                  default:
+                    files[name] = { ...lstat, type };
+                }
+
+              }
+              return { path: p, lstat: { ...lstat, type }, files };
+            }
           }
+          throw new Error(`Unsupported path [${p}] type ${lstat}`);
         }
 
         const buildWatcher = (p: string): { watcher: fs.FSWatcher, path: string } | undefined => {
           const listener = () => pipeline.post(async () => {
             const state = await buildState(p)
-              .catch(function (error) { return { error } });
+              .catch(function (error) { return { error, path: p } });
             if (socket.readyState === ws.OPEN && watcher?.path === p) {
               try {
                 socket.send(JSON.stringify(state));
@@ -62,7 +80,7 @@ function watch(context: Context) {
           const { cd } = JSON.parse(data);
           if (watcher && cd === watcher.path) return pipeline.post(async () => {
             const state = await buildState(cd)
-              .catch(function (error) { return { error } });
+              .catch(function (error) { return { error, path: cd } });
             if (socket.readyState === ws.OPEN && watcher?.path === cd) {
               try {
                 socket.send(JSON.stringify(state));

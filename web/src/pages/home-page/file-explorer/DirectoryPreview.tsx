@@ -1,7 +1,6 @@
-import { Stats } from "fs";
 import path from "path";
 import React from "react";
-import { FileType, Watch } from "../../../common/Type";
+import { Lstat, Watch } from "../../../common/Type";
 import { SharedAxisTransition } from "../../../components/Transitions";
 import FileExplorer, { NavigatorBar } from "./Common";
 import InformationDialog from "./directory-preview/InformationDialog";
@@ -18,7 +17,7 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
   const { cd, config } = React.useContext(FileExplorer.Context);
   const [onSelect, setOnSelect] = React.useState(false);
   const [selected, setSelected] = React.useState(new Set<string>());
-  const [information, setInformation] = React.useState<InformationDialog.State>({ open: false, path: '', stats: {} as Stats });
+  const [information, setInformation] = React.useState<InformationDialog.State>({ open: false, path: '', stats: {} as Lstat });
   const fileList = Object.entries(files).filter(config.showAll
     ? () => true
     : ([key]) => !key.startsWith('.'));
@@ -47,9 +46,7 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
 export default DirectoryPreView;
 
 class List extends React.Component<{
-  fileList: [string, Stats & {
-    type?: FileType | undefined;
-  }][],
+  fileList: [string, Lstat][],
   dir: string,
   selected: Set<string>,
   setSelected: (value: Set<string>) => unknown,

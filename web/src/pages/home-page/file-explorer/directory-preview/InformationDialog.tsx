@@ -1,10 +1,9 @@
-import { Stats } from "fs";
 import React from "react";
 import { Button, IconButton, Tooltip, Typography, Dialog, DialogActions } from "rmwc";
 
 import { Server, ThemeContext } from "../../../../common/Providers";
 import { delay } from "../../../../common/Tools";
-import { FileType, Rest } from "../../../../common/Type";
+import { FileType, Lstat, Rest } from "../../../../common/Type";
 import { DialogContent, DialogTitle } from "../../../../components/Dialog";
 import LongPressButton from "../../../../components/LongPressButton";
 import Scaffold from "../../Scaffold";
@@ -81,7 +80,7 @@ function InformationDialog({ state: dialog, close, rename }: {
 namespace InformationDialog {
   export type State = {
     open: boolean,
-    stats: Stats & { type?: FileType },
+    stats: Lstat,
     path: string
   };
 }

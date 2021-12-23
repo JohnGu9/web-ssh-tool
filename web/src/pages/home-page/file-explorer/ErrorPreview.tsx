@@ -3,7 +3,7 @@ import { Button } from "rmwc";
 import FileExplorer from "./Common";
 import GoToDialog from "./common/GoToDialog";
 
-function ErrorPreview({ state: { error } }: { state: { error: any } }) {
+function ErrorPreview({ state: { error, path } }: { state: { error: any, path?: string } }) {
   const { cd } = React.useContext(FileExplorer.Context);
   return (
     <div className='full-size column' style={{ alignItems: 'center', justifyContent: 'center' }}>
@@ -11,7 +11,7 @@ function ErrorPreview({ state: { error } }: { state: { error: any } }) {
       <div style={{ height: 16 }} />
       <Button raised label='Return to home' onClick={() => cd()} />
       <div style={{ height: 16 }} />
-      <GoToButton />
+      <GoToButton path={path} />
     </div>
   );
 }
@@ -32,12 +32,12 @@ export function UnknownErrorPreview() {
 }
 
 
-function GoToButton() {
-  const [dialog, setDialog] = React.useState<GoToDialog.State>({ open: false, path: '' });
+function GoToButton({ path }: { path?: string }) {
+  const [dialog, setDialog] = React.useState<GoToDialog.State>({ open: false, path: path ?? '' });
   const close = () => setDialog({ ...dialog, open: false });
   return (
     <>
-      <Button label='go to' icon='reply' onClick={() => setDialog({ open: true, path: '' })} />
+      <Button label='go to' icon='reply' onClick={() => setDialog({ open: true, path: path ?? '' })} />
       <GoToDialog state={dialog} close={close} />
     </>
   );

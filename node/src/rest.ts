@@ -76,7 +76,7 @@ async function rest(context: Context) {
                           // { shell: { id, resize: { height: 100 width: 100 } } }
                           const { id, resize: { cols, rows, height, width } } = value as { id: string, resize: { rows: number, cols: number, height: number, width: number } };
                           const stream = shellMap.get(id);
-                          stream?.setWindow(rows, cols, height, width);
+                          stream!.setWindow(rows, cols, height, width);
                         } else if ('close' in value) {
                           // { shell: { id, close: <any> } }
                           const { id } = value as { id: string, close: any };

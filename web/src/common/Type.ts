@@ -4,6 +4,8 @@ import fs from 'fs/promises';
 export type ProcessPipeLine = ({ stdin: string } | { stdout: string } | { stderr: string })[];
 export type CommandResult = { output: ProcessPipeLine, exitCode: number | null };
 
+export type Lstat = Stats & { type?: FileType, realPath?: string, realType?: FileType };
+
 export const enum FileType {
   file = 'file',
   directory = 'directory',
@@ -46,6 +48,6 @@ export namespace Rest {
 }
 
 export namespace Watch {
-  export type File = { path: string, content: string, lstat: Stats & { type?: FileType } }
-  export type Directory = { path: string, files: { [key: string]: Stats & { type?: FileType } }, lstat: Stats }
+  export type File = { path: string, content: string, lstat: Lstat }
+  export type Directory = { path: string, files: { [key: string]: Lstat }, lstat: Lstat }
 }

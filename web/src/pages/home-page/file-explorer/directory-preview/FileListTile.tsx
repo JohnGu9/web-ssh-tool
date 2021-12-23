@@ -1,8 +1,7 @@
-import { Stats } from "fs";
 import path from "path";
 import React from "react";
 import { Checkbox, Icon, IconButton, SimpleListItem } from "rmwc";
-import { FileType } from "../../../../common/Type";
+import { FileType, Lstat } from "../../../../common/Type";
 import { SharedAxisTransition } from "../../../../components/Transitions";
 import DropZone from "./DropZone";
 
@@ -58,12 +57,12 @@ function FileIcon(name: string, { type }: { type?: FileType, }) {
 function FileListTile({ dirname, name, stats, selected, onSelect, onSelected, onClick, onDetail, style }: {
   dirname: string,
   name: string,
-  stats: Stats & { type?: FileType },
+  stats: Lstat,
   selected: boolean,
   onSelect: boolean,
   onSelected: (selected: boolean) => unknown,
   onClick?: () => unknown,
-  onDetail: (stats: Stats & { type?: FileType }, path: string) => unknown,
+  onDetail: (stats: Lstat, path: string) => unknown,
   style?: React.CSSProperties,
 }) {
   const { setDisabled } = React.useContext(DropZone.Context);
@@ -77,6 +76,16 @@ function FileListTile({ dirname, name, stats, selected, onSelect, onSelected, on
         break;
       case FileType.directory:
         return false;
+      case FileType.symbolicLink:
+        switch (stats.realType) {
+          case FileType.file:
+            if (onSelect) return false;
+            if (stats.size < 1 * 1024 * 1024) return false; // limit to 1MB for preview
+            break;
+          case FileType.directory:
+            return false;
+        }
+        break;
     }
     return true;
   })();
