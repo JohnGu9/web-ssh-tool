@@ -47,11 +47,11 @@ class MultiTerminalView extends React.Component<MultiTerminalView.Props, MultiTe
     });
   }
 
-  componentWillUnmount() {
+  override componentWillUnmount() {
     this._controllers.forEach(controller => controller.close());
   }
 
-  render() {
+  override render() {
     const { controllers, controller } = this.state;
     return (
       <>
@@ -308,7 +308,7 @@ class License extends React.Component<{}, { value?: string[] }> {
 
   _mounted = true;
 
-  componentDidMount() {
+  override componentDidMount() {
     if (this.state.value === undefined)
       fetch('/LICENSE')
         .then(response => response.text())
@@ -318,11 +318,11 @@ class License extends React.Component<{}, { value?: string[] }> {
         });
   }
 
-  componentWillUnmount() {
+  override componentWillUnmount() {
     this._mounted = false;
   }
 
-  render() {
+  override render() {
     const { value } = this.state;
     return <FadeCrossTransition id={value === undefined} className='full-size'>
       {value === undefined

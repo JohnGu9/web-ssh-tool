@@ -95,7 +95,7 @@ function FileListTile({ dirname, name, stats, selected, onSelect, onSelected, on
         ? <Checkbox readOnly checked={selected} style={{ height: 24 }}></Checkbox>
         : <Icon icon={FileIcon(name, stats)}></Icon>}
     </SharedAxisTransition>}
-    text={name}
+    text={<div style={{ flex: 1, minWidth: 0, overflowX: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>}
     meta={<IconButton
       icon='more_horiz'
       style={{ opacity: hover ? 1 : 0, transition: 'opacity 300ms' }}

@@ -76,7 +76,7 @@ export namespace LocaleService {
       }
     }
 
-    render() {
+    override render() {
       return (
         <LocaleContext.Provider value={this.state}>
           {this.props.children}

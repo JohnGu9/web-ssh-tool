@@ -79,19 +79,19 @@ class Service extends React.Component<Service.Props, Service.State> {
     this.ws.addEventListener('open', this._onOpen);
   }
 
-  componentDidMount() {
+  override componentDidMount() {
     this.ws = new WebSocket(`wss://${host}/rest`);
     this.ws.addEventListener('error', this._onError, { once: true });
     this.ws.addEventListener('close', this._onClose);
     this.ws.addEventListener('open', this._onOpen);
   }
 
-  componentWillUnmount() {
+  override componentWillUnmount() {
     this._mounted = false;
     wsSafeClose(this.ws);
   }
 
-  render() {
+  override render() {
     const { server } = this.state;
     const { children, locale: { locale } } = this.props;
     return (

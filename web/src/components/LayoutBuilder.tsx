@@ -13,16 +13,16 @@ class LayoutBuilder extends React.Component<LayoutBuilder.Props, LayoutBuilder.S
     if (current) this.setState({ size: { height: current.clientHeight, width: current.clientWidth } })
   }
 
-  componentDidMount() {
+  override componentDidMount() {
     this._resize();
     window.addEventListener('resize', this._resize);
   }
 
-  componentWillUnmount() {
+  override componentWillUnmount() {
     window.removeEventListener('resize', this._resize);
   }
 
-  render() {
+  override render() {
     return (
       <div key={null} ref={this._ref} style={this.props.style} className={this.props.className}>
         {this.props.builder(this.state.size, this.props.children)}

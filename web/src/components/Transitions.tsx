@@ -199,7 +199,7 @@ export class SwitchTransition extends React.Component<SwitchTransition.Props, Sw
   _mounted: boolean = true;
   _pipeLine: SwitchTransition.PipeLine = new SwitchTransition.PipeLine();
 
-  componentDidUpdate(oldProps: SwitchTransition.Props) {
+  override componentDidUpdate(oldProps: SwitchTransition.Props) {
     if (oldProps.id !== this.props.id) {
       const { outAnimation, inAnimation } = this.props.getAnimations();
       this._pipeLine.post(async () => {
@@ -214,11 +214,11 @@ export class SwitchTransition extends React.Component<SwitchTransition.Props, Sw
     }
   }
 
-  componentWillUnmount() {
+  override componentWillUnmount() {
     this._mounted = false;
   }
 
-  render() {
+  override render() {
     const current = this.state.childrenPipeLine[0];
     return (
       <div className={this.props.className} style={{

@@ -113,18 +113,18 @@ class FileExplorer extends React.Component<FileExplorer.Props, FileExplorer.Stat
     this.forceUpdate();
   }
 
-  componentDidMount() {
+  override componentDidMount() {
     this._ws = new WebSocket(`wss://${host}/watch`);
     this._bind(this._ws);
   }
 
-  componentWillUnmount() {
+  override componentWillUnmount() {
     this._mounted = false;
     this._unbind(this._ws);
     wsSafeClose(this._ws);
   }
 
-  render() {
+  override render() {
     const { closed, state, loading, config } = this.state;
     return (
       <Common.Context.Provider value={{

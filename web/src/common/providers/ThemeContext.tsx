@@ -77,15 +77,15 @@ export class ThemeService extends React.Component<ThemeService.Props, ThemeServi
     });
   }
 
-  componentDidMount() {
+  override componentDidMount() {
     this._mediaQueryList.addEventListener('change', this._listener);
   }
 
-  componentWillUnmount() {
+  override componentWillUnmount() {
     this._mediaQueryList.removeEventListener('change', this._listener);
   }
 
-  render() {
+  override render() {
     return (
       <ThemeContext.Provider value={this.state}>
         <ThemeProvider options={this.state.themeData} style={{ height: '100%', width: '100%' }}>

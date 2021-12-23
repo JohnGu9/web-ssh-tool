@@ -41,7 +41,7 @@ export namespace Settings {
       }
     }
 
-    render() {
+    override render() {
       return (
         <Context.Provider value={{
           get locale() { return localStorage.getItem('locale') },

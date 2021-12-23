@@ -50,12 +50,12 @@ class Content extends React.Component<Content.Props, Content.State> {
     }
   }
 
-  componentDidMount() {
+  override componentDidMount() {
     const { settings } = this.props;
     if (settings.keepSignIn) this._submit();
   }
 
-  render() {
+  override render() {
     const { settings, locale: { locale } } = this.props;
     const { auth, loading } = this.state;
     return (

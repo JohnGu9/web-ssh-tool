@@ -12,7 +12,7 @@ class AnimatedList extends React.Component<AnimatedList.Props> {
   protected _children: Map<AnimatedList.KeyType, React.ReactNode>;
   protected _origin: Set<AnimatedList.KeyType>;
 
-  componentDidUpdate(oldProps: AnimatedList.Props) {
+  override componentDidUpdate(oldProps: AnimatedList.Props) {
     if (oldProps.children !== this.props.children) {
       this._origin.clear();
       for (const { listId, children } of this.props.children) {
@@ -22,7 +22,7 @@ class AnimatedList extends React.Component<AnimatedList.Props> {
     }
   }
 
-  render() {
+  override render() {
     const newKeys = new Set(this.props.children
       .map(value => value.listId));
     return (<>
@@ -96,14 +96,14 @@ class Wrap extends React.Component<Wrap.Props, Wrap.State> {
 
   _timer?: number;
 
-  componentDidMount() {
+  override componentDidMount() {
     if (this.state.state === AnimatedList.AnimationState.enter)
       this.setState({ state: AnimatedList.AnimationState.entering },
         () => this._timer = window.setTimeout(
           () => this.setState({ state: AnimatedList.AnimationState.entered }), this.props.duration));
   }
 
-  componentDidUpdate(oldProps: Wrap.Props) {
+  override componentDidUpdate(oldProps: Wrap.Props) {
     if (oldProps.isExisted !== this.props.isExisted) {
       window.clearTimeout(this._timer);
       if (this.props.isExisted === false) {
@@ -120,11 +120,11 @@ class Wrap extends React.Component<Wrap.Props, Wrap.State> {
     }
   }
 
-  componentWillUnmount() {
+  override componentWillUnmount() {
     window.clearTimeout(this._timer);
   }
 
-  render() {
+  override render() {
     return (
       <AnimatedList.Context.Provider value={{ state: this.state.state, duration: this.props.duration }}>
         {this.props.children}

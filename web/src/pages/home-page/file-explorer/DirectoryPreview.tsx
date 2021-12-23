@@ -10,10 +10,12 @@ import FileListTile from "./directory-preview/FileListTile";
 import DropZone from "./directory-preview/DropZone";
 import ToolsBar, { SelectingToolsBar } from "./directory-preview/ToolsBar";
 import { FixedSizeList } from "../../../components/AdaptedWindow";
+import EventListenerBuilder from "../../../components/EventListenerBuilder";
+import { any } from "../../../common/Tools";
 
 function DirectoryPreView({ state }: { state: Watch.Directory }) {
   const { path: dir, files } = state;
-  const { config } = React.useContext(FileExplorer.Context);
+  const { cd, config } = React.useContext(FileExplorer.Context);
   const [onSelect, setOnSelect] = React.useState(false);
   const [selected, setSelected] = React.useState(new Set<string>());
   const [information, setInformation] = React.useState<InformationDialog.State>({ open: false, path: '', stats: {} as Stats });
@@ -33,10 +35,7 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
           ? <div className='column' style={{ width: '100%', justifyContent: 'center', alignItems: 'center' }}>
             Nothing here...
           </div>
-          : <List dir={dir} onSelect={onSelect}
-            selected={selected} setSelected={setSelected}
-            setInformation={setInformation}
-            list={FileExplorer.sortArray(fileList, config.sort)} />}
+          : <List fileList={fileList} dir={dir} selected={selected} setSelected={setSelected} onSelect={onSelect} cd={cd} setInformation={setInformation} />}
       </DropZone>
       <div style={{ height: 16 }} />
       <NavigatorBar path={dir} />
@@ -47,23 +46,30 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
 
 export default DirectoryPreView;
 
-function List({ dir, onSelect, selected, setSelected, setInformation, list }: {
+class List extends React.Component<{
+  fileList: [string, Stats & {
+    type?: FileType | undefined;
+  }][],
   dir: string,
-  onSelect: boolean,
   selected: Set<string>,
   setSelected: (value: Set<string>) => unknown,
-  setInformation: (state: InformationDialog.State) => unknown,
-  list: [string, Stats & {
-    type?: FileType | undefined;
-  }][]
-}) {
-  const { cd } = React.useContext(FileExplorer.Context);
-  return (
-    <FixedSizeList key={list as any} className='full-size'
-      itemCount={list.length + 2} itemSize={48}>
-      {({ index, style }) => {
-        if (index >= list.length) return <></>;
-        const [key, value] = list[index];
+  onSelect: boolean,
+  cd: (value?: string) => unknown,
+  setInformation: (value: InformationDialog.State) => unknown
+}> {
+
+  readonly eventTarget = new EventTarget();
+  override componentDidUpdate(oldProp: any) {
+    if (any(Object.keys(this.props), (value) => (this.props as any)[value] !== oldProp[value]))
+      this.eventTarget.dispatchEvent(new Event('change'));
+  }
+
+  builder = ({ index, style }: { index: number, style?: React.CSSProperties }) => {
+    return <EventListenerBuilder eventName='change' eventTarget={this.eventTarget}
+      builder={() => {
+        const { fileList, dir, selected, setSelected, onSelect, cd, setInformation } = this.props;
+        if (index >= fileList.length) return <React.Fragment key={index}></React.Fragment>;
+        const [key, value] = fileList[index];
         return <FileListTile
           key={key}
           style={style}
@@ -82,10 +88,18 @@ function List({ dir, onSelect, selected, setSelected, setInformation, list }: {
           name={key}
           stats={value}
           onClick={() => cd(path.join(dir, key))}
-          onDetail={(stats, path) => setInformation({ open: true, stats, path })} />
-      }}
-    </FixedSizeList>
-  );
+          onDetail={(stats, path) => setInformation({ open: true, stats, path })} />;
+      }} />;
+  }
+
+  override render() {
+    const { fileList } = this.props;
+    return (
+      <FixedSizeList key={fileList as any} className='full-size' itemCount={fileList.length + 2} itemSize={48}>
+        {this.builder}
+      </FixedSizeList>
+    );
+  }
 }
 
 function Dialogs({ children, information, setInformation }: {

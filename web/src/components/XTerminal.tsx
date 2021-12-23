@@ -30,7 +30,7 @@ class Content extends React.Component<Content.Props> {
   _fit: FitAddon;
   protected _timer!: number;
 
-  componentDidMount() {
+  override componentDidMount() {
     this._timer = window.setInterval(() => this._fit.fit(), 10);
     const current = this._ref.current!;
     this.props.terminal.loadAddon(this._fit);
@@ -38,7 +38,7 @@ class Content extends React.Component<Content.Props> {
     this.props.terminal.focus();
   }
 
-  componentDidUpdate(oldProps: Content.Props) {
+  override componentDidUpdate(oldProps: Content.Props) {
     if (oldProps.terminal !== this.props.terminal) {
       this._fit.dispose();
       this._fit = new FitAddon();
@@ -49,12 +49,12 @@ class Content extends React.Component<Content.Props> {
     }
   }
 
-  componentWillUnmount() {
+  override componentWillUnmount() {
     window.clearInterval(this._timer);
     this._fit.dispose();
   }
 
-  render() {
+  override render() {
     const { style, className } = this.props;
     return <LayoutBuilder
       style={style}
