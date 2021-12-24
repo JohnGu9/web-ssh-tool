@@ -53,19 +53,20 @@ function watch(context: Context) {
           }
           throw new Error(`Unsupported path [${p}] type ${lstat}`);
         }
+        const notifyState = async (p: string) => {
+          const state = await buildState(p)
+            .catch(function (error) { return { error, path: p } });
+          if (socket.readyState === ws.OPEN && watcher?.path === p) {
+            try {
+              socket.send(JSON.stringify(state));
+            } catch (error) {
+              socket.send(JSON.stringify({ error }));
+            }
+          }
+        }
 
         const buildWatcher = (p: string): { watcher: fs.FSWatcher, path: string } | undefined => {
-          const listener = () => pipeline.post(async () => {
-            const state = await buildState(p)
-              .catch(function (error) { return { error, path: p } });
-            if (socket.readyState === ws.OPEN && watcher?.path === p) {
-              try {
-                socket.send(JSON.stringify(state));
-              } catch (error) {
-                socket.send(JSON.stringify({ error }));
-              }
-            }
-          });
+          const listener = () => pipeline.post(async () => notifyState(p));
           try {
             const watcher = fs.watch(p, listener);
             listener();
@@ -78,17 +79,7 @@ function watch(context: Context) {
         watcher = buildWatcher(cd ?? context.home ?? os.homedir());
         socket.on('message', async (data: string) => {
           const { cd } = JSON.parse(data);
-          if (watcher && cd === watcher.path) return pipeline.post(async () => {
-            const state = await buildState(cd)
-              .catch(function (error) { return { error, path: cd } });
-            if (socket.readyState === ws.OPEN && watcher?.path === cd) {
-              try {
-                socket.send(JSON.stringify(state));
-              } catch (error) {
-                socket.send(JSON.stringify({ error }));
-              }
-            }
-          });
+          if (watcher && cd === watcher.path) return pipeline.post(async () => notifyState(cd));
           watcher?.watcher.close();
           watcher = buildWatcher(cd ?? context.home ?? os.homedir());
         });

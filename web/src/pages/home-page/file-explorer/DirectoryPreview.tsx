@@ -18,9 +18,9 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
   const [onSelect, setOnSelect] = React.useState(false);
   const [selected, setSelected] = React.useState(new Set<string>());
   const [information, setInformation] = React.useState<InformationDialog.State>({ open: false, path: '', stats: {} as Lstat });
-  const fileList = Object.entries(files).filter(config.showAll
+  const fileList = FileExplorer.sortArray(Object.entries(files).filter(config.showAll
     ? () => true
-    : ([key]) => !key.startsWith('.'));
+    : ([key]) => !key.startsWith('.')), config.sort);
   return (
     <div className='full-size column' >
       <SharedAxisTransition className='row' style={{ height: 56, padding: '0 8px 0 0' }}
@@ -92,7 +92,7 @@ class List extends React.Component<{
   override render() {
     const { fileList } = this.props;
     return (
-      <FixedSizeList key={fileList as any} className='full-size' itemCount={fileList.length + 2} itemSize={48}>
+      <FixedSizeList className='full-size' itemCount={fileList.length + 2} itemSize={48}>
         {this.builder}
       </FixedSizeList>
     );

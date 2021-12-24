@@ -76,20 +76,18 @@ class FileExplorer extends React.Component<FileExplorer.Props, FileExplorer.Stat
     const { auth } = this.props;
     const abort = new AbortController();
     const target = path.join(dest, file.name);
-    const checkFileExists = async () => {
-      const exists = await auth.rest('fs.exists', [target]);
-      if (Rest.isError(exists)) throw exists.error;
-      if (exists) throw new Error(`File [${target}] already exists. `);
-    }
 
     const controller = new UploadItem.Controller({
       id: uuid(), file, dest,
       upload: async () => {
-        await checkFileExists();
+        // create a placeholder file at target path
+        const result = await auth.rest('fs.writeFile',
+          [target, "Web-ssh-tool try to create file here. Don't edit, move or delete this file", { flag: 'wx' }]);
+        if (Rest.isError(result)) throw result.error;
         return auth.upload(file, { signal: abort.signal })
       },
       operate: async (multer) => {
-        await checkFileExists();
+        // overwrite the placeholder file
         const result = await auth.rest('fs.rename', [multer.path, target]);
         if (Rest.isError(result)) throw result.error;
       },
