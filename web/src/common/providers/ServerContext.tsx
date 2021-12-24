@@ -19,7 +19,7 @@ export namespace Server {
       signOut(): void;
       upload(data: File | FormData, init?: RequestInit): Promise<Express.Multer.File>;
       download(filePath: string | string[]): Promise<void>;
-      rest<T extends Rest.Type>(type: T, parameter: Rest.Map.Parameter<T>): Promise<Rest.Map.Return<T> | Rest.Error>;
+      rest<T extends keyof Rest.Map>(type: T, parameter: Rest.Map.Parameter<T>): Promise<Rest.Map.Return<T> | Rest.Error>;
     };
     export const Context = React.createContext<Type>(undefined as unknown as Type);
   }

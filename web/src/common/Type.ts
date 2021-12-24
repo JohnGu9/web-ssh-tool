@@ -35,7 +35,6 @@ export namespace Rest {
       return: { open: string } | void
     }
   }
-  export type Type = keyof Map;
   export namespace Map {
     export type Parameter<Key extends keyof Map> = Map[Key] extends { parameter: infer R } ? R : never;
     export type Return<Key extends keyof Map> = Map[Key] extends { return: infer R } ? R : never;

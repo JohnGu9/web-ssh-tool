@@ -91,7 +91,10 @@ class FileExplorer extends React.Component<FileExplorer.Props, FileExplorer.Stat
         const result = await auth.rest('fs.rename', [multer.path, target]);
         if (Rest.isError(result)) throw result.error;
       },
-      cancel: () => abort.abort(),
+      cancel: () => {
+        abort.abort();
+        return auth.rest('fs.unlink', [target]);
+      },
     });
     const listener = () => {
       const { detail: { state } } = controller;
@@ -271,6 +274,7 @@ function UploadItem(props: { controller: UploadItem.Controller }) {
         {(() => {
           switch (state) {
             case UploadItem.State.upload:
+              return <IconButton icon='close' onClick={() => props.controller.cancel()} />;
             case UploadItem.State.error:
               return <IconButton icon='close' onClick={() => props.controller.cleanup()} />;
           }

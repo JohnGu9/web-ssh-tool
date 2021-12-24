@@ -155,7 +155,7 @@ class Auth implements Server.Authentication.Type {
     }
   })();
 
-  async rest<T extends Rest.Type>(type: T, parameter: Rest.Map.Parameter<T>): Promise<Rest.Map.Return<T> | Rest.Error> {
+  async rest<T extends keyof Rest.Map>(type: T, parameter: Rest.Map.Parameter<T>): Promise<Rest.Map.Return<T> | Rest.Error> {
     return new Promise(resolve => {
       const tag = this._tag++;
       this._callbacks.set(tag, resolve);

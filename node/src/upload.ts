@@ -1,5 +1,5 @@
 import express from 'express';
-import multer from 'multer';
+import multer, { diskStorage } from 'multer';
 import path from 'path';
 import process from 'process';
 import { promises as fs } from 'fs';
@@ -7,7 +7,7 @@ import { promises as fs } from 'fs';
 import { Context, exists } from './common';
 
 async function upload(urlPath: string, app: express.Express, context: Context) {
-  const dest = await (async () => {
+  const destination = await (async () => {
     if (context.upload) {
       if (await exists(context.upload)) {
         const state = await fs.lstat(context.upload);
@@ -19,17 +19,27 @@ async function upload(urlPath: string, app: express.Express, context: Context) {
       const temp = await fs.mkdtemp(path.join(process.cwd(), 'uploads-'));
       context.logger.log(`upload file store in temporary directory [${temp}] (warning: temporary directory will be removed when process exit)`);
       process.once('SIGINT', async (signal) => {
-        await fs.rmdir(temp, { maxRetries: 3 });
+        await fs.rm(temp, { recursive: true });
         process.kill(process.pid, signal);
       });
       process.once('exit', async (code) => {
-        await fs.rmdir(temp, { maxRetries: 3 });
+        await fs.rm(temp, { recursive: true });
         process.exit(code);
       });
       return temp;
     }
   })();
-  const config = multer({ dest });
+  const config = multer({
+    storage: diskStorage({
+      destination,
+      filename: (req, file, cb) => {
+        const fileName = `${Date.now()}`;
+        const filePath = path.join(destination, fileName);
+        req.on('aborted', () => fs.unlink(filePath));
+        cb(null, fileName);
+      }
+    })
+  });
   return app.post(urlPath,
     function (req, res, next) {
       const token = req.query['t'];
@@ -47,10 +57,6 @@ async function upload(urlPath: string, app: express.Express, context: Context) {
       else if (file === undefined) return res.status(400).json({ error: 'No files were uploaded.' });
       context.logger.log(`uploaded file [${file.path} ] from [${forward ?? req.socket.remoteAddress}]`);
       res.json(file);
-      setTimeout(async () => {
-        const { path } = file;
-        if (await exists(path)) await fs.unlink(path);
-      }, 10 * 1000); // auto clean up unused files
     });
 }
 

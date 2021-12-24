@@ -1,6 +1,6 @@
 import path from "path";
 import React from "react";
-import { IconButton, MenuItem, MenuSurface, MenuSurfaceAnchor, Tooltip } from "rmwc";
+import { Checkbox, IconButton, MenuItem, MenuSurface, MenuSurfaceAnchor, Tooltip } from "rmwc";
 import { Server, ThemeContext } from "../../../../common/Providers";
 import { any } from "../../../../common/Tools";
 import { FileType, Rest, Watch } from "../../../../common/Type";
@@ -128,12 +128,26 @@ function CheckListButton({ setOnSelect }: { setOnSelect: (value: boolean) => unk
   );
 }
 
-export function SelectingToolsBar({ state: { path: dir, files }, selected, setOnSelect }: { state: Watch.Directory, selected: Set<string>, setOnSelect: (value: boolean) => unknown }) {
+export function SelectingToolsBar({ state: { path: dir, files }, selected, setSelected, setOnSelect }: { state: Watch.Directory, selected: Set<string>, setSelected: (value: Set<string>) => unknown, setOnSelect: (value: boolean) => unknown }) {
   const auth = React.useContext(Server.Authentication.Context);
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
   const { themeData: theme } = React.useContext(ThemeContext);
+  const fileList = Object.keys(files);
+  const selectedList = Array.from(selected);
+  const checked = fileList.length === selectedList.length;
   return (
     <>
+      <div style={{ width: 16 + 3 }} />
+      <div className='column' style={{ width: 24, justifyContent: 'center', alignItems: 'center' }}>
+        <Tooltip content={checked ? 'cancel select' : 'select all'}>
+          <Checkbox checked={checked}
+            onChange={event => {
+              if (fileList.length === selectedList.length) setSelected(new Set());
+              else setSelected(new Set(fileList));
+            }} />
+        </Tooltip>
+      </div>
+      <div style={{ width: 16 }} />
       <DownloadButton callback={() =>
         auth.download(Array.from(selected)
           .map(value => path.join(dir, value)))} />

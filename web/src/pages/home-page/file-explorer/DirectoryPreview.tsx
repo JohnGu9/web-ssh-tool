@@ -26,7 +26,7 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
       <SharedAxisTransition className='row' style={{ height: 56, padding: '0 8px 0 0' }}
         type={SharedAxisTransition.Type.fromTopToBottom} id={onSelect}>
         {onSelect
-          ? <SelectingToolsBar setOnSelect={setOnSelect} state={state} selected={selected} />
+          ? <SelectingToolsBar setOnSelect={setOnSelect} state={state} selected={selected} setSelected={setSelected} />
           : <ToolsBar dir={dir} setOnSelect={setOnSelect} />}
       </SharedAxisTransition>
       <DropZone style={{ flex: 1, width: '100%', minHeight: 0 }} dirname={dir}>
