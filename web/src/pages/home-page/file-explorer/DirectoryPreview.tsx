@@ -1,16 +1,17 @@
 import path from "path";
 import React from "react";
 import { Lstat, Watch } from "../../../common/Type";
-import { SharedAxisTransition } from "../../../components/Transitions";
+import { SharedAxisTransition } from "../../../components/Transitions"
+import { FixedSizeList } from "../../../components/AdaptedWindow";
+import EventListenerBuilder from "../../../components/EventListenerBuilder";
+
 import FileExplorer, { NavigatorBar } from "./Common";
 import InformationDialog from "./directory-preview/InformationDialog";
 import RenameDialog from "./directory-preview/RenameDialog";
 import FileListTile from "./directory-preview/FileListTile";
 import DropZone from "./directory-preview/DropZone";
 import ToolsBar, { SelectingToolsBar } from "./directory-preview/ToolsBar";
-import { FixedSizeList } from "../../../components/AdaptedWindow";
-import EventListenerBuilder from "../../../components/EventListenerBuilder";
-import { any } from "../../../common/Tools";
+
 
 function DirectoryPreView({ state }: { state: Watch.Directory }) {
   const { path: dir, files } = state;
@@ -57,7 +58,7 @@ class List extends React.Component<{
 
   readonly eventTarget = new EventTarget();
   override componentDidUpdate(oldProp: any) {
-    if (any(Object.keys(this.props), (value) => (this.props as any)[value] !== oldProp[value]))
+    if (Object.keys(this.props).some(value => (this.props as any)[value] !== oldProp[value]))
       this.eventTarget.dispatchEvent(new Event('change'));
   }
 

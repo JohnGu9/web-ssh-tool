@@ -18,13 +18,6 @@ export function sliceOutput(output: ProcessPipeLine) {
 
 export { default as delay } from './Delay';
 
-export function any<T>(array: Array<T>, test: (value: T) => boolean) {
-  for (const value of array) {
-    if (test(value)) return true;
-  }
-  return false;
-}
-
 export type AwaitProps<T> = { [P in keyof T]: Awaited<T[P]> }
 
 export async function concurrent<T extends object>(obj: T): Promise<AwaitProps<T>> {

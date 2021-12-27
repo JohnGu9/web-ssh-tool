@@ -6,13 +6,6 @@ import licenseChecker, { ModuleInfos } from 'license-checker';
 export { };
 
 
-function any<T>(array: Array<T>, test: (value: T) => boolean) {
-  for (const value of array) {
-    if (test(value)) return true;
-  }
-  return false;
-}
-
 function run(command: string) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, { shell: true });
@@ -44,9 +37,9 @@ async function main() {
   const buildProjectJson = JSON.parse(buildProjectFile);
   const nodeProjectJson = JSON.parse(nodeProjectFile);
 
-  if (any(Object.entries(nodeProjectJson["dependencies"]),
+  if (Object.entries(nodeProjectJson["dependencies"]).some(
     ([value, version]) => buildProjectJson["dependencies"]?.[value] !== version)
-    || any(Object.entries(nodeProjectJson["optionalDependencies"]),
+    || Object.entries(nodeProjectJson["optionalDependencies"]).some(
       ([value, version]) => buildProjectJson["optionalDependencies"]?.[value] !== version)) {
     console.log('synchronize packages...');
     buildProjectJson["dependencies"] = nodeProjectJson["dependencies"];

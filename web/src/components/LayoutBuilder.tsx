@@ -4,27 +4,39 @@ class LayoutBuilder extends React.Component<LayoutBuilder.Props, LayoutBuilder.S
   constructor(props: LayoutBuilder.Props) {
     super(props);
     this.state = {};
-    this._ref = React.createRef();
   }
 
-  readonly _ref: React.RefObject<HTMLDivElement>;
-  readonly _resize = () => {
-    const { current } = this._ref;
-    if (current) this.setState({ size: { height: current.clientHeight, width: current.clientWidth } })
+  protected _resizeObserver = ResizeObserver ? new ResizeObserver(entries => this._resize()) : null;
+  protected _current: HTMLDivElement | null = null;
+
+  protected readonly _resize = () => {
+    const current = this._current;
+    if (current !== null) this.setState({ size: { height: current.clientHeight, width: current.clientWidth } })
+  }
+
+  protected _updateRef = (ref: HTMLDivElement | null) => {
+    if (ref !== this._current) {
+      this._current = ref;
+      this._resizeObserver?.disconnect();
+      if (ref !== null) this._resizeObserver?.observe(ref);
+    }
   }
 
   override componentDidMount() {
-    this._resize();
-    window.addEventListener('resize', this._resize);
+    if (this._resizeObserver === null) {
+      this._resize();
+      window.addEventListener('resize', this._resize);
+    }
   }
 
   override componentWillUnmount() {
-    window.removeEventListener('resize', this._resize);
+    if (this._resizeObserver === null)
+      window.removeEventListener('resize', this._resize);
   }
 
   override render() {
     return (
-      <div key={null} ref={this._ref} style={this.props.style} className={this.props.className}>
+      <div key={null} ref={this._updateRef} style={this.props.style} className={this.props.className}>
         {this.props.builder(this.state.size, this.props.children)}
       </div>
     );

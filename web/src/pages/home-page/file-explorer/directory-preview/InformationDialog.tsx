@@ -1,5 +1,5 @@
 import React from "react";
-import { Button, IconButton, Tooltip, Typography, Dialog, DialogActions } from "rmwc";
+import { Button, IconButton, Tooltip, Typography, Dialog, DialogActions, ListDivider } from "rmwc";
 
 import { Server, ThemeContext } from "../../../../common/Providers";
 import { delay } from "../../../../common/Tools";
@@ -18,12 +18,24 @@ function InformationDialog({ state: dialog, close, rename }: {
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
   const onError = (error: any) => showMessage({ icon: 'error', title: 'Delete failed', body: error?.message ?? error?.name ?? 'Unknown issue', actions: [{ label: 'close' }] });
   const onDeleted = (path: string) => showMessage({ icon: 'checked', title: 'Deleted', body: path, actions: [{ label: 'close' }] });
+  const { type, size, atime, mtime, ctime, birthtime, ...stats } = dialog.stats;
   return (
     <Dialog open={dialog.open} onClose={close}>
       <DialogTitle>Information</DialogTitle>
       <DialogContent style={{ overflow: 'auto', maxHeight: 360 }}>
-        <div style={{ margin: '0 0 16px' }}><Typography use='button'>path</Typography>: {dialog.path}</div>
-        {Object.entries(dialog.stats)
+        <div style={{ margin: '0 0 16px' }}><Typography use='button' >path</Typography>: {dialog.path}</div>
+        <ListDivider />
+        <div style={{ margin: '16px 0 8px', opacity: 0.5 }}>Basic</div>
+        {type === undefined ? <></> : <Typography use='button'>type: {type}</Typography>}
+        <div ><Typography use='button'>size</Typography>: {FileSize(size)}</div>
+        <div ><Typography use='button'>atime</Typography>: {atime}</div>
+        <div ><Typography use='button'>mtime</Typography>: {mtime}</div>
+        <div ><Typography use='button'>ctime</Typography>: {ctime}</div>
+        <div ><Typography use='button'>birthtime</Typography>: {birthtime}</div>
+        <div style={{ height: 8 }} />
+        <ListDivider />
+        <div style={{ margin: '16px 0 8px', opacity: 0.5 }}>Advance</div>
+        {Object.entries(stats)
           .map(([key, value]) => {
             return <div key={key}><Typography use='button'>{key}</Typography>: {value}</div>;
           })}
@@ -102,4 +114,11 @@ function DeleteButton({ onLongPress }: { onLongPress: () => unknown }) {
       transition: 'background-color 1s'
     }}
     tooltip='Long press to delete' />;
+}
+
+function FileSize(size: number) {
+  if (size > 1024 * 1024 * 1024) return `${(size / (1024 * 1024 * 1024)).toFixed(2)} GB (${size} bytes)`;
+  else if (size > 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(2)} MB (${size} bytes)`;
+  else if (size > 1024) return `${(size / (1024)).toFixed(2)} KB (${size} bytes)`;
+  else return `${size} bytes`;
 }

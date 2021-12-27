@@ -54,6 +54,8 @@ function FileIcon(name: string, { type }: { type?: FileType, }) {
   }
 }
 
+const sizeLimit = 10 * 1024 * 1024;// limit to 10MB for preview
+
 function FileListTile({ dirname, name, stats, selected, onSelect, onSelected, onClick, onDetail, style }: {
   dirname: string,
   name: string,
@@ -72,7 +74,7 @@ function FileListTile({ dirname, name, stats, selected, onSelect, onSelected, on
     switch (stats.type) {
       case FileType.file:
         if (onSelect) return false;
-        if (stats.size < 1 * 1024 * 1024) return false; // limit to 1MB for preview
+        if (stats.size < sizeLimit) return false;
         break;
       case FileType.directory:
         return false;
@@ -80,7 +82,7 @@ function FileListTile({ dirname, name, stats, selected, onSelect, onSelected, on
         switch (stats.realType) {
           case FileType.file:
             if (onSelect) return false;
-            if (stats.size < 1 * 1024 * 1024) return false; // limit to 1MB for preview
+            if (stats.size < sizeLimit) return false;
             break;
           case FileType.directory:
             return false;

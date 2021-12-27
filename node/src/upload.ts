@@ -35,7 +35,9 @@ async function upload(urlPath: string, app: express.Express, context: Context) {
       filename: (req, file, cb) => {
         const fileName = `${Date.now()}`;
         const filePath = path.join(destination, fileName);
-        req.on('aborted', () => fs.unlink(filePath));
+        const cleanup = () => fs.unlink(filePath).catch(function () { });
+        req.once('error', cleanup);
+        req.once('aborted', cleanup);
         cb(null, fileName);
       }
     })

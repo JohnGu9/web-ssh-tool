@@ -4,6 +4,7 @@ import { IconButton, Tooltip } from "rmwc";
 import { Server, ThemeContext } from "../../../common/Providers";
 import { Watch } from "../../../common/Type";
 import FileExplorer, { NavigatorBar } from "./Common";
+import { FixedSizeList } from "../../../components/AdaptedWindow";
 
 function FilePreview({ state }: { state: Watch.File }) {
   const { cd } = React.useContext(FileExplorer.Context);
@@ -54,9 +55,7 @@ function PreviewWindow({ name, content }: { name: string, content: string }) {
         return <Center><img src={`data:image/${last};base64,${content}`} alt='Loading' /></Center>;
     }
   }
-  return <code style={{ flex: 1, width: '100%', overflow: 'auto', whiteSpace: 'pre', padding: 8 }}>
-    {Buffer.from(content, 'base64').toString()}
-  </code>;
+  return <PlainTextPreview base64Content={content} style={{ flex: 1, width: '100%' }} />
 }
 
 export default FilePreview;
@@ -66,4 +65,19 @@ function Center({ children }: { children: React.ReactNode }) {
     style={{ flex: 1, width: '100%', overflow: 'auto', justifyContent: 'center', padding: '0 8px' }}>
     {children}
   </div>;
+}
+
+function PlainTextPreview({ base64Content: content, style }: { base64Content: string, style?: React.CSSProperties }) {
+  const lines = React.useMemo(() => {
+    const text = Buffer.from(content, 'base64').toString();
+    return text.split('\n');
+  }, [content]);
+  const builder = React.useCallback(({ style, index }: { style: React.CSSProperties, index: number }) => {
+    return <code style={style}>{lines[index]}</code>
+  }, [lines]);
+  return (
+    <FixedSizeList itemCount={lines.length} itemSize={16} style={style}>
+      {builder}
+    </FixedSizeList>
+  );
 }

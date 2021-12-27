@@ -2,7 +2,6 @@ import path from "path";
 import React from "react";
 import { Checkbox, IconButton, MenuItem, MenuSurface, MenuSurfaceAnchor, Tooltip } from "rmwc";
 import { Server, ThemeContext } from "../../../../common/Providers";
-import { any } from "../../../../common/Tools";
 import { FileType, Rest, Watch } from "../../../../common/Type";
 import { LongPressIconButton } from "../../../../components/LongPressButton";
 import { SharedAxisTransition } from "../../../../components/Transitions";
@@ -173,7 +172,7 @@ export function SelectingToolsBar({ state: { path: dir, files }, selected, setSe
             }
           }));
           if (value.length === 0) return true;
-          if (any(value, value => value === false)) return false;
+          if (value.some(value => value === false)) return false;
           onCompleted();
           setOnSelect(false);
           return true;
@@ -197,7 +196,7 @@ export function SelectingToolsBar({ state: { path: dir, files }, selected, setSe
             }
           }));
           if (value.length === 0) return true;
-          if (any(value, value => value === false)) return false;
+          if (value.some(value => value === false)) return false;
           onCompleted();
           setOnSelect(false);
           return true;
@@ -226,7 +225,7 @@ export function SelectingToolsBar({ state: { path: dir, files }, selected, setSe
             }
           }));
           if (value.length === 0) return true;
-          if (any(value, value => value === false)) return false;
+          if (value.some(value => value === false)) return false;
           onCompleted();
           setOnSelect(false);
           return true;
