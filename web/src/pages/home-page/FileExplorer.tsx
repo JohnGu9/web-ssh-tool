@@ -1,12 +1,13 @@
 import React from "react";
 import { Elevation, LinearProgress, CircularProgress, Typography, IconButton, Icon, Tooltip, Theme } from 'rmwc';
 import { v1 as uuid } from 'uuid';
-import path from "path";
+import path from "path-browserify";
 
 import { wsSafeClose } from "../../common/DomTools";
 import { Server, Settings } from "../../common/Providers";
 import { Rest, Watch } from "../../common/Type";
 import { SharedAxisTransition } from "../../components/Transitions";
+import AnimatedList from "../../components/AnimatedList";
 
 import FilePreview from "./file-explorer/FilePreview";
 import DirectoryPreView from "./file-explorer/DirectoryPreview";
@@ -14,8 +15,8 @@ import LostConnection from "./file-explorer/LostConnection";
 import Loading from "./file-explorer/Loading";
 import ErrorPreview, { UnknownErrorPreview } from "./file-explorer/ErrorPreview";
 import Common from './file-explorer/Common';
-import AnimatedList from "../../components/AnimatedList";
 import { SimpleListItem } from "rmwc";
+import { FileSize } from "../../common/Tools";
 
 const { host } = document.location;
 
@@ -76,15 +77,18 @@ class FileExplorer extends React.Component<FileExplorer.Props, FileExplorer.Stat
     const { auth } = this.props;
     const abort = new AbortController();
     const target = path.join(dest, file.name);
-
     const controller = new UploadItem.Controller({
       id: uuid(), file, dest,
-      upload: async () => {
+      upload: async (onUploadProgress, onDownloadProgress) => {
         // create a placeholder file at target path
         const result = await auth.rest('fs.writeFile',
           [target, "Web-ssh-tool try to create file here. Don't edit, move or delete this file", { flag: 'wx' }]);
         if (Rest.isError(result)) throw result.error;
-        return auth.upload(file, { signal: abort.signal })
+        return auth.upload(file, {
+          signal: abort.signal,
+          onUploadProgress,
+          onDownloadProgress,
+        })
       },
       operate: async (multer) => {
         // overwrite the placeholder file
@@ -226,11 +230,17 @@ function Content({ state }: { state?: Watch.Directory | Watch.File | { error: an
 
 function UploadItem(props: { controller: UploadItem.Controller }) {
   const [state, setState] = React.useState<UploadItem.State>(props.controller.detail.state);
+  const [upload, setUpload] = React.useState<ProgressEvent | undefined>(undefined);
   React.useEffect(() => {
     const { controller } = props;
-    const listener = () => setState(controller.detail.state);
-    controller.addEventListener('change', listener);
-    return () => controller.removeEventListener('change', listener);
+    const onChange = () => setState(controller.detail.state);
+    const onUpload = (event: Event) => {
+      const { detail: uploadEvent } = event as CustomEvent;
+      setUpload(uploadEvent);
+    };
+    controller.addEventListener('change', onChange);
+    controller.addEventListener('upload', onUpload);
+    return () => controller.removeEventListener('change', onChange);
   });
   const { controller: { detail: { file, dest } } } = props;
   return (
@@ -243,15 +253,37 @@ function UploadItem(props: { controller: UploadItem.Controller }) {
         {(() => {
           switch (state) {
             case UploadItem.State.upload:
-            case UploadItem.State.operate:
-              return <CircularProgress />;
+            case UploadItem.State.operate: {
+              if (upload && upload.lengthComputable) {
+                if (upload.lengthComputable) {
+                  const progress = upload.loaded / upload.total;
+                  return (
+                    <Tooltip content={`${(progress * 100).toFixed(1)} %; ${FileSize(upload.loaded)}`}>
+                      <CircularProgress progress={progress} />
+                    </Tooltip>
+                  );
+                } else {
+                  return (
+                    <Tooltip content={FileSize(upload.loaded)}>
+                      <CircularProgress />
+                    </Tooltip>
+                  );
+                }
+              } else {
+                return <Tooltip content='' open={false}>
+                  <CircularProgress />
+                </Tooltip>
+              }
+
+            }
             case UploadItem.State.close:
               return <Icon icon='checked' />;
-            case UploadItem.State.error:
+            case UploadItem.State.error: {
               const { error } = props.controller.detail;
               return <Tooltip content={error?.message ?? error?.name ?? 'Unknown error'}>
                 <Theme use='error'><Icon icon='error' /></Theme>
               </Tooltip>;
+            }
             case UploadItem.State.cancel:
               return <Icon icon='cancel' />;
           }
@@ -294,7 +326,8 @@ namespace UploadItem {
       id: string,
       file: File,
       dest: string,
-      upload: () => Promise<Express.Multer.File>,
+      upload: (onUploadProgress: (progress: ProgressEvent) => unknown,
+        onDownloadProgress: (progress: ProgressEvent) => unknown,) => Promise<Express.Multer.File>,
       operate: (file: Express.Multer.File) => Promise<unknown>,
       cancel: () => unknown,
     }) {
@@ -310,26 +343,29 @@ namespace UploadItem {
         dest: props.dest,
         state: State.upload,
       };
-      props.upload()
-        .then((file) => {
-          if (this.detail.state !== State.cancel) {
-            this.detail.state = State.operate;
-            this.dispatchEvent(new Event('change'));
-            return props.operate(file).then(() => {
-              this.detail.state = State.close;
-              this.dispatchEvent(new Event('change'))
-            });
-          }
-        })
-        .catch((error) => {
-          if (this.detail.state !== State.cancel) {
-            this.detail.error = error;
-            this.detail.state = State.error;
+      props.upload(
+        event => this.dispatchEvent(new CustomEvent('upload', { detail: event })),
+        event => this.dispatchEvent(new CustomEvent('download', { detail: event })),
+      ).then((file) => {
+        if ('error' in file) {
+          this.detail.state = State.error;
+          this.dispatchEvent(new Event('change'));
+        } else if (this.detail.state !== State.cancel) {
+          this.detail.state = State.operate;
+          this.dispatchEvent(new Event('change'));
+          return props.operate(file).then(() => {
+            this.detail.state = State.close;
             this.dispatchEvent(new Event('change'))
-          }
-        });
+          });
+        }
+      }).catch((error) => {
+        if (this.detail.state !== State.cancel) {
+          this.detail.error = error;
+          this.detail.state = State.error;
+          this.dispatchEvent(new Event('change'))
+        }
+      });
     }
-
     readonly detail: {
       id: string,
       file: File,

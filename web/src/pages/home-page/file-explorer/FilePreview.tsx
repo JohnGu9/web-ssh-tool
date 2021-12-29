@@ -1,5 +1,5 @@
 import React from "react";
-import path from "path";
+import path from "path-browserify";
 import { IconButton, Tooltip } from "rmwc";
 import { Server, ThemeContext } from "../../../common/Providers";
 import { Watch } from "../../../common/Type";

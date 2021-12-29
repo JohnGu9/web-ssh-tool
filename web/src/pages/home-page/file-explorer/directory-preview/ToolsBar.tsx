@@ -1,4 +1,4 @@
-import path from "path";
+import path from "path-browserify";
 import React from "react";
 import { Checkbox, IconButton, MenuItem, MenuSurface, MenuSurfaceAnchor, Tooltip } from "rmwc";
 import { Server, ThemeContext } from "../../../../common/Providers";

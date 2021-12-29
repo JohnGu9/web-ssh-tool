@@ -26,3 +26,4 @@ index.js
 .vscode
 **/*.log
 .test
+**/.DS_Store

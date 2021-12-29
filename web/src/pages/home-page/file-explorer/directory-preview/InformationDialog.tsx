@@ -2,7 +2,7 @@ import React from "react";
 import { Button, IconButton, Tooltip, Typography, Dialog, DialogActions, ListDivider } from "rmwc";
 
 import { Server, ThemeContext } from "../../../../common/Providers";
-import { delay } from "../../../../common/Tools";
+import { delay, FileSize } from "../../../../common/Tools";
 import { FileType, Lstat, Rest } from "../../../../common/Type";
 import { DialogContent, DialogTitle } from "../../../../components/Dialog";
 import LongPressButton from "../../../../components/LongPressButton";
@@ -116,9 +116,4 @@ function DeleteButton({ onLongPress }: { onLongPress: () => unknown }) {
     tooltip='Long press to delete' />;
 }
 
-function FileSize(size: number) {
-  if (size > 1024 * 1024 * 1024) return `${(size / (1024 * 1024 * 1024)).toFixed(2)} GB (${size} bytes)`;
-  else if (size > 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(2)} MB (${size} bytes)`;
-  else if (size > 1024) return `${(size / (1024)).toFixed(2)} KB (${size} bytes)`;
-  else return `${size} bytes`;
-}
+

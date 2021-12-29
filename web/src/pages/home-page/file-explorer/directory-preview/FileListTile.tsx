@@ -1,4 +1,4 @@
-import path from "path";
+import path from "path-browserify";
 import React from "react";
 import { Checkbox, Icon, IconButton, SimpleListItem } from "rmwc";
 import { FileType, Lstat } from "../../../../common/Type";

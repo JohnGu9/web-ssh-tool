@@ -5,7 +5,6 @@ import licenseChecker, { ModuleInfos } from 'license-checker';
 
 export { };
 
-
 function run(command: string) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, { shell: true });
@@ -24,32 +23,7 @@ function checker() {
   );
 }
 
-async function main() {
-  console.log('running build.ts');
-
-  // sync package
-  const nodeProjectFilePath = path.resolve(__dirname, 'node', 'package.json');
-  const buildProjectFilePath = path.resolve(__dirname, 'package.json');
-  const [buildProjectFile, nodeProjectFile] = await Promise.all([
-    fs.readFile(buildProjectFilePath).then(value => value.toString()),
-    fs.readFile(nodeProjectFilePath).then(value => value.toString()),
-  ]);
-  const buildProjectJson = JSON.parse(buildProjectFile);
-  const nodeProjectJson = JSON.parse(nodeProjectFile);
-
-  if (Object.entries(nodeProjectJson["dependencies"]).some(
-    ([value, version]) => buildProjectJson["dependencies"]?.[value] !== version)
-    || Object.entries(nodeProjectJson["optionalDependencies"]).some(
-      ([value, version]) => buildProjectJson["optionalDependencies"]?.[value] !== version)) {
-    console.log('synchronize packages...');
-    buildProjectJson["dependencies"] = nodeProjectJson["dependencies"];
-    buildProjectJson["optionalDependencies"] = nodeProjectJson["optionalDependencies"];
-    await fs.writeFile(buildProjectFilePath, JSON.stringify(buildProjectJson, null, 2));
-    await run('npm i');
-  }
-
-  // bundle licenses to frontend
-  console.log('checking licenses...');
+async function licenseBundle() {
   const webBuiltDirectory = path.resolve(__dirname, 'web', 'build', 'static', 'js');
   for await (const { name: file } of await fs.opendir(webBuiltDirectory)) {
     if (file.endsWith('LICENSE.txt')) {
@@ -61,30 +35,35 @@ async function main() {
           await fs.writeFile(target, buffer);
         })(),
       ]);
+      const buffer2 = Buffer.from('\n\n');
       for (const [name, { licenseFile }] of Object.entries(licenses)) {
         if (licenseFile) {
           const buffer0 = Buffer.from(`\n${name}\n`);
           const buffer1 = await fs.readFile(licenseFile);
-          const buffer2 = Buffer.from('\n\n');
-          const buffer = Buffer.concat([buffer0, buffer1, buffer2]);
-          await fs.appendFile(target, buffer);
+          await fs.appendFile(target, Buffer.concat([buffer0, buffer1, buffer2]));
         }
       }
       break;
     }
   }
+}
+
+async function main() {
+  console.log('running build.ts');
+
+  // bundle licenses to frontend
+  console.log('checking licenses...');
+  await licenseBundle();
+  await fs.cp(path.join(__dirname, 'web', 'build'), path.join(__dirname, 'node', 'assets'), { recursive: true });
 
   // pkg
-  console.log('bundle project to executables...')
-  await fs.copyFile(path.resolve(__dirname, 'node', 'index.js'), 'index.js');
-  await run('npx pkg --compress Brotli package.json');
-
-  // clean up
-  console.log('clean up useless files');
-  fs.unlink('index.js');
+  console.log('bundle project to executables...');
+  await run('cd node && npx pkg --compress Brotli package.json');
 
   // print information
   console.log('🚚 application built! ');
+  const buildProjectFilePath = path.resolve(__dirname, 'node', 'package.json');
+  const buildProjectJson = JSON.parse(await fs.readFile(buildProjectFilePath).then(value => value.toString()));
   const projectName = buildProjectJson['name'];
   console.log(`📦 output executables: `);
   for await (const { name: file } of await fs.opendir('build')) {

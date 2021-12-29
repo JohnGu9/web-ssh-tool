@@ -17,7 +17,11 @@ export namespace Server {
       readonly ws: WebSocket;
       readonly shell: EventTarget;
       signOut(): void;
-      upload(data: File | FormData, init?: RequestInit): Promise<Express.Multer.File>;
+      upload(data: File | FormData, init?: {
+        signal?: AbortSignal | null
+        onUploadProgress?: (progress: ProgressEvent) => unknown,
+        onDownloadProgress?: (progress: ProgressEvent) => unknown,
+      }): Promise<Express.Multer.File>;
       download(filePath: string | string[]): Promise<void>;
       rest<T extends keyof Rest.Map>(type: T, parameter: Rest.Map.Parameter<T>): Promise<Rest.Map.Return<T> | Rest.Error>;
     };

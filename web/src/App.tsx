@@ -5,7 +5,6 @@ import delay from './common/Delay';
 import { wsSafeClose } from './common/DomTools';
 import { LocaleContext, LocaleContextType, LocaleService, Server, SettingsService, ThemeService } from './common/Providers';
 import { SharedAxisTransition } from './components/Transitions';
-import HomePage from './pages/HomePage';
 import SignInPage from './pages/SignInPage';
 
 function App() {
@@ -15,9 +14,7 @@ function App() {
         <ThemeService>
           <LocaleContext.Consumer>
             {locale => <Service locale={locale}>
-              <SignInPage >
-                <HomePage />
-              </SignInPage>
+              <SignInPage />
             </Service>}
           </LocaleContext.Consumer>
         </ThemeService>

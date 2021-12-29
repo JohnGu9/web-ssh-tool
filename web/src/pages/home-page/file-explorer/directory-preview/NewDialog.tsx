@@ -1,5 +1,5 @@
 import React from "react";
-import path from 'path';
+import path from 'path-browserify';
 import { Button, SnackbarQueueMessage, TextField, Dialog, DialogActions } from "rmwc";
 
 import { DialogContent, DialogTitle } from "../../../../components/Dialog";

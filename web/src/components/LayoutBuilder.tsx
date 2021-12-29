@@ -30,8 +30,8 @@ class LayoutBuilder extends React.Component<LayoutBuilder.Props, LayoutBuilder.S
   }
 
   override componentWillUnmount() {
-    if (this._resizeObserver === null)
-      window.removeEventListener('resize', this._resize);
+    if (this._resizeObserver === null) window.removeEventListener('resize', this._resize);
+    else this._resizeObserver.disconnect();
   }
 
   override render() {

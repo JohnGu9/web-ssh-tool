@@ -1,4 +1,4 @@
-import path from "path";
+import path from "path-browserify";
 import React from "react";
 import { Lstat, Watch } from "../../../common/Type";
 import { SharedAxisTransition } from "../../../components/Transitions"

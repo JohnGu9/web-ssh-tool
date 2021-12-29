@@ -1,4 +1,4 @@
-import path from "path";
+import path from "path-browserify";
 import React from "react";
 import { Server } from "../../../../common/Providers";
 import { Rest } from "../../../../common/Type";

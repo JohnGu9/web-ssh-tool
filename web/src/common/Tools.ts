@@ -25,3 +25,10 @@ export async function concurrent<T extends object>(obj: T): Promise<AwaitProps<T
   for (const [key, value] of Object.entries(obj)) result[key] = await value;
   return result as AwaitProps<T>;
 }
+
+export function FileSize(size: number) {
+  if (size > 1024 * 1024 * 1024) return `${(size / (1024 * 1024 * 1024)).toFixed(2)} GB (${size} bytes)`;
+  else if (size > 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(2)} MB (${size} bytes)`;
+  else if (size > 1024) return `${(size / (1024)).toFixed(2)} KB (${size} bytes)`;
+  else return `${size} bytes`;
+}

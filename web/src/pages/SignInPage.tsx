@@ -1,20 +1,24 @@
 import '../components/Layout.css';
 import React from "react";
-import path from 'path';
+import path from 'path-browserify';
 import { Card, TextField, Checkbox, Typography, LinearProgress, Button } from 'rmwc';
 import { SharedAxisTransition } from '../components/Transitions';
 import { LocaleContext, LocaleContextType, Server, Settings } from '../common/Providers';
 import { Rest } from '../common/Type';
 import { wsSafeClose } from '../common/DomTools';
 import Scaffold from './home-page/Scaffold';
+import lazy from 'react-lazy-with-preload';
+
+const HomePage = lazy(() => import('./HomePage'));
+HomePage.preload();
 
 const { host } = document.location;
 
-function SignInPage({ children }: { children: React.ReactNode }) {
+function SignInPage() {
   const settings = React.useContext(Settings.Context);
   const locale = React.useContext(LocaleContext);
   const server = React.useContext(Server.Context);
-  return <Content server={server} settings={settings} locale={locale}>{children}</Content>;
+  return <Content server={server} settings={settings} locale={locale}><HomePage /></Content>;
 }
 
 export default SignInPage;
@@ -45,6 +49,7 @@ class Content extends React.Component<Content.Props, Content.State> {
       } else {
         settings.setSshUserName(username);
         settings.setSshPassword(password);
+        await HomePage.preload();
         this.setState({ auth: new Auth({ server }), loading: false });
       }
     }
@@ -163,7 +168,11 @@ class Auth implements Server.Authentication.Type {
     });
   }
 
-  async upload(data: File | FormData, init?: RequestInit): Promise<Express.Multer.File> {
+  async upload(data: File | FormData, init?: {
+    signal?: AbortSignal | null
+    onUploadProgress?: (progress: ProgressEvent) => unknown,
+    onDownloadProgress?: (progress: ProgressEvent) => unknown,
+  }): Promise<Express.Multer.File> {
     const token = await this.rest('token', []);
     if (Rest.isError(token)) throw token.error;
     const formData = (() => {
@@ -176,9 +185,33 @@ class Auth implements Server.Authentication.Type {
       }
       throw new Error('upload data type error');
     })();
-    const response = await fetch(`https://${host}/upload?t=${token}`,
-      { ...init, method: 'POST', body: formData });
-    return response.json();
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      if (init) {
+        const { onUploadProgress, onDownloadProgress, signal } = init;
+        if (onUploadProgress) xhr.upload.addEventListener('progress', event => {
+          if (event.lengthComputable) onUploadProgress(event)
+        });
+        if (onDownloadProgress) xhr.addEventListener('progress', event => {
+          if (event.lengthComputable) onDownloadProgress(event);
+        });
+        if (signal) signal.addEventListener('abort', () => xhr.abort());
+      }
+      const listenerOptions: AddEventListenerOptions = { once: true };
+      xhr.addEventListener('abort', reject, listenerOptions);
+      xhr.addEventListener('error', reject, listenerOptions);
+      xhr.addEventListener('timeout', reject, listenerOptions);
+      xhr.onload = event => {
+        try {
+          resolve(JSON.parse(xhr.responseText));
+        } catch (error) {
+          reject(error);
+        }
+      }
+
+      xhr.open('POST', `https://${host}/upload?t=${token}`, true);
+      xhr.send(formData);
+    });
   }
 
   async download(filePath: string | string[]): Promise<void> {
