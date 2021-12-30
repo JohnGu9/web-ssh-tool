@@ -56,10 +56,11 @@ function FileIcon(name: string, { type }: { type?: FileType, }) {
 
 const sizeLimit = 10 * 1024 * 1024;// limit to 10MB for preview
 
-function FileListTile({ dirname, name, stats, selected, onSelect, onSelected, onClick, onDetail, style }: {
+function FileListTile({ dirname, name, stats, uploading, selected, onSelect, onSelected, onClick, onDetail, style }: {
   dirname: string,
   name: string,
   stats: Lstat,
+  uploading: boolean,
   selected: boolean,
   onSelect: boolean,
   onSelected: (selected: boolean) => unknown,
@@ -71,6 +72,7 @@ function FileListTile({ dirname, name, stats, selected, onSelect, onSelected, on
   const targetPath = path.join(dirname, name);
   const [hover, setHover] = React.useState(false);
   const disabled = (() => {
+    if (uploading) return true;
     switch (stats.type) {
       case FileType.file:
         if (onSelect) return false;
@@ -104,7 +106,7 @@ function FileListTile({ dirname, name, stats, selected, onSelect, onSelected, on
       style={{ justifyContent: 'center', alignItems: 'center' }}>
       {onSelect
         ? <Checkbox readOnly checked={selected} style={{ height: 24 }}></Checkbox>
-        : <Icon icon={FileIcon(name, stats)}></Icon>}
+        : <Icon icon={uploading ? 'file_upload' : FileIcon(name, stats)}></Icon>}
     </SharedAxisTransition>}
     text={<div style={{ flex: 1, minWidth: 0, overflowX: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>}
     meta={<IconButton

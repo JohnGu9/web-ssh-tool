@@ -19,6 +19,7 @@ export const enum FileType {
 export namespace Rest {
   export type Map = {
     'token': { parameter: any, return: string },
+    'unzip': { parameter: { src: string, dest: string }, return: void },
     'fs.rename': { parameter: Parameters<typeof fs.rename>, return: Awaited<ReturnType<typeof fs.rename>> },
     'fs.unlink': { parameter: Parameters<typeof fs.unlink>, return: Awaited<ReturnType<typeof fs.unlink>> },
     'fs.rm': { parameter: Parameters<typeof fs.rm>, return: Awaited<ReturnType<typeof fs.rm>> },

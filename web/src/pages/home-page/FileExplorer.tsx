@@ -18,7 +18,11 @@ import Common from './file-explorer/Common';
 import { SimpleListItem } from "rmwc";
 import { FileSize } from "../../common/Tools";
 
+// @ts-ignore: Unreachable code error
+import Worker from './FileExplorer.worker';
+
 const { host } = document.location;
+let tag = 0;
 
 class FileExplorer extends React.Component<FileExplorer.Props, FileExplorer.State> {
   constructor(props: FileExplorer.Props) {
@@ -26,16 +30,17 @@ class FileExplorer extends React.Component<FileExplorer.Props, FileExplorer.Stat
     this.state = {
       closed: false,
       loading: false,
-      config: { showAll: false, sort: Common.SortType.alphabetically }
+      config: { showAll: false, sort: Common.SortType.alphabetically },
+      uploadItems: [],
     };
   }
 
+  protected readonly _worker = new Worker();
   protected _mounted = true;
-  protected _controllers: UploadItem.Controller[] = [];
   protected _ws!: WebSocket;
-  protected _onError = () => { wsSafeClose(this._ws) }
-  protected _onClose = (event: CloseEvent) => { this.setState({ closed: true, state: undefined }) }
-  protected _onOpen = async () => {
+  protected readonly _onError = () => { wsSafeClose(this._ws) }
+  protected readonly _onClose = (event: CloseEvent) => { this.setState({ closed: true, state: undefined }) }
+  protected readonly _onOpen = async () => {
     this.setState({ closed: false, state: undefined })
     const token = await this.props.auth.rest('token', []);
     if (Rest.isError(token)) {
@@ -48,7 +53,7 @@ class FileExplorer extends React.Component<FileExplorer.Props, FileExplorer.Stat
         this._ws.send(JSON.stringify({ token, cd: this.props.settings.lastPath }));
     }
   }
-  protected _onMessage = ({ data }: MessageEvent<string>) => {
+  protected readonly _onMessage = ({ data }: MessageEvent<string>) => {
     const state = JSON.parse(data);
     this.setState({ state, loading: false });
   }
@@ -77,14 +82,46 @@ class FileExplorer extends React.Component<FileExplorer.Props, FileExplorer.Stat
     const { auth } = this.props;
     const abort = new AbortController();
     const target = path.join(dest, file.name);
-    const controller = new UploadItem.Controller({
-      id: uuid(), file, dest,
+    const controller = new Common.UploadController({
+      id: uuid(), file, dest, fullPath: target,
       upload: async (onUploadProgress, onDownloadProgress) => {
-        // create a placeholder file at target path
-        const result = await auth.rest('fs.writeFile',
-          [target, "Web-ssh-tool try to create file here. Don't edit, move or delete this file", { flag: 'wx' }]);
+        const [deflate, result] = await Promise.all([
+          (async () => {
+            // build compress data
+            const buffer = await new Promise<string | ArrayBuffer | null | undefined>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = event => resolve(event.target?.result);
+              reader.onerror = reject;
+              reader.readAsArrayBuffer(file);
+            });
+            if (!(buffer instanceof ArrayBuffer)) throw new Error('Zip file failed');
+            const deflate = await new Promise<Uint8Array>((resolve, reject) => {
+              const messageTag = tag++;
+              const listener = (msg: MessageEvent) => {
+                const { tag, data, error } = msg.data;
+                if (messageTag === tag) {
+                  this._worker.addEventListener('message', listener);
+                  if (error) reject(error);
+                  else resolve(data);
+                }
+              };
+              this._worker.addEventListener('message', listener);
+              this._worker.postMessage({ tag: messageTag, data: buffer }, [buffer]);
+            });
+            return deflate;
+          })(),
+          (async () => {
+            // create a placeholder file at target path
+            const result = await auth.rest('fs.writeFile',
+              [target, "Web-ssh-tool try to create file here. Don't edit, move or delete this file", { flag: 'wx' }]);
+            return result;
+          })(),
+        ]);
         if (Rest.isError(result)) throw result.error;
-        return auth.upload(file, {
+        const blob = new Blob([deflate]);
+        const formData = new FormData();
+        formData.append('file', blob, file.name);
+        return auth.upload(formData, {
           signal: abort.signal,
           onUploadProgress,
           onDownloadProgress,
@@ -92,8 +129,9 @@ class FileExplorer extends React.Component<FileExplorer.Props, FileExplorer.Stat
       },
       operate: async (multer) => {
         // overwrite the placeholder file
-        const result = await auth.rest('fs.rename', [multer.path, target]);
+        const result = await auth.rest('unzip', { src: multer.path, dest: target });
         if (Rest.isError(result)) throw result.error;
+        await auth.rest('fs.unlink', [multer.path]);
       },
       cancel: () => {
         abort.abort();
@@ -103,19 +141,27 @@ class FileExplorer extends React.Component<FileExplorer.Props, FileExplorer.Stat
     const listener = () => {
       const { detail: { state } } = controller;
       switch (state) {
-        case UploadItem.State.cancel:
-        case UploadItem.State.close:
+        case Common.UploadController.State.cancel:
+        case Common.UploadController.State.close:
           controller.removeEventListener('change', listener);
-          const index = this._controllers.indexOf(controller);
-          if (index > -1) {
-            this._controllers.splice(index, 1);
-            if (this._mounted) this.forceUpdate();
+          if (this._mounted) {
+            const { uploadItems } = this.state;
+            const index = uploadItems.indexOf(controller);
+            if (index > -1) this.setState({
+              uploadItems: [...uploadItems.filter(value => {
+                switch (value.detail.state) {
+                  case Common.UploadController.State.cancel:
+                  case Common.UploadController.State.close:
+                    return false;
+                }
+                return true;
+              })]
+            });
           }
       }
     }
     controller.addEventListener('change', listener);
-    this._controllers.push(controller);
-    this.forceUpdate();
+    this.setState({ uploadItems: [...this.state.uploadItems, controller] });
   }
 
   override componentDidMount() {
@@ -126,14 +172,15 @@ class FileExplorer extends React.Component<FileExplorer.Props, FileExplorer.Stat
   override componentWillUnmount() {
     this._mounted = false;
     this._unbind(this._ws);
+    this._worker.terminate();
     wsSafeClose(this._ws);
   }
 
   override render() {
-    const { closed, state, loading, config } = this.state;
+    const { closed, state, loading, config, uploadItems } = this.state;
     return (
       <Common.Context.Provider value={{
-        config,
+        config, uploadItems,
         setConfig: config => this.setState({ config }),
         cd: cd => this._cd(cd),
         upload: (file, dest) => this._upload(file, dest),
@@ -170,17 +217,17 @@ class FileExplorer extends React.Component<FileExplorer.Props, FileExplorer.Stat
           </SharedAxisTransition>
           <div style={{ maxHeight: 240, overflowY: 'auto' }}>
             <AnimatedList>
-              {this._controllers.map(value => {
+              {uploadItems.map(value => {
                 return {
                   listId: value.detail.id,
-                  children: <AnimatedList.Wrap><UploadItem controller={value} /></AnimatedList.Wrap>,
+                  children: <AnimatedList.Wrap><UploadItem key={value as any} controller={value} /></AnimatedList.Wrap>,
                 }
               })}
             </AnimatedList>
           </div>
           <div style={{ height: 8 }} />
           <SimpleListItem text='Cancel all' metaIcon='clear_all'
-            style={this._controllers.length > 2
+            style={uploadItems.length > 2
               ? {
                 height: 48,
                 opacity: 1,
@@ -193,8 +240,8 @@ class FileExplorer extends React.Component<FileExplorer.Props, FileExplorer.Stat
                 transition: 'height 300ms, opacity 210ms',
               }}
             onClick={() => {
-              for (const item of Array.from(this._controllers)) item.cancel();
-              this.forceUpdate();
+              this.setState({ uploadItems: [] });
+              for (const item of Array.from(uploadItems)) item.cancel();
             }} />
           <div style={{ height: 16 }} />
         </Elevation>
@@ -217,6 +264,7 @@ namespace FileExplorer {
     state?: Watch.Directory | Watch.File | { error: any },
     loading: boolean,
     config: Common.Config,
+    uploadItems: Common.UploadController[],
   };
 }
 
@@ -228,19 +276,19 @@ function Content({ state }: { state?: Watch.Directory | Watch.File | { error: an
   else return <UnknownErrorPreview />;
 }
 
-function UploadItem(props: { controller: UploadItem.Controller }) {
-  const [state, setState] = React.useState<UploadItem.State>(props.controller.detail.state);
-  const [upload, setUpload] = React.useState<ProgressEvent | undefined>(undefined);
+function UploadItem(props: { controller: Common.UploadController }) {
+  const [state, setState] = React.useState<Common.UploadController.State>(props.controller.detail.state);
+  const [upload, setUpload] = React.useState(props.controller.upload);
   React.useEffect(() => {
     const { controller } = props;
     const onChange = () => setState(controller.detail.state);
-    const onUpload = (event: Event) => {
-      const { detail: uploadEvent } = event as CustomEvent;
-      setUpload(uploadEvent);
-    };
+    const onUpload = () => setUpload(controller.upload);
     controller.addEventListener('change', onChange);
     controller.addEventListener('upload', onUpload);
-    return () => controller.removeEventListener('change', onChange);
+    return () => {
+      controller.removeEventListener('change', onChange);
+      controller.removeEventListener('upload', onUpload);
+    };
   });
   const { controller: { detail: { file, dest } } } = props;
   return (
@@ -252,13 +300,12 @@ function UploadItem(props: { controller: UploadItem.Controller }) {
         style={{ height: 48, width: 48, justifyContent: 'center', alignItems: 'center' }}>
         {(() => {
           switch (state) {
-            case UploadItem.State.upload:
-            case UploadItem.State.operate: {
+            case Common.UploadController.State.upload: {
               if (upload && upload.lengthComputable) {
                 if (upload.lengthComputable) {
                   const progress = upload.loaded / upload.total;
                   return (
-                    <Tooltip content={`${(progress * 100).toFixed(1)} %; ${FileSize(upload.loaded)}`}>
+                    <Tooltip content={`${(progress * 100).toFixed(1)} %; ${FileSize(upload.loaded)}; ${FileSize(upload.total)}`}>
                       <CircularProgress progress={progress} />
                     </Tooltip>
                   );
@@ -270,21 +317,25 @@ function UploadItem(props: { controller: UploadItem.Controller }) {
                   );
                 }
               } else {
-                return <Tooltip content='' open={false}>
+                return <Tooltip content='Deflate file and initialize network request...'>
                   <CircularProgress />
-                </Tooltip>
+                </Tooltip>;
               }
 
             }
-            case UploadItem.State.close:
+            case Common.UploadController.State.operate:
+              return <Tooltip content='Moving file'>
+                <CircularProgress />
+              </Tooltip>;
+            case Common.UploadController.State.close:
               return <Icon icon='checked' />;
-            case UploadItem.State.error: {
+            case Common.UploadController.State.error: {
               const { error } = props.controller.detail;
-              return <Tooltip content={error?.message ?? error?.name ?? 'Unknown error'}>
+              return <Tooltip content={error?.message ?? error?.name ?? error?.code ?? error?.errno ?? 'Unknown error'}>
                 <Theme use='error'><Icon icon='error' /></Theme>
               </Tooltip>;
             }
-            case UploadItem.State.cancel:
+            case Common.UploadController.State.cancel:
               return <Icon icon='cancel' />;
           }
         })()}
@@ -305,9 +356,9 @@ function UploadItem(props: { controller: UploadItem.Controller }) {
         type={SharedAxisTransition.Type.fromTopToBottom}>
         {(() => {
           switch (state) {
-            case UploadItem.State.upload:
+            case Common.UploadController.State.upload:
               return <IconButton icon='close' onClick={() => props.controller.cancel()} />;
-            case UploadItem.State.error:
+            case Common.UploadController.State.error:
               return <IconButton icon='close' onClick={() => props.controller.cleanup()} />;
           }
         })()}
@@ -317,70 +368,3 @@ function UploadItem(props: { controller: UploadItem.Controller }) {
   );
 }
 
-namespace UploadItem {
-  export const enum State {
-    upload, operate, error, close, cancel
-  }
-  export class Controller extends EventTarget {
-    constructor(props: {
-      id: string,
-      file: File,
-      dest: string,
-      upload: (onUploadProgress: (progress: ProgressEvent) => unknown,
-        onDownloadProgress: (progress: ProgressEvent) => unknown,) => Promise<Express.Multer.File>,
-      operate: (file: Express.Multer.File) => Promise<unknown>,
-      cancel: () => unknown,
-    }) {
-      super();
-      this.cancel = () => {
-        this.detail.state = State.cancel;
-        this.dispatchEvent(new Event('change'));
-        props.cancel();
-      };
-      this.detail = {
-        id: props.id,
-        file: props.file,
-        dest: props.dest,
-        state: State.upload,
-      };
-      props.upload(
-        event => this.dispatchEvent(new CustomEvent('upload', { detail: event })),
-        event => this.dispatchEvent(new CustomEvent('download', { detail: event })),
-      ).then((file) => {
-        if ('error' in file) {
-          this.detail.state = State.error;
-          this.dispatchEvent(new Event('change'));
-        } else if (this.detail.state !== State.cancel) {
-          this.detail.state = State.operate;
-          this.dispatchEvent(new Event('change'));
-          return props.operate(file).then(() => {
-            this.detail.state = State.close;
-            this.dispatchEvent(new Event('change'))
-          });
-        }
-      }).catch((error) => {
-        if (this.detail.state !== State.cancel) {
-          this.detail.error = error;
-          this.detail.state = State.error;
-          this.dispatchEvent(new Event('change'))
-        }
-      });
-    }
-    readonly detail: {
-      id: string,
-      file: File,
-      dest: string,
-      state: State,
-      error?: any
-    };
-
-    readonly cancel: () => void;
-    cleanup() {
-      if (this.detail.state === State.error) {
-        this.detail.state = State.cancel;
-        this.dispatchEvent(new Event('change'));
-      }
-    }
-  }
-
-}

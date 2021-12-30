@@ -2,6 +2,9 @@ import { Context, exists, wsSafeClose } from "./common";
 import ws, { RawData, WebSocket } from 'ws';
 import { Client, ClientChannel } from 'ssh2';
 import fs from 'fs/promises';
+import zlib from 'zlib';
+import { resolve } from "path/posix";
+import { buffer } from "stream/consumers";
 
 async function rest(context: Context) {
   const wsServer = new ws.Server({ noServer: true });
@@ -49,8 +52,6 @@ async function rest(context: Context) {
               if (typeof request === 'object') {
                 for (const [key, value] of Object.entries(request)) {
                   switch (key) {
-                    case 'token':
-                      return context.token.generate();
                     case 'fs.unlink':
                       return fs.unlink(...value as Parameters<typeof fs.unlink>);
                     case 'fs.rm':
@@ -65,6 +66,19 @@ async function rest(context: Context) {
                       return fs.writeFile(...value as Parameters<typeof fs.writeFile>);
                     case 'fs.cp':
                       return fs.cp(...value as Parameters<typeof fs.cp>);
+                    case 'token':
+                      return context.token.generate();
+                    case 'unzip': {
+                      const { src, dest } = value as { src: string, dest: string };
+                      const buffer = await fs.readFile(src);
+                      const unzippedBuffer = await new Promise<Buffer>(
+                        (resolve, reject) =>
+                          zlib.unzip(buffer, (error, buffer) => {
+                            if (error) reject(error);
+                            else resolve(buffer);
+                          }));
+                      return fs.writeFile(dest, unzippedBuffer);
+                    }
                     case 'shell':
                       if (typeof value === 'object' && value !== null && 'id' in value) {
                         if ('data' in value) {
@@ -112,7 +126,7 @@ async function rest(context: Context) {
                 }
               }
               throw new Error('Unknown request')
-            })().catch((error) => { error });
+            })().catch((error) => { return { error } });
             if (ws.readyState === WebSocket.OPEN)
               ws.send(stringify({ tag, response }));
           });

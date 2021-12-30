@@ -15,7 +15,7 @@ import ToolsBar, { SelectingToolsBar } from "./directory-preview/ToolsBar";
 
 function DirectoryPreView({ state }: { state: Watch.Directory }) {
   const { path: dir, files } = state;
-  const { cd, config } = React.useContext(FileExplorer.Context);
+  const { cd, config, uploadItems } = React.useContext(FileExplorer.Context);
   const [onSelect, setOnSelect] = React.useState(false);
   const [selected, setSelected] = React.useState(new Set<string>());
   const [information, setInformation] = React.useState<InformationDialog.State>({ open: false, path: '', stats: {} as Lstat });
@@ -35,7 +35,8 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
           ? <div className='column' style={{ width: '100%', justifyContent: 'center', alignItems: 'center' }}>
             Nothing here...
           </div>
-          : <List fileList={fileList} dir={dir} selected={selected} setSelected={setSelected} onSelect={onSelect} cd={cd} setInformation={setInformation} />}
+          : <List fileList={fileList} dir={dir} selected={selected} setSelected={setSelected}
+            onSelect={onSelect} cd={cd} setInformation={setInformation} uploadItems={uploadItems} />}
       </DropZone>
       <div style={{ height: 16 }} />
       <NavigatorBar path={dir} />
@@ -54,12 +55,18 @@ class List extends React.Component<{
   onSelect: boolean,
   cd: (value?: string) => unknown,
   setInformation: (value: InformationDialog.State) => unknown
+  uploadItems: FileExplorer.UploadController[],
 }> {
 
-  readonly eventTarget = new EventTarget();
+  protected _uploadItems = new Set(this.props.uploadItems.map(value => value.detail.fullPath));
+  protected readonly eventTarget = new EventTarget();
   override componentDidUpdate(oldProp: any) {
-    if (Object.keys(this.props).some(value => (this.props as any)[value] !== oldProp[value]))
+    if (this.props.uploadItems !== oldProp.uploadItems) {
+      this._uploadItems = new Set(this.props.uploadItems.map(value => value.detail.fullPath));
       this.eventTarget.dispatchEvent(new Event('change'));
+    } else if (Object.keys(this.props).some(value => (this.props as any)[value] !== oldProp[value])) {
+      this.eventTarget.dispatchEvent(new Event('change'));
+    }
   }
 
   builder = ({ index, style }: { index: number, style?: React.CSSProperties }) => {
@@ -68,10 +75,12 @@ class List extends React.Component<{
         const { fileList, dir, selected, setSelected, onSelect, cd, setInformation } = this.props;
         if (index >= fileList.length) return <React.Fragment key={index}></React.Fragment>;
         const [key, value] = fileList[index];
+        const fullPath = path.join(dir, key);
         return <FileListTile
           key={key}
           style={style}
           dirname={dir}
+          uploading={this._uploadItems.has(fullPath)}
           selected={selected.has(key)}
           onSelect={onSelect}
           onSelected={value => {
@@ -85,7 +94,7 @@ class List extends React.Component<{
           }}
           name={key}
           stats={value}
-          onClick={() => cd(path.join(dir, key))}
+          onClick={() => cd(fullPath)}
           onDetail={(stats, path) => setInformation({ open: true, stats, path })} />;
       }} />;
   }

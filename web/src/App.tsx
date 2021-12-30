@@ -39,8 +39,8 @@ class AppServer implements Server.Type {
     const config: ConnectConfig = { ...props };
     return new Promise(resolve => {
       const ws = this._ws;
-      const onMessage = ({ data }: MessageEvent) => resolve(JSON.parse(data));
-      ws.addEventListener('message', onMessage, { once: true });
+      ws.addEventListener('message',
+        ({ data }) => resolve(JSON.parse(data)), { once: true });
       ws.send(JSON.stringify(config));
     });
   };
@@ -54,38 +54,37 @@ class Service extends React.Component<Service.Props, Service.State> {
     this.state = {};
     this._debugFetch();
   }
-  ws!: WebSocket;
-
+  protected _ws!: WebSocket;
   protected _mounted = true;
   protected async _debugFetch() {
     if (isDebug) { await fetch(`https://${hostname}:7200/`, { mode: 'cors' }).catch(error => { }) }
   }
 
-  protected readonly _onOpen = () => this.setState({ server: new AppServer({ ws: this.ws! }) })
-  protected readonly _onError = () => { if (this.ws) wsSafeClose(this.ws) }
+  protected readonly _onOpen = () => this.setState({ server: new AppServer({ ws: this._ws! }) })
+  protected readonly _onError = () => { if (this._ws) wsSafeClose(this._ws) }
   protected readonly _onClose = async () => {
-    if (this.ws) wsSafeClose(this.ws);
+    if (this._ws) wsSafeClose(this._ws);
     if (!this._mounted) return;
     this.setState({ server: undefined });
     await delay(300);
     await this._debugFetch();
     if (!this._mounted) return;
-    this.ws = new WebSocket(`wss://${host}/rest`);
-    this.ws.addEventListener('error', this._onError, { once: true });
-    this.ws.addEventListener('close', this._onClose);
-    this.ws.addEventListener('open', this._onOpen);
+    this._ws = new WebSocket(`wss://${host}/rest`);
+    this._ws.addEventListener('error', this._onError, { once: true });
+    this._ws.addEventListener('close', this._onClose);
+    this._ws.addEventListener('open', this._onOpen);
   }
 
   override componentDidMount() {
-    this.ws = new WebSocket(`wss://${host}/rest`);
-    this.ws.addEventListener('error', this._onError, { once: true });
-    this.ws.addEventListener('close', this._onClose);
-    this.ws.addEventListener('open', this._onOpen);
+    this._ws = new WebSocket(`wss://${host}/rest`);
+    this._ws.addEventListener('error', this._onError, { once: true });
+    this._ws.addEventListener('close', this._onClose);
+    this._ws.addEventListener('open', this._onOpen);
   }
 
   override componentWillUnmount() {
     this._mounted = false;
-    wsSafeClose(this.ws);
+    wsSafeClose(this._ws);
   }
 
   override render() {

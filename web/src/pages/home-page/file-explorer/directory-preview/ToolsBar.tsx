@@ -173,6 +173,7 @@ export function SelectingToolsBar({ state: { path: dir, files }, selected, setSe
           }));
           if (value.length === 0) return true;
           if (value.some(value => value === false)) return false;
+          setSelected(new Set());
           onCompleted();
           setOnSelect(false);
           return true;
@@ -224,6 +225,7 @@ export function SelectingToolsBar({ state: { path: dir, files }, selected, setSe
               }
             }
           }));
+          setSelected(new Set());
           if (value.length === 0) return true;
           if (value.some(value => value === false)) return false;
           onCompleted();

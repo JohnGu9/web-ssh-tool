@@ -154,8 +154,8 @@ class Auth implements Server.Authentication.Type {
   get ws() { return this._ws }
 
   readonly shell = new (class extends EventTarget {
-    invoke(props: Server.Authentication.ShellEventDetail & { id: string }) {
-      const event: Server.Authentication.ShellEvent = new CustomEvent(props.id, { detail: props });
+    invoke({ id, ...props }: Server.Authentication.ShellEventDetail & { id: string }) {
+      const event: Server.Authentication.ShellEvent = new CustomEvent(id, { detail: props });
       this.dispatchEvent(event);
     }
   })();
@@ -173,8 +173,6 @@ class Auth implements Server.Authentication.Type {
     onUploadProgress?: (progress: ProgressEvent) => unknown,
     onDownloadProgress?: (progress: ProgressEvent) => unknown,
   }): Promise<Express.Multer.File> {
-    const token = await this.rest('token', []);
-    if (Rest.isError(token)) throw token.error;
     const formData = (() => {
       if (data instanceof File) {
         const formData = new FormData();
@@ -185,22 +183,20 @@ class Auth implements Server.Authentication.Type {
       }
       throw new Error('upload data type error');
     })();
+    const token = await this.rest('token', []);
+    if (Rest.isError(token)) throw token.error;
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       if (init) {
         const { onUploadProgress, onDownloadProgress, signal } = init;
-        if (onUploadProgress) xhr.upload.addEventListener('progress', event => {
-          if (event.lengthComputable) onUploadProgress(event)
-        });
-        if (onDownloadProgress) xhr.addEventListener('progress', event => {
-          if (event.lengthComputable) onDownloadProgress(event);
-        });
+        if (onUploadProgress) xhr.upload.addEventListener('progress', onUploadProgress);
+        if (onDownloadProgress) xhr.addEventListener('progress', onDownloadProgress);
         if (signal) signal.addEventListener('abort', () => xhr.abort());
       }
       const listenerOptions: AddEventListenerOptions = { once: true };
-      xhr.addEventListener('abort', reject, listenerOptions);
-      xhr.addEventListener('error', reject, listenerOptions);
-      xhr.addEventListener('timeout', reject, listenerOptions);
+      xhr.addEventListener('abort', event => reject({ ...new Event('AbortError'), event }), listenerOptions);
+      xhr.addEventListener('error', event => reject({ ...new Event('UnknownError'), event }), listenerOptions);
+      xhr.addEventListener('timeout', event => reject({ ...new Event('TimeoutError'), event }), listenerOptions);
       xhr.onload = event => {
         try {
           resolve(JSON.parse(xhr.responseText));
@@ -215,16 +211,14 @@ class Auth implements Server.Authentication.Type {
   }
 
   async download(filePath: string | string[]): Promise<void> {
+    const token = await this.rest('token', []);
+    if (Rest.isError(token)) throw token.error;
     const element = document.createElement('a');
     if (typeof filePath === 'string') {
-      const token = await this.rest('token', []);
-      if (Rest.isError(token)) throw token.error;
       element.setAttribute('href', `https://${host}/download?t=${token}&p=${encodeURIComponent(filePath)}`);
       element.setAttribute('download', path.basename(filePath));
     } else {
       if (filePath.length === 0) return;
-      const token = await this.rest('token', []);
-      if (Rest.isError(token)) throw token.error;
       element.setAttribute('href', `https://${host}/download?t=${token}${filePath.map(value => `&p=${encodeURIComponent(value)}`).join('')}`);
       element.setAttribute('download', 'bundle.zip');
     }
