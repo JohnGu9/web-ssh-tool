@@ -1,26 +1,24 @@
 import React from "react";
-import { Button, TextField, Dialog, DialogActions } from "rmwc";
-import { DialogContent, DialogTitle } from "../../../../components/Dialog";
+import { Button, TextField, Dialog, Icon } from "rmcw";
+import { useUuidV4 } from "../Common";
 
 function CopyToDialog({ state, close }: { state: CopyToDialog.State, close: () => unknown }) {
-  const input = React.useRef<HTMLInputElement>(null);
+  const [value, setValue] = React.useState("");
+  const id = useUuidV4();
   return (
-    <Dialog tag='form' open={state.open} onClose={close}
-      onSubmit={async event => {
-        event.preventDefault();
-        const { current } = input;
-        if (current && current.value) {
-          if (await state.onSubmit(current.value)) close();
-        }
-      }}>
-      <DialogTitle>Copy To</DialogTitle>
-      <DialogContent>
-        <TextField autoFocus required inputRef={input} defaultValue={state.path} style={{ width: 480 }} label='path' />
-      </DialogContent>
-      <DialogActions style={{ paddingLeft: 16, flexDirection: 'row' }}>
-        <Button type='submit' icon='file_copy' label='copy' />
+    <Dialog open={state.open} onScrimClick={close} onEscapeKey={close}
+      title="Copy To"
+      actions={<>
+        <Button type='submit' form={id} leading={<Icon>file_copy</Icon>} label='copy' />
         <Button type='button' onClick={close} label='close' />
-      </DialogActions>
+      </>}>
+      <form id={id}
+        onSubmit={async event => {
+          event.preventDefault();
+          if (await state.onSubmit(value)) close();
+        }}>
+        <TextField autoFocus required value={value} onChange={(e) => setValue(e.target.value)} style={{ width: 480 }} label='path' />
+      </form>
     </Dialog>
   );
 }

@@ -1,11 +1,91 @@
-import path from "path-browserify";
 import React from "react";
-import { Checkbox, Icon, IconButton, SimpleListItem } from "rmwc";
+import { Checkbox, Icon, IconButton, ListItem } from "rmcw";
 import { FileType, Lstat } from "../../../../common/Type";
 import { SharedAxisTransition } from "../../../../components/Transitions";
 import DropZone from "./DropZone";
+import { Server } from "../../../../common/Providers";
 
-function FileIcon(name: string, { type }: { type?: FileType, }) {
+function FileListTile({ name, stats, uploading, selected, onSelecting: onSelect, onClick, onSelected, onDetail, style }: {
+  name: string,
+  stats: Lstat,
+  uploading: boolean,
+  selected: boolean,
+  onSelecting: boolean,
+  onClick: (() => unknown) | undefined, // cd
+  onSelected: ((selected: boolean) => unknown) | undefined,
+  onDetail: (stats: Lstat) => unknown,
+  style?: React.CSSProperties,
+}) {
+  const { setDisabled } = React.useContext(DropZone.Context);
+  const auth = React.useContext(Server.Authentication.Context);
+  const [hover, setHover] = React.useState(false);
+  const [disabled, isPreview] = (() => {
+    if (!uploading) {
+      switch (stats.type) {
+        case FileType.file:
+          return [false, true];
+        case FileType.directory:
+          return [false, false];
+        case FileType.symbolicLink:
+          switch (stats.realType) {
+            case FileType.file:
+              return [false, true];
+            case FileType.directory:
+              return [false, false];
+          }
+      }
+    }
+    return [true, false];
+  })();
+  return <ListItem draggable
+    nonInteractive={disabled}
+    onDragStart={event => {
+      const { path } = stats;
+      if (path === undefined || path === null) return;
+      setDisabled(true);
+      event.dataTransfer.setData('text', path);
+      event.dataTransfer.dropEffect = 'copy';
+    }}
+    onDragEnd={() => setDisabled(false)}
+    graphic={<SharedAxisTransition
+      type={SharedAxisTransition.Type.fromLeftToRight} id={onSelect}
+      className='column'
+      style={{ justifyContent: 'center', alignItems: 'center' }}>
+      {onSelect
+        ? <Checkbox readOnly checked={selected} style={{ height: 24 }}></Checkbox>
+        : <Icon>{uploading ? 'file_upload' : FileIcon(name, stats)}</Icon>}
+    </SharedAxisTransition>}
+    primaryText={<div style={{ flex: 1, minWidth: 0, overflowX: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>}
+    meta={<IconButton
+      style={{ opacity: hover ? 1 : 0, transition: 'opacity 300ms' }}
+      onClick={event => {
+        event.stopPropagation();
+        onDetail(stats);
+      }} >
+      <Icon>more_horiz</Icon>
+    </IconButton>}
+    onClick={disabled
+      ? undefined
+      : (onSelect
+        ? () => {
+          onSelected?.(!selected);
+        }
+        : () => {
+          if (isPreview) {
+            if (typeof stats.path === 'string') {
+              auth.preview(stats.path);
+              return;
+            }
+          }
+          return onClick?.();
+        })}
+    activated={selected && onSelect}
+    style={{ ...style, opacity: disabled ? 0.5 : 1 }}
+    onMouseEnter={() => setHover(true)}
+    onMouseLeave={() => setHover(false)} />
+}
+
+function FileIcon(name: string, { type }: { type?: FileType | null, }) {
   switch (type) {
     case FileType.directory:
       return 'folder';
@@ -52,83 +132,6 @@ function FileIcon(name: string, { type }: { type?: FileType, }) {
     default:
       return 'browser_not_supported';
   }
-}
-
-const sizeLimit = 10 * 1024 * 1024;// limit to 10MB for preview
-
-function FileListTile({ dirname, name, stats, uploading, selected, onSelect, onSelected, onClick, onDetail, style }: {
-  dirname: string,
-  name: string,
-  stats: Lstat,
-  uploading: boolean,
-  selected: boolean,
-  onSelect: boolean,
-  onSelected: (selected: boolean) => unknown,
-  onClick?: () => unknown,
-  onDetail: (stats: Lstat, path: string) => unknown,
-  style?: React.CSSProperties,
-}) {
-  const { setDisabled } = React.useContext(DropZone.Context);
-  const targetPath = path.join(dirname, name);
-  const [hover, setHover] = React.useState(false);
-  const disabled = (() => {
-    if (uploading) return true;
-    switch (stats.type) {
-      case FileType.file:
-        if (onSelect) return false;
-        if (stats.size < sizeLimit) return false;
-        break;
-      case FileType.directory:
-        return false;
-      case FileType.symbolicLink:
-        switch (stats.realType) {
-          case FileType.file:
-            if (onSelect) return false;
-            if (stats.size < sizeLimit) return false;
-            break;
-          case FileType.directory:
-            return false;
-        }
-        break;
-    }
-    return true;
-  })();
-  return <SimpleListItem draggable
-    onDragStart={event => {
-      setDisabled(true);
-      event.dataTransfer.setData('text', targetPath);
-      event.dataTransfer.dropEffect = 'copy';
-    }}
-    onDragEnd={event => setDisabled(false)}
-    graphic={<SharedAxisTransition
-      type={SharedAxisTransition.Type.fromLeftToRight} id={onSelect}
-      className='column'
-      style={{ justifyContent: 'center', alignItems: 'center' }}>
-      {onSelect
-        ? <Checkbox readOnly checked={selected} style={{ height: 24 }}></Checkbox>
-        : <Icon icon={uploading ? 'file_upload' : FileIcon(name, stats)}></Icon>}
-    </SharedAxisTransition>}
-    text={<div style={{ flex: 1, minWidth: 0, overflowX: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>}
-    meta={<IconButton
-      icon='more_horiz'
-      style={{ opacity: hover ? 1 : 0, transition: 'opacity 300ms' }}
-      onClick={event => {
-        event.stopPropagation();
-        onDetail(stats, targetPath);
-      }} />}
-    onClick={disabled
-      ? undefined
-      : (onSelect
-        ? () => {
-          const value = !selected;
-          onSelected(value);
-        }
-        : onClick)}
-    activated={selected && onSelect}
-    disabled={disabled}
-    style={{ ...style, opacity: disabled ? 0.5 : 1 }}
-    onMouseEnter={() => setHover(true)}
-    onMouseLeave={() => setHover(false)} />
 }
 
 export default FileListTile;

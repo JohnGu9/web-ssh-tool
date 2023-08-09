@@ -1,7 +1,7 @@
 import React from "react";
 import { Server, Settings } from "../common/Providers";
 
-import FileExplorer from "./home-page/FileExplorer";
+import MultiFileExplorer from "./home-page/MultiFileExplorer";
 import MultiTerminalView from "./home-page/MultiTerminalView";
 
 function HomePage() {
@@ -11,7 +11,7 @@ function HomePage() {
   return (
     <div className='full-size row'>
       <MultiTerminalView auth={auth} />
-      <FileExplorer auth={auth} server={server} settings={settings} />
+      <MultiFileExplorer auth={auth} server={server} settings={settings} />
     </div>
   );
 }

@@ -14,6 +14,12 @@ module.exports = function (app) {
       secure: false,
       logLevel: 'silent',
     }))
+    .use(createProxyMiddleware('/preview', {
+      target: 'https://localhost:7200',
+      changeOrigin: true,
+      secure: false,
+      logLevel: 'silent',
+    }))
     .use(createProxyMiddleware('/rest', {
       target: 'wss://localhost:7200',
       changeOrigin: true,

@@ -11,7 +11,13 @@ class LayoutBuilder extends React.Component<LayoutBuilder.Props, LayoutBuilder.S
 
   protected readonly _resize = () => {
     const current = this._current;
-    if (current !== null) this.setState({ size: { height: current.clientHeight, width: current.clientWidth } })
+    if (current !== null) {
+      window.requestAnimationFrame(() => {
+        if (this.state.size?.height !== current.clientHeight &&
+          this.state.size?.width !== current.clientWidth)
+          this.setState({ size: { height: current.clientHeight, width: current.clientWidth } });
+      });
+    }
   }
 
   protected _updateRef = (ref: HTMLDivElement | null) => {

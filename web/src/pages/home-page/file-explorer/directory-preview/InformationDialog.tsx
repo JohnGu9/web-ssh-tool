@@ -1,61 +1,51 @@
 import React from "react";
-import { Button, IconButton, Tooltip, Typography, Dialog, DialogActions, ListDivider } from "rmwc";
+import { Button, IconButton, Tooltip, Typography, Dialog, ListDivider, Icon } from "rmcw";
 
 import { Server, ThemeContext } from "../../../../common/Providers";
-import { delay, FileSize } from "../../../../common/Tools";
+import { FileSize } from "../../../../common/Tools";
 import { FileType, Lstat, Rest } from "../../../../common/Type";
-import { DialogContent, DialogTitle } from "../../../../components/Dialog";
 import LongPressButton from "../../../../components/LongPressButton";
-import Scaffold from "../../Scaffold";
+import Scaffold from "../../../../components/Scaffold";
+import styles from "./InformationDialog.module.css";
 
-function InformationDialog({ state: dialog, close, rename }: {
+function InformationDialog({ state, close, rename }: {
   close: () => unknown,
-  rename: (path: string) => unknown,
+  rename: () => unknown,
   state: InformationDialog.State
 }) {
   const auth = React.useContext(Server.Authentication.Context);
   const { themeData: theme } = React.useContext(ThemeContext);
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
-  const onError = (error: any) => showMessage({ icon: 'error', title: 'Delete failed', body: error?.message ?? error?.name ?? 'Unknown issue', actions: [{ label: 'close' }] });
-  const onDeleted = (path: string) => showMessage({ icon: 'checked', title: 'Deleted', body: path, actions: [{ label: 'close' }] });
-  const { type, size, atime, mtime, ctime, birthtime, ...stats } = dialog.stats;
+  const onError = (error: any) => showMessage({ content: `Delete failed (${error})`, action: <Button label="close" /> });
+  const onDeleted = (path: string) => showMessage({ content: `Deleted (${path})`, action: <Button label="close" /> });
+  const { type, size, path, basename, ...stats } = state.stats;
   return (
-    <Dialog open={dialog.open} onClose={close}>
-      <DialogTitle>Information</DialogTitle>
-      <DialogContent style={{ overflow: 'auto', maxHeight: 360 }}>
-        <div style={{ margin: '0 0 16px' }}><Typography use='button' >path</Typography>: {dialog.path}</div>
-        <ListDivider />
-        <div style={{ margin: '16px 0 8px', opacity: 0.5 }}>Basic</div>
-        {type === undefined ? <></> : <Typography use='button'>type: {type}</Typography>}
-        <div ><Typography use='button'>size</Typography>: {FileSize(size)}</div>
-        <div ><Typography use='button'>atime</Typography>: {atime}</div>
-        <div ><Typography use='button'>mtime</Typography>: {mtime}</div>
-        <div ><Typography use='button'>ctime</Typography>: {ctime}</div>
-        <div ><Typography use='button'>birthtime</Typography>: {birthtime}</div>
-        <div style={{ height: 8 }} />
-        <ListDivider />
-        <div style={{ margin: '16px 0 8px', opacity: 0.5 }}>Advance</div>
-        {Object.entries(stats)
-          .map(([key, value]) => {
-            return <div key={key}><Typography use='button'>{key}</Typography>: {value}</div>;
-          })}
-        <div style={{ height: 32 }} />
-      </DialogContent>
-      <DialogActions style={{ paddingLeft: 16, flexDirection: 'row', width: 560 }}>
+    <Dialog open={state.open}
+      onScrimClick={close}
+      onEscapeKey={close}
+      title="Information"
+      fullscreen
+      actions={<>
         {(() => {
-          const { path, stats: { type } } = dialog;
+          const { stats: { type, path } } = state;
+          if (path === undefined || path === null) {
+            return (<Button
+              leading={<Icon>delete</Icon>}
+              label='delete'
+              disabled />);
+          }
           switch (type) {
             case FileType.file:
               return <DeleteButton onLongPress={async () => {
                 close();
-                const result = await auth.rest('fs.unlink', [path]);
+                const result = await auth.rest('fs.unlink', [[path]]);
                 if (Rest.isError(result)) return onError(result.error);
                 onDeleted(path);
               }} />;
             case FileType.directory:
               return <DeleteButton onLongPress={async () => {
                 close();
-                const result = auth.rest('fs.rm', [path, { recursive: true }]);
+                const result = await auth.rest('fs.rm', [[path]]);
                 if (Rest.isError(result)) return onError(result.error);
                 onDeleted(path);
               }} />;
@@ -63,28 +53,46 @@ function InformationDialog({ state: dialog, close, rename }: {
         })()}
         <div style={{ minWidth: 32, flex: 1 }} />
         {(() => {
-          const { type } = dialog.stats;
-          switch (type) {
-            case FileType.file:
-            case FileType.directory:
-              return (
-                <>
-                  <Tooltip content='rename'>
-                    <IconButton style={{ color: theme.primary }} icon='drive_file_rename_outline' onClick={async () => {
-                      close();
-                      await delay(150);
-                      rename(dialog.path);
-                    }} />
-                  </Tooltip>
-                  <Tooltip content='download'>
-                    <IconButton style={{ color: theme.primary }} icon='download' onClick={() => auth.download(dialog.path)} />
-                  </Tooltip>
-                </>
-              );
-          }
+          const { type, path } = state.stats;
+          if (path !== undefined && path !== null)
+            switch (type) {
+              case FileType.file:
+              case FileType.directory:
+                return (
+                  <>
+                    <Tooltip label='rename'>
+                      <IconButton style={{ color: theme.primary }} onClick={() => {
+                        close();
+                        rename();
+                      }} ><Icon>drive_file_rename_outline</Icon></IconButton>
+                    </Tooltip>
+                    <Tooltip label='download'>
+                      <IconButton style={{ color: theme.primary }}
+                        onClick={() => auth.download(path)
+                          .catch(e => showMessage({ content: `Download failed: ${e}` }))} >
+                        <Icon>download</Icon>
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                );
+            }
         })()}
         <Button onClick={close} label='close' />
-      </DialogActions>
+      </>}>
+      <div style={{ margin: '16px 0 8px', opacity: 0.5 }}>Basic</div>
+      <div><Typography.Button className={styles.title}>path</Typography.Button>: {path}</div>
+      <div><Typography.Button className={styles.title}>basename</Typography.Button>: {basename}</div>
+      {type === undefined ? <></> : <Typography.Button className={styles.title}>type: {type}</Typography.Button>}
+      <div ><Typography.Button className={styles.title}>size</Typography.Button>: {size === undefined ? "undefined" : FileSize(size)}</div>
+      <div style={{ height: 8 }} />
+      <ListDivider />
+      <div style={{ margin: '16px 0 8px', opacity: 0.5 }}>Advance</div>
+      {Object.entries(stats)
+        .map(([key, value]) => {
+          if (value === undefined || value === null) return <React.Fragment key={key}></React.Fragment>;
+          return <div key={key}><Typography.Button className={styles.title}>{key}</Typography.Button>: {`${value}`}</div>;
+        })}
+      <div style={{ height: 32 }} />
     </Dialog>
   );
 }
@@ -92,8 +100,8 @@ function InformationDialog({ state: dialog, close, rename }: {
 namespace InformationDialog {
   export type State = {
     open: boolean,
+    dirname: string,
     stats: Lstat,
-    path: string
   };
 }
 
@@ -109,8 +117,8 @@ function DeleteButton({ onLongPress }: { onLongPress: () => unknown }) {
     icon='delete'
     label='delete'
     style={{
-      color: theme.error,
-      backgroundColor: down ? theme.error : undefined,
+      color: theme.primary,
+      backgroundColor: down ? theme.primary : undefined,
       transition: 'background-color 1s'
     }}
     tooltip='Long press to delete' />;

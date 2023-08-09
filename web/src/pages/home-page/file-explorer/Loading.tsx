@@ -1,4 +1,4 @@
-import { CircularProgress } from "rmwc";
+import { CircularProgress } from "rmcw";
 
 function Loading() {
   return (

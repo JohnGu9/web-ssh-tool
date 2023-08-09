@@ -1,26 +1,24 @@
 import React from "react";
-import { Button, TextField, Dialog, DialogActions } from "rmwc";
-import { DialogContent, DialogTitle } from "../../../../components/Dialog";
+import { Button, TextField, Dialog, Icon } from "rmcw";
+import { useUuidV4 } from "../Common";
 
 function MoveToDialog({ state, close }: { state: MoveToDialog.State, close: () => unknown }) {
-  const input = React.useRef<HTMLInputElement>(null);
+  const [value, setValue] = React.useState(state.path);
+  const id = useUuidV4();
   return (
-    <Dialog tag='form' open={state.open} onClose={close}
-      onSubmit={async event => {
-        event.preventDefault();
-        const { current } = input;
-        if (current && current.value) {
-          if (await state.onSubmit(current.value)) close();
-        }
-      }}>
-      <DialogTitle>Move To</DialogTitle>
-      <DialogContent>
-        <TextField autoFocus required inputRef={input} defaultValue={state.path} style={{ width: 480 }} label='path' />
-      </DialogContent>
-      <DialogActions style={{ paddingLeft: 16, flexDirection: 'row' }}>
-        <Button type='submit' icon='drag_handle' label='move' />
+    <Dialog open={state.open} onScrimClick={close} onEscapeKey={close}
+      title="Move To"
+      actions={<>
+        <Button type='submit' form={id} leading={<Icon>drag_handle</Icon>} label='move' />
         <Button type='button' onClick={close} label='close' />
-      </DialogActions>
+      </>}>
+      <form id={id}
+        onSubmit={async event => {
+          event.preventDefault();
+          if (await state.onSubmit(value)) close();
+        }}>
+        <TextField autoFocus required value={value} onChange={e => setValue(e.target.value)} style={{ width: 480 }} label='path' />
+      </form>
     </Dialog>
   );
 }

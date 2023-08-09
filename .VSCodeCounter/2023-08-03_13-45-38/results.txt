@@ -1,0 +1,57 @@
+Date : 2023-08-03 13:45:38
+Directory : /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust
+Total : 24 files,  4787 codes, 25 comments, 454 blanks, all 5266 lines
+
+Languages
++----------+------------+------------+------------+------------+------------+
+| language | files      | code       | comment    | blank      | total      |
++----------+------------+------------+------------+------------+------------+
+| Rust     |         21 |      2,476 |         22 |        192 |      2,690 |
+| TOML     |          2 |      2,306 |          3 |        260 |      2,569 |
+| Markdown |          1 |          5 |          0 |          2 |          7 |
++----------+------------+------------+------------+------------+------------+
+
+Directories
++-------------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                                                    | files      | code       | comment    | blank      | total      |
++-------------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                                       |         24 |      4,787 |         25 |        454 |      5,266 |
+| . (Files)                                                                                                               |          2 |      2,306 |          3 |        260 |      2,569 |
+| src                                                                                                                     |         22 |      2,481 |         22 |        194 |      2,697 |
+| src (Files)                                                                                                             |          3 |        475 |         11 |         51 |        537 |
+| src/http_server                                                                                                         |          7 |        331 |          1 |         22 |        354 |
+| src/tls                                                                                                                 |          2 |         33 |          0 |          7 |         40 |
+| src/websocket_client                                                                                                    |          5 |      1,053 |          9 |         71 |      1,133 |
+| src/websocket_server                                                                                                    |          5 |        589 |          1 |         43 |        633 |
++-------------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++-------------------------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| filename                                                                                                                | language | code       | comment    | blank      | total      |
++-------------------------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/Cargo.lock                                      | TOML     |      2,272 |          2 |        257 |      2,531 |
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/Cargo.toml                                      | TOML     |         34 |          1 |          3 |         38 |
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/src/app_config.rs                               | Rust     |        149 |          9 |         19 |        177 |
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/src/connection_peer.rs                          | Rust     |        151 |          0 |         23 |        174 |
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/src/http_server/client.rs                       | Rust     |         29 |          0 |          2 |         31 |
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/src/http_server/download.rs                     | Rust     |         89 |          0 |          3 |         92 |
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/src/http_server/file_send.rs                    | Rust     |         15 |          0 |          2 |         17 |
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/src/http_server/helpers.rs                      | Rust     |         29 |          0 |          2 |         31 |
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/src/http_server/mod.rs                          | Rust     |         77 |          1 |          6 |         84 |
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/src/http_server/not_found.rs                    | Rust     |         16 |          0 |          4 |         20 |
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/src/http_server/upload.rs                       | Rust     |         76 |          0 |          3 |         79 |
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/src/main.rs                                     | Rust     |        175 |          2 |          9 |        186 |
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/src/tls/mod.rs                                  | Rust     |         28 |          0 |          5 |         33 |
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/src/tls/readme.md                               | Markdown |          5 |          0 |          2 |          7 |
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/src/websocket_client/components.rs              | Rust     |        128 |          0 |         17 |        145 |
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/src/websocket_client/download.rs                | Rust     |        253 |          7 |         15 |        275 |
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/src/websocket_client/mod.rs                     | Rust     |        275 |          0 |         13 |        288 |
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/src/websocket_client/upload.rs                  | Rust     |         56 |          0 |          3 |         59 |
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/src/websocket_client/watch.rs                   | Rust     |        341 |          2 |         23 |        366 |
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/src/websocket_server/mod.rs                     | Rust     |         48 |          0 |          2 |         50 |
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/src/websocket_server/on_authenticate.rs         | Rust     |        145 |          1 |         11 |        157 |
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/src/websocket_server/on_client.rs               | Rust     |         73 |          0 |          7 |         80 |
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/src/websocket_server/on_request_authenticate.rs | Rust     |        173 |          0 |         12 |        185 |
+| /Users/guyuesheng/Development/Projects/nodejs_project/web-ssh-tool/rust/src/websocket_server/shell.rs                   | Rust     |        150 |          0 |         11 |        161 |
+| Total                                                                                                                   |          |      4,787 |         25 |        454 |      5,266 |
++-------------------------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+

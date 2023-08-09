@@ -18,6 +18,10 @@ export namespace Settings {
 
     lastPath: string | null,
     setLastPath: (_: string | null) => void,
+
+
+    darkMode: 'dark' | 'light' | null,
+    setDarkMode: (_: 'dark' | 'light' | null) => void,
   };
 
   export class Service extends React.Component<Service.Props> {
@@ -58,6 +62,9 @@ export namespace Settings {
 
           get lastPath() { return localStorage.getItem('last-path') },
           setLastPath: this._stringKeyCallback('last-path'),
+
+          get darkMode() { return localStorage.getItem('dark-mode') as null },
+          setDarkMode: this._stringKeyCallback('dark-mode'),
         }}>
           {this.props.children}
         </Context.Provider>

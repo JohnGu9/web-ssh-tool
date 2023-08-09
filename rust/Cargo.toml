@@ -1,0 +1,39 @@
+[package]
+name = "rust"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+argh = "0.1.10"
+bytes = "1.4.0"
+chrono = "0.4.24"
+http-body-util = "0.1.0-rc.2"
+hyper = { version = "=1.0.0-rc.3", features = ["full"] }
+rustls-pemfile = "1.0.2"
+rustls = { version = "0.20.8", features = ["dangerous_configuration"] }
+serde_json = "1.0.96"
+tokio = { version = "1", features = ["full"] }
+tokio-rustls = { version = "0.24.0", features = ["dangerous_configuration"] }
+tokio-tungstenite = { version = "0.19.0", features = [
+    "rustls-tls-native-roots",
+    "handshake",
+] }
+uuid = { version = "1.3.3", features = ["v4", "fast-rng", "macro-diagnostics"] }
+notify = "6.0.0"
+ssh2 = "0.9.4"
+russh = "0.37.1"
+async-trait = "0.1.68"
+russh-keys = "0.37.1"
+url = "2.4.0"
+tokio-util = { version = "0.7.8", features = ["full"] }
+walkdir = "2.3.3"
+base64 = "0.21.2"
+async_zip = { version = "0.0.15", features = ["deflate"] }
+futures = "0.3.28"
+pin-project = "1.1.2"
+hyper-tls = "0.5.0"
+async-compat = "0.2.1"
+flate2 = { version = "1.0.26", features = ["zlib"] }
+mime_guess = "2.0.4"

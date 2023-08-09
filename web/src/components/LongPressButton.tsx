@@ -1,13 +1,17 @@
 import React from "react";
-import { Button, ButtonHTMLProps, ButtonProps, IconButton, IconButtonProps, Tooltip } from "rmwc";
+import { Button, Icon, IconButton, Tooltip } from "rmcw";
 
-function LongPressButton({ onLongPress, onLongPressStart, onLongPressEnd, timeout, tooltip, ...props }: {
+function LongPressButton({ onLongPress, onLongPressStart, onLongPressEnd, timeout, tooltip, icon, label, ...props }: {
   onLongPress: () => unknown,
   onLongPressStart?: () => unknown,
   onLongPressEnd?: () => unknown,
   timeout?: number,
   tooltip?: string,
-} & ButtonProps & ButtonHTMLProps) {
+  icon?: string,
+  label?: string,
+  className?: string,
+  style?: React.CSSProperties,
+}) {
   const [tooltipOn, setTooltipOn] = React.useState(false);
   const [down, setDown] = React.useState<number | undefined>(undefined);
   const clear = () => {
@@ -17,8 +21,10 @@ function LongPressButton({ onLongPress, onLongPressStart, onLongPressEnd, timeou
     onLongPressEnd?.();
   }
   return (
-    <Tooltip content={tooltip ?? 'Please long press'} open={tooltipOn}>
+    <Tooltip label={tooltip ?? 'Please long press'} open={tooltipOn}>
       <Button {...props}
+        label={label}
+        leading={icon !== undefined ? <Icon>{icon}</Icon> : undefined}
         onMouseDown={() => {
           setTooltipOn(true);
           onLongPressStart?.();
@@ -34,13 +40,16 @@ function LongPressButton({ onLongPress, onLongPressStart, onLongPressEnd, timeou
 export default LongPressButton;
 
 
-export function LongPressIconButton({ onLongPress, onLongPressStart, onLongPressEnd, timeout, tooltip, ...props }: {
+export function LongPressIconButton({ onLongPress, onLongPressStart, onLongPressEnd, timeout, tooltip, icon, ...props }: {
   onLongPress: () => unknown,
   onLongPressStart?: () => unknown,
   onLongPressEnd?: () => unknown,
   timeout?: number,
   tooltip?: string,
-} & IconButtonProps & ButtonHTMLProps) {
+  icon: string,
+  className?: string,
+  style?: React.CSSProperties,
+}) {
   const [tooltipOn, setTooltipOn] = React.useState(false);
   const [down, setDown] = React.useState<number | undefined>(undefined);
   const clear = () => {
@@ -50,7 +59,7 @@ export function LongPressIconButton({ onLongPress, onLongPressStart, onLongPress
     onLongPressEnd?.();
   }
   return (
-    <Tooltip content={tooltip ?? 'Please long press'} open={tooltipOn}>
+    <Tooltip label={tooltip ?? 'Please long press'} open={tooltipOn}>
       <IconButton {...props}
         onMouseDown={() => {
           setTooltipOn(true);
@@ -59,7 +68,9 @@ export function LongPressIconButton({ onLongPress, onLongPressStart, onLongPress
           setDown(id);
         }}
         onMouseUp={clear}
-        onMouseLeave={clear} />
+        onMouseLeave={clear} >
+        <Icon>{icon}</Icon>
+      </IconButton>
     </Tooltip>
   );
 }

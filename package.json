@@ -6,9 +6,8 @@
   "license": "MIT",
   "scripts": {
     "build:web": "cd web && npm run build",
-    "build:node": "cd node && npm run build",
-    "build:bundle": "ts-node build.ts",
-    "build": "npm run build:web && npm run build:node && npm run build:bundle",
+    "build:rust": "ts-node build-rust-assets.ts && cd rust && cargo build --release",
+    "build": "npm run build:web && npm run build:rust",
     "clean:web": "cd web && npm ci",
     "clean:node": "cd node && npm ci",
     "clean": "npm run clean:web && npm run clean:node && npm ci",

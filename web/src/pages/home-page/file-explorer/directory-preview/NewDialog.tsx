@@ -1,48 +1,48 @@
 import React from "react";
-import path from 'path-browserify';
-import { Button, SnackbarQueueMessage, TextField, Dialog, DialogActions } from "rmwc";
+import { Button, TextField, Dialog, TextArea } from "rmcw";
 
-import { DialogContent, DialogTitle } from "../../../../components/Dialog";
 import { Server } from "../../../../common/Providers";
-import Scaffold from "../../Scaffold";
+import Scaffold, { SnackbarQueueMessage } from "../../../../components/Scaffold";
 import { Rest } from "../../../../common/Type";
 import { delay } from "../../../../common/Tools";
+import { useUuidV4 } from "../Common";
 
 export function NewFileDialog({ state, close }: { state: NewFileDialog.State, close: () => unknown }) {
   const auth = React.useContext(Server.Authentication.Context);
-  const nameInput = React.useRef<HTMLInputElement>(null);
-  const contentInput = React.useRef<HTMLInputElement>(null);
+  const [name, setName] = React.useState("");
+  const [content, setContent] = React.useState("");
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
   const onError = (message: SnackbarQueueMessage) =>
-    showMessage({ icon: 'error', actions: [{ label: 'close' }], ...message, });
+    showMessage({ action: <Button label="close" />, ...message, });
+  const id = useUuidV4();
   return (
-    <Dialog tag='form' open={state.open} onClose={close}
-      onSubmit={async event => {
-        event.preventDefault();
-        const newName = nameInput.current?.value ?? '';
-        if (newName.length === 0) return onError({ title: 'Error', body: "File name can't be empty" });
-        const target = path.join(state.path, newName);
-        const exists = await auth.rest('fs.exists', [target]);
-        if (Rest.isError(exists)) return onError({ title: exists.error?.name, body: exists.error?.message });
-        if (exists) return onError({ title: 'Error', body: `File [${target}] already exists. ` });
-        const result = await auth.rest('fs.writeFile', [target, contentInput.current?.value ?? '']);
-        if (Rest.isError(result)) return onError({ title: result.error?.name, body: result.error?.message });
-        close();
-        await delay(150);
-        showMessage({ icon: 'checked', title: 'Created', body: target, actions: [{ label: 'close' }] });
-      }}>
-      <DialogTitle>
-        New File
-      </DialogTitle>
-      <DialogContent>
-        <TextField autoFocus required inputRef={nameInput} label='name' style={{ width: 480 }} />
-        <div style={{ height: 32 }} />
-        <TextField autoFocus inputRef={contentInput} textarea outlined fullwidth rows={8} label='content' style={{ width: 480 }} />
-      </DialogContent>
-      <DialogActions>
-        <Button type='submit' label='new' />
+    <Dialog open={state.open}
+      onScrimClick={close}
+      onEscapeKey={close}
+      title="New File"
+      actions={<>
+        <Button type='submit' label='new' form={id} />
         <Button type='button' label='close' onClick={close} />
-      </DialogActions>
+      </>}>
+      <form id={id}
+        onSubmit={async event => {
+          event.preventDefault();
+          const newName = name;
+          if (newName.length === 0) return onError({ content: "Error (File name can't be empty)" });
+          const target = [state.path, newName];
+          const exists = await auth.rest('fs.exists', [target]);
+          if (Rest.isError(exists)) return onError({ content: `${exists.error}` });
+          if (exists) return onError({ content: `Error (File [${target}] already exists)` });
+          const result = await auth.rest('fs.writeFile', [target, content]);
+          if (Rest.isError(result)) return onError({ content: `${result.error}` });
+          close();
+          await delay(150);
+          showMessage({ content: `Created (${target})`, action: <Button label="close" /> });
+        }}>
+        <TextField autoFocus required value={name} onChange={e => setName(e.target.value)} label='name' style={{ width: 480 }} />
+        <div style={{ height: 32 }} />
+        <TextArea autoFocus value={content} onChange={e => setContent(e.target.value)} outlined rows={8} label='content' style={{ width: 480 }} />
+      </form>
     </Dialog>
   );
 }
@@ -56,36 +56,35 @@ export namespace NewFileDialog {
 
 export function NewDirectoryDialog({ state, close }: { state: NewFileDialog.State, close: () => unknown }) {
   const auth = React.useContext(Server.Authentication.Context);
-  const nameInput = React.useRef<HTMLInputElement>(null);
+  const [value, setValue] = React.useState("");
+  const id = useUuidV4();
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
   const onError = (message: SnackbarQueueMessage) =>
-    showMessage({ icon: 'error', actions: [{ label: 'close' }], ...message, });
+    showMessage({ action: <Button label="close" />, ...message, });
   return (
-    <Dialog tag='form' open={state.open} onClose={close}
-      onSubmit={async event => {
-        event.preventDefault();
-        const newName = nameInput.current?.value ?? '';
-        if (newName.length === 0) return onError({ title: 'Error', body: "File name can't be empty" });
-        const target = path.join(state.path, newName);
-        const exists = await auth.rest('fs.exists', [target]);
-        if (Rest.isError(exists)) return onError({ title: exists.error?.name, body: exists.error?.message });
-        if (exists) return onError({ title: 'Error', body: `File [${target}] already exists. ` });
-        const result = await auth.rest('fs.mkdir', [target]);
-        if (Rest.isError(result)) return onError({ title: result.error?.name, body: result.error?.message });
-        close();
-        await delay(150);
-        showMessage({ icon: 'checked', title: 'Created', body: target, actions: [{ label: 'close' }] });
-      }}>
-      <DialogTitle>
-        New Directory
-      </DialogTitle>
-      <DialogContent>
-        <TextField autoFocus required inputRef={nameInput} label='name' />
-      </DialogContent>
-      <DialogActions>
-        <Button type='submit' label='new' />
+    <Dialog open={state.open} onScrimClick={close} onEscapeKey={close}
+      title="New Directory"
+      actions={<>
+        <Button type='submit' form={id} label='new' />
         <Button type='button' label='close' onClick={close} />
-      </DialogActions>
+      </>}>
+      <form id={id}
+        onSubmit={async event => {
+          event.preventDefault();
+          const newName = value;
+          if (newName.length === 0) return onError({ content: "Error (File name can't be empty)" });
+          const target = [state.path, newName];
+          const exists = await auth.rest('fs.exists', [target]);
+          if (Rest.isError(exists)) return onError({ content: `${exists.error}` });
+          if (exists) return onError({ content: `Error (File [${target}] already exists)` });
+          const result = await auth.rest('fs.mkdir', [target]);
+          if (Rest.isError(result)) return onError({ content: `${result.error}` });
+          close();
+          await delay(150);
+          showMessage({ content: `Created (${target})`, action: <Button label="close" /> });
+        }}>
+        <TextField autoFocus required value={value} onChange={e => setValue(e.target.value)} label='name' style={{ width: 480 }} />
+      </form>
     </Dialog>
   );
 }

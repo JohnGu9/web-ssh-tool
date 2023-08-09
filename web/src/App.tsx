@@ -1,22 +1,25 @@
 import React from 'react';
-import { CircularProgress } from 'rmwc';
+import { CircularProgress } from 'rmcw';
 import { ConnectConfig } from 'ssh2';
 import delay from './common/Delay';
 import { wsSafeClose } from './common/DomTools';
 import { LocaleContext, LocaleContextType, LocaleService, Server, SettingsService, ThemeService } from './common/Providers';
 import { SharedAxisTransition } from './components/Transitions';
 import SignInPage from './pages/SignInPage';
+import Scaffold from './components/Scaffold';
 
 function App() {
   return (
     <SettingsService>
       <LocaleService>
         <ThemeService>
-          <LocaleContext.Consumer>
-            {locale => <Service locale={locale}>
-              <SignInPage />
-            </Service>}
-          </LocaleContext.Consumer>
+          <Scaffold>
+            <LocaleContext.Consumer>
+              {locale => <Service locale={locale}>
+                <SignInPage />
+              </Service>}
+            </LocaleContext.Consumer>
+          </Scaffold>
         </ThemeService>
       </LocaleService>
     </SettingsService>
@@ -66,7 +69,7 @@ class Service extends React.Component<Service.Props, Service.State> {
     if (this._ws) wsSafeClose(this._ws);
     if (!this._mounted) return;
     this.setState({ server: undefined });
-    await delay(300);
+    await delay(3000);
     await this._debugFetch();
     if (!this._mounted) return;
     this._ws = new WebSocket(`wss://${host}/rest`);

@@ -1,30 +1,28 @@
-import path from "path-browserify";
 import React from "react";
-import { Checkbox, IconButton, MenuItem, MenuSurface, MenuSurfaceAnchor, Tooltip } from "rmwc";
+import { Button, Checkbox, Icon, IconButton, ListDivider, ListItem, Menu, Radio, Switch, Tooltip } from "rmcw";
 import { Server, ThemeContext } from "../../../../common/Providers";
-import { FileType, Rest, Watch } from "../../../../common/Type";
+import { FileType, Lstat, Rest, Watch } from "../../../../common/Type";
 import { LongPressIconButton } from "../../../../components/LongPressButton";
-import { SharedAxisTransition } from "../../../../components/Transitions";
-import Scaffold from "../../Scaffold";
+import Scaffold from "../../../../components/Scaffold";
 import FileExplorer from "../Common";
 import CopyToDialog from "./CopyToDialog";
 import MoveToDialog from "./MoveToDialog";
 import { NewDirectoryDialog, NewFileDialog } from "./NewDialog";
 
-function ToolsBar({ dir, setOnSelect }: { dir: string, setOnSelect: (value: boolean) => unknown }) {
-  const { cd } = React.useContext(FileExplorer.Context);
-  const disabled = path.dirname(dir) === dir;
+function ToolsBar({ path: dir, realPath, setOnSelect }: {
+  path: string | null | undefined,
+  realPath: string | null | undefined,
+  setOnSelect: (value: boolean) => unknown
+}) {
+  const { cdToParent } = React.useContext(FileExplorer.Context);
   const { themeData: theme } = React.useContext(ThemeContext);
   return (
     <>
-      <IconButton style={{ color: disabled ? undefined : theme.primary }} icon='arrow_back'
-        disabled={disabled}
-        onClick={() => cd(path.dirname(dir))} />
+      <IconButton style={{ color: theme.primary }}
+        onClick={cdToParent} ><Icon>arrow_back</Icon></IconButton>
       <div className='expanded' />
-      <NewButton dest={dir} />
-      <UploadButton dest={dir} />
-      <SortButton />
-      <ShowAndHideButton />
+      <MoreButton dest={dir} />
+      <UploadManagementButton />
       <CheckListButton setOnSelect={setOnSelect} />
     </>
   );
@@ -32,141 +30,136 @@ function ToolsBar({ dir, setOnSelect }: { dir: string, setOnSelect: (value: bool
 
 export default ToolsBar;
 
-function ShowAndHideButton() {
-  const { config, setConfig } = React.useContext(FileExplorer.Context);
+function UploadManagementButton() {
+  const { openUploadManagement } = React.useContext(FileExplorer.Context);
   return (
-    <SharedAxisTransition
-      id={config.showAll}
-      type={SharedAxisTransition.Type.fromRightToLeft}>
-      {config.showAll
-        ? <Tooltip content='hide hidden file'><IconButton icon='visibility_off' onClick={() => setConfig({ ...config, showAll: false })} /></Tooltip>
-        : <Tooltip content='show hidden file'><IconButton icon='visibility' onClick={() => setConfig({ ...config, showAll: true })} /></Tooltip>}
-    </SharedAxisTransition>
-  );
-}
-
-function SortButton() {
-  const { config, setConfig } = React.useContext(FileExplorer.Context);
-  return (
-    <Tooltip content={`sort: ${config.sort}`}>
-      <IconButton icon='sort'
-        onClick={() => setConfig({
-          ...config,
-          sort: FileExplorer.switchSortType(config.sort),
-        })} />
-    </Tooltip>
-  );
-}
-
-function UploadButton({ dest }: { dest: string }) {
-  const { upload } = React.useContext(FileExplorer.Context);
-  return (
-    <Tooltip content='upload'>
+    <Tooltip label={'Open upload management'}>
       <IconButton
-        icon='upload'
-        onClick={event => {
-          event.preventDefault();
-          const input = document.createElement('input');
-          input.type = 'file';
-          input.multiple = true;
-          input.onchange = async () => {
-            if (input.files) Array
-              .from(input.files)
-              .forEach(file => upload(file, dest));
-          };
-          input.click();
-        }} />
+        onClick={openUploadManagement} >
+        <Icon>upload</Icon>
+      </IconButton>
     </Tooltip>
   );
 }
 
-function NewButton({ dest }: { dest: string }) {
-  const [open, setOpen] = React.useState(false);
-  const close = () => setOpen(false);
-
-  const [file, setFile] = React.useState<NewFileDialog.State>({ open: false, path: dest });
+function MoreButton({ dest }: { dest: string | null | undefined }) {
+  const [file, setFile] = React.useState<NewFileDialog.State>({ open: false, path: "" });
   const closeFile = () => setFile({ ...file, open: false });
 
-  const [directory, setDirectory] = React.useState<NewDirectoryDialog.State>({ open: false, path: dest });
+  const [directory, setDirectory] = React.useState<NewDirectoryDialog.State>({ open: false, path: "" });
   const closeDirectory = () => setDirectory({ ...directory, open: false });
 
+  const [open, setOpen] = React.useState(false);
+  const { config, setConfig } = React.useContext(FileExplorer.Context);
+  React.useEffect(() => {
+    if (open) {
+      const listener = () => {
+        setOpen(false);
+      };
+      window.addEventListener('click', listener);
+      return () => window.removeEventListener('click', listener);
+    }
+  }, [open]);
   return (
-    <>
-      <MenuSurfaceAnchor>
-        <MenuSurface anchorCorner='bottomStart'
-          open={open}
-          onClose={close}>
-          <MenuItem onClick={() => {
-            close();
-            setFile({ open: true, path: dest });
-          }}>File</MenuItem>
-          <MenuItem onClick={() => {
-            close();
-            setDirectory({ open: true, path: dest });
-          }}>Directory</MenuItem>
-        </MenuSurface>
-        <Tooltip content='new' open={open ? false : undefined}>
-          <IconButton
-            icon='add'
-            onClick={event => setOpen(true)} />
-        </Tooltip>
-      </MenuSurfaceAnchor>
+    <Tooltip label={'More operation'}>
+      <Menu
+        open={open}
+        anchorCorner="bottom-right"
+        anchorQuadrant="bottom-left"
+        surface={<div>
+          {typeof dest === 'string' ? <>
+            <ListItem primaryText="New file"
+              meta={<Icon>text_snippet</Icon>}
+              onClick={() => setFile({ open: true, path: dest })} />
+            <ListItem primaryText="New directory"
+              meta={<Icon>folder</Icon>}
+              onClick={() => setDirectory({ open: true, path: dest })} />
+            <ListDivider />
+          </> : <></>}
+          <ListItem nonInteractive
+            primaryText="Sort"
+            meta={<Icon>sort</Icon>} />
+          {[FileExplorer.SortType.alphabetically,
+          FileExplorer.SortType.date,
+          FileExplorer.SortType.type].map(t =>
+            <ListItem key={t} primaryText={t}
+              meta={<Radio checked={config.sort === t} />}
+              onClick={() => setConfig({ ...config, sort: t })} />
+          )}
+          <ListDivider />
+          <ListItem primaryText={<span style={{ marginRight: 16 }}>Show hidden items</span>}
+            meta={<Switch selected={config.showAll} />}
+            onClick={() => setConfig({ ...config, showAll: !config.showAll })} />
+          <ListItem primaryText="Upload compress"
+            meta={<Switch selected={config.uploadCompress} />}
+            onClick={() => setConfig({ ...config, uploadCompress: !config.uploadCompress })} />
+        </div>}
+      >
+        <IconButton
+          onClick={() => {
+            requestAnimationFrame(() => {
+              setOpen(true);
+            });
+          }} >
+          <Icon>more_vert</Icon>
+        </IconButton>
+      </Menu>
       <NewFileDialog state={file} close={closeFile} />
       <NewDirectoryDialog state={directory} close={closeDirectory} />
-    </>
+    </Tooltip>
   );
 }
 
 function CheckListButton({ setOnSelect }: { setOnSelect: (value: boolean) => unknown }) {
   return (
-    <Tooltip content='select'>
+    <Tooltip label='select'>
       <IconButton
-        icon='checklist'
-        onClick={event => setOnSelect(true)} />
+        onClick={event => setOnSelect(true)} >
+        <Icon>checklist</Icon>
+      </IconButton>
     </Tooltip>
   );
 }
 
-export function SelectingToolsBar({ state: { path: dir, files }, selected, setSelected, setOnSelect }: { state: Watch.Directory, selected: Set<string>, setSelected: (value: Set<string>) => unknown, setOnSelect: (value: boolean) => unknown }) {
+export function SelectingToolsBar({ state: { path: dir, entries }, selected, setSelected, setOnSelect }: { state: Watch.Directory, selected: Set<Lstat>, setSelected: (value: Set<Lstat>) => unknown, setOnSelect: (value: boolean) => unknown }) {
   const auth = React.useContext(Server.Authentication.Context);
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
-  const { themeData: theme } = React.useContext(ThemeContext);
-  const fileList = Object.keys(files);
   const selectedList = Array.from(selected);
-  const checked = fileList.length === selectedList.length;
+  const checked = Object.entries(entries).length === selectedList.length;
   return (
     <>
       <div style={{ width: 16 + 3 }} />
       <div className='column' style={{ width: 24, justifyContent: 'center', alignItems: 'center' }}>
-        <Tooltip content={checked ? 'cancel select' : 'select all'}>
+        <Tooltip label={checked ? 'cancel select' : 'select all'}>
           <Checkbox checked={checked}
-            onChange={event => {
-              if (fileList.length === selectedList.length) setSelected(new Set());
-              else setSelected(new Set(fileList));
+            onChange={() => {
+              if (checked) setSelected(new Set());
+              else setSelected(new Set(Object.values(entries)));
             }} />
         </Tooltip>
       </div>
       <div style={{ width: 16 }} />
-      <DownloadButton callback={() =>
-        auth.download(Array.from(selected)
-          .map(value => path.join(dir, value)))} />
+      <DownloadButton callback={async () => auth.download(Array.from(selected)
+        .map(v => v.path)
+        .filter(v => v !== undefined && v !== null) as string[])
+        .catch(e => showMessage({ content: `Download failed: ${e}` }))} />
       <MoveButton path={dir}
         onSubmit={async (newPath) => {
-          const onCompleted = () => showMessage({ icon: 'checked', title: 'Move completed', actions: [{ label: 'close' }] });
+          const onCompleted = () => showMessage({ content: 'Move completed', action: <Button label="close" /> });
           const value = await Promise.all(Array.from(selected).map(async value => {
-            const { type } = files[value];
+            const { type, path } = value;
             const onError = (error: any) => {
-              showMessage({ icon: 'error', title: `Move [${value}] failed`, body: error?.message ?? error?.name ?? 'Unknown issue', actions: [{ label: 'close' }] })
+              showMessage({ content: `Move [${value}] failed (${error})`, action: <Button label="close" /> })
               return false;
             };
+            if (path === undefined || path === null) {
+              onError(`No path associate with file ${value}`);
+              return;
+            }
             switch (type) {
               case FileType.file:
               case FileType.directory:
-                const target = path.join(newPath, value);
-                const exists = await auth.rest('fs.exists', [target]);
-                if (Rest.isError(exists)) return onError(exists.error);
-                if (exists) return onError({ message: `[${target}] already exists` });
-                const result = await auth.rest('fs.rename', [path.join(dir, value), target]);
+                const result = await auth.rest('fs.rename', [[path], [newPath]]);
                 if (Rest.isError(result)) return onError(result.error);
                 return;
             }
@@ -180,18 +173,22 @@ export function SelectingToolsBar({ state: { path: dir, files }, selected, setSe
         }} />
       <CopyButton path={dir}
         onSubmit={async (newPath) => {
-          const onCompleted = () => showMessage({ icon: 'checked', title: 'Copy completed', actions: [{ label: 'close' }] });
+          const onCompleted = () => showMessage({ content: 'Copy completed', action: <Button label="close" /> });
           const value = await Promise.all(Array.from(selected).map(async value => {
-            const { type } = files[value];
+            const { type, path } = value;
             const onError = (error: any) => {
-              showMessage({ icon: 'error', title: `Copy [${value}] failed`, body: error?.message ?? error?.name ?? 'Unknown issue', actions: [{ label: 'close' }] });
+              showMessage({ content: `Copy [${value}] failed (${error})`, action: <Button label="close" /> });
               return false;
             };
+            if (path === undefined || path === null) {
+              onError(`No path associate with file ${value}`);
+              return;
+            }
             switch (type) {
               case FileType.file:
               case FileType.directory:
                 const result = await auth.rest('fs.cp',
-                  [path.join(dir, value), path.join(newPath, value), { errorOnExist: true }]);
+                  [[path], [newPath]]);
                 if (Rest.isError(result)) return onError(result.error);
                 return;
             }
@@ -202,24 +199,28 @@ export function SelectingToolsBar({ state: { path: dir, files }, selected, setSe
           setOnSelect(false);
           return true;
         }} />
-      <LongPressIconButton icon='delete'
-        style={{ color: theme.error }}
+      <LongPressIconButton
+        icon='delete'
         onLongPress={async () => {
-          const onCompleted = () => showMessage({ icon: 'checked', title: 'Deleted completed', actions: [{ label: 'close' }] });
+          const onCompleted = () => showMessage({ content: 'Deleted completed', action: <Button label="close" /> });
           const value = await Promise.all(Array.from(selected).map(async value => {
-            const { type } = files[value];
+            const { type, path } = value;
             const onError = (error: any) => {
-              showMessage({ icon: 'error', title: `Delete [${value}] failed`, body: error?.message ?? error?.name ?? 'Unknown issue', actions: [{ label: 'close' }] });
+              showMessage({ content: `Delete [${value}] failed (${error})`, action: <Button label="close" /> });
               return false;
             };
+            if (path === undefined || path === null) {
+              onError(`No path associate with file ${value}`);
+              return;
+            }
             switch (type) {
               case FileType.file: {
-                const result = await auth.rest('fs.unlink', [path.join(dir, value)]);
+                const result = await auth.rest('fs.unlink', [[path]]);
                 if (Rest.isError(result)) return onError(result.error);
                 return;
               }
               case FileType.directory: {
-                const result = await auth.rest('fs.rm', [path.join(dir, value), { recursive: true }]);
+                const result = await auth.rest('fs.rm', [[path]]);
                 if (Rest.isError(result)) return onError(result.error);
                 return;
               }
@@ -233,50 +234,60 @@ export function SelectingToolsBar({ state: { path: dir, files }, selected, setSe
           return true;
         }} />
       <div className='expanded' />
-      <IconButton icon='close' onClick={event => setOnSelect(false)} />
+      <IconButton onClick={event => setOnSelect(false)} >
+        <Icon>close</Icon>
+      </IconButton>
     </>
   );
 }
 
 function DownloadButton({ callback }: { callback: () => unknown }) {
   return (
-    <Tooltip content='download'>
-      <IconButton icon='download'
-        onClick={callback} />
+    <Tooltip label='download'>
+      <IconButton
+        onClick={callback} >
+        <Icon>download</Icon>
+      </IconButton>
     </Tooltip>
   );
 }
 
-function MoveButton({ path, onSubmit }: { path: string, onSubmit: (path: string) => PromiseLike<boolean> }) {
+function MoveButton({ path, onSubmit }: { path: string | null | undefined, onSubmit: (path: string) => PromiseLike<boolean> }) {
   const [state, setState] = React.useState<MoveToDialog.State>({
-    path: path,
+    path: path ?? "",
     open: false,
     onSubmit: onSubmit,
   });
   const close = () => setState({ ...state, open: false });
   return (
     <>
-      <Tooltip content='move'>
-        <IconButton icon='drag_handle'
-          onClick={() => setState({ ...state, open: true })} />
+      <Tooltip label='move'>
+        <IconButton
+          disabled={path === undefined || path === null}
+          onClick={() => setState({ ...state, open: true })} >
+          <Icon>drag_handle</Icon>
+        </IconButton>
       </Tooltip>
       <MoveToDialog state={state} close={close} />
     </>
   );
 }
 
-function CopyButton({ path, onSubmit }: { path: string, onSubmit: (path: string) => PromiseLike<boolean> }) {
+function CopyButton({ path, onSubmit }: { path: string | null | undefined, onSubmit: (path: string) => PromiseLike<boolean> }) {
   const [state, setState] = React.useState<CopyToDialog.State>({
-    path: path,
+    path: path ?? "",
     open: false,
     onSubmit: onSubmit,
   });
   const close = () => setState({ ...state, open: false });
   return (
     <>
-      <Tooltip content='copy'>
-        <IconButton icon='file_copy'
-          onClick={() => setState({ ...state, open: true })} />
+      <Tooltip label='copy'>
+        <IconButton
+          disabled={path === undefined || path === null}
+          onClick={() => setState({ ...state, open: true })} >
+          <Icon>file_copy</Icon>
+        </IconButton>
       </Tooltip>
       <CopyToDialog state={state} close={close} />
     </>

@@ -14,19 +14,19 @@ const english = {
   connecting: 'Connecting'
 };
 
-const chineseSimplified = {
-  ...english,
-  signIn: '登录',
-  signOut: '登出',
-  next: '下一步',
-  help: '帮助',
-  username: '用户名',
-  password: '密码',
-  ok: '好的',
-  cancel: '取消',
-  keepSignIn: '保持登录状态',
-  connecting: '连接中',
-};
+// const chineseSimplified = {
+//   ...english,
+//   signIn: '登录',
+//   signOut: '登出',
+//   next: '下一步',
+//   help: '帮助',
+//   username: '用户名',
+//   password: '密码',
+//   ok: '好的',
+//   cancel: '取消',
+//   keepSignIn: '保持登录状态',
+//   connecting: '连接中',
+// };
 
 const defaultLocale = {
   name: 'English',
@@ -48,12 +48,12 @@ export function LocaleService({ children }: { children: React.ReactNode }) {
 export namespace LocaleService {
   function buildState(locale: string) {
     switch (locale) {
-      case 'zh':
-      case 'zh-CN':
-        return {
-          name: 'Chinese (Simplified)',
-          locale: chineseSimplified,
-        };
+      // case 'zh':
+      // case 'zh-CN':
+      //   return {
+      //     name: 'Chinese (Simplified)',
+      //     locale: chineseSimplified,
+      //   };
       default:
         return {
           name: 'English',
