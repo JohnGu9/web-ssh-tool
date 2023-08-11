@@ -247,7 +247,6 @@ function MoreButton() {
           <Button onClick={close} label='close' />
         </>}>
         <Typography.Subtitle1>Version</Typography.Subtitle1>
-        <div style={{ height: 8 }} />
         <Typography.Body1>v0.1.0</Typography.Body1>
         <div style={{ height: 16 }} />
         <Typography.Subtitle1>License</Typography.Subtitle1>
@@ -282,12 +281,23 @@ function XTerminalView({ controller, remove }: {
     };
   return <FadeCrossTransition id={closed} className='full-size'>
     {closed
-      ? <Card className='full-size column'
-        style={{ justifyContent: 'center', alignItems: 'center' }}>
-        Shell already closed
+      ? <div className='full-size column'>
+        <div style={{ height: 8 }} />
+        <Card
+          style={{
+            flex: 1, width: '100%', overflow: 'auto', padding: 8,
+            justifyContent: 'center', alignItems: 'center'
+          }}>
+          Shell already closed
+        </Card>
+        <div className='row' style={{ height: 56 }}>
+          <IconButton
+            onClick={() => remove(controller)}
+          ><Icon>close</Icon></IconButton>
+          <div className='expanded' />
+        </div>
         <div style={{ height: 16 }} />
-        <Button buttonStyle="raised" label='Close windows' onClick={() => remove(controller)} />
-      </Card>
+      </div>
       : <div className='full-size column'>
         <div style={{ height: 8 }} />
         <Card style={{ flex: 1, width: '100%', overflow: 'auto', padding: 8 }}

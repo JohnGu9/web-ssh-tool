@@ -1,6 +1,5 @@
 import React from 'react';
 import { CircularProgress } from 'rmcw';
-import { ConnectConfig } from 'ssh2';
 import delay from './common/Delay';
 import { wsSafeClose } from './common/DomTools';
 import { LocaleContext, LocaleContextType, LocaleService, Server, SettingsService, ThemeService } from './common/Providers';
@@ -28,7 +27,14 @@ function App() {
 
 export default App;
 
-const isDebug = process.env.NODE_ENV !== 'production'; // do not export this variable
+const { host, hostname } = document.location;
+
+// const isDebug = process.env.NODE_ENV !== 'production'; // do not export this variable
+// const _ = process.env.NODE_ENV !== 'production' ? fetch(`https://${hostname}:7200/`, { mode: 'cors' }).catch(error => { }) : {};
+// @ts-ignore
+// const wsUri = import.meta.env.DEV ? `wss://${hostname}:7200/rest` : `wss://${host}/rest`
+
+const wsUri = `wss://${host}/rest`;
 
 class AppServer implements Server.Type {
   constructor(props: { ws: WebSocket }) {
@@ -39,7 +45,7 @@ class AppServer implements Server.Type {
   get ws() { return this._ws }
 
   async signIn(props: { username: string, password: string }): Promise<{ token: string; } | { error: Error; }> {
-    const config: ConnectConfig = { ...props };
+    const config = { ...props };
     return new Promise(resolve => {
       const ws = this._ws;
       ws.addEventListener('message',
@@ -49,19 +55,14 @@ class AppServer implements Server.Type {
   };
 }
 
-const { host, hostname } = document.location;
 
 class Service extends React.Component<Service.Props, Service.State> {
   constructor(props: Service.Props) {
     super(props);
     this.state = {};
-    this._debugFetch();
   }
   protected _ws!: WebSocket;
   protected _mounted = true;
-  protected async _debugFetch() {
-    if (isDebug) { await fetch(`https://${hostname}:7200/`, { mode: 'cors' }).catch(error => { }) }
-  }
 
   protected readonly _onOpen = () => this.setState({ server: new AppServer({ ws: this._ws! }) })
   protected readonly _onError = () => { if (this._ws) wsSafeClose(this._ws) }
@@ -70,16 +71,15 @@ class Service extends React.Component<Service.Props, Service.State> {
     if (!this._mounted) return;
     this.setState({ server: undefined });
     await delay(3000);
-    await this._debugFetch();
     if (!this._mounted) return;
-    this._ws = new WebSocket(`wss://${host}/rest`);
+    this._ws = new WebSocket(wsUri);
     this._ws.addEventListener('error', this._onError, { once: true });
     this._ws.addEventListener('close', this._onClose);
     this._ws.addEventListener('open', this._onOpen);
   }
 
   override componentDidMount() {
-    this._ws = new WebSocket(`wss://${host}/rest`);
+    this._ws = new WebSocket(wsUri);
     this._ws.addEventListener('error', this._onError, { once: true });
     this._ws.addEventListener('close', this._onClose);
     this._ws.addEventListener('open', this._onOpen);

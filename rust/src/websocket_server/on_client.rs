@@ -60,6 +60,7 @@ pub async fn handle_request(
             }
         })
         .await;
+
         {
             let mut lk = client_connection.lock().await;
             lk.clear_internal_client_stream();

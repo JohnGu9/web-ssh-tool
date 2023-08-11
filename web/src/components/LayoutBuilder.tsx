@@ -6,14 +6,14 @@ class LayoutBuilder extends React.Component<LayoutBuilder.Props, LayoutBuilder.S
     this.state = {};
   }
 
-  protected _resizeObserver = ResizeObserver ? new ResizeObserver(entries => this._resize()) : null;
+  protected _resizeObserver = ResizeObserver ? new ResizeObserver(entries => { if (entries.length !== 0) this._resize() }) : null;
   protected _current: HTMLDivElement | null = null;
 
-  protected readonly _resize = () => {
+  protected _resize() {
     const current = this._current;
     if (current !== null) {
       window.requestAnimationFrame(() => {
-        if (this.state.size?.height !== current.clientHeight &&
+        if (this.state.size?.height !== current.clientHeight ||
           this.state.size?.width !== current.clientWidth)
           this.setState({ size: { height: current.clientHeight, width: current.clientWidth } });
       });
@@ -22,8 +22,8 @@ class LayoutBuilder extends React.Component<LayoutBuilder.Props, LayoutBuilder.S
 
   protected _updateRef = (ref: HTMLDivElement | null) => {
     if (ref !== this._current) {
+      if (this._current !== null) this._resizeObserver?.unobserve(this._current);
       this._current = ref;
-      this._resizeObserver?.disconnect();
       if (ref !== null) this._resizeObserver?.observe(ref);
     }
   }

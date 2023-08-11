@@ -31,24 +31,26 @@ pub async fn handle_request(
         let headers = req.headers_mut();
         headers.append("id", HeaderValue::from_str(id.to_string().as_str())?);
         headers.append("peer", HeaderValue::from_str(token.as_str())?);
-        headers.append(
-            header::CONNECTION,
-            header::HeaderValue::from_static("close"),
-        );
+        headers.append(header::CONNECTION, HeaderValue::from_static("close"));
         headers.append(
             header::CONTENT_TYPE,
-            header::HeaderValue::from_str(guess.to_string().as_str())?,
+            HeaderValue::from_str(guess.to_string().as_str())?,
         );
         match size {
             Some(size) => headers.append(
                 header::CONTENT_LENGTH,
-                header::HeaderValue::from_str(size.to_string().as_str())?,
+                HeaderValue::from_str(size.to_string().as_str())?,
             ),
             None => headers.append(
                 header::TRANSFER_ENCODING,
-                header::HeaderValue::from_static("chunked"),
+                HeaderValue::from_static("chunked"),
             ),
         };
+        headers.append(
+            header::CONNECTION,
+            HeaderValue::from_static("close"),
+        );
+
         let mut response = sender.send_request(req).await?;
         tokio::spawn(async move {
             let body = response.body_mut();

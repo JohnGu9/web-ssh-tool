@@ -259,7 +259,8 @@ impl MyWatcher {
                 };
                 let file_type = "directory";
                 self.event_channel
-                    .send(json!({"id":self.id,
+                    .send(json!({
+                        "id":self.id,
                         "path":self.current_path.to_str(),
                         "basename":basename,
                         "realPath":real_path,

@@ -3,9 +3,7 @@ use crate::connection_peer::ClientConnection;
 
 use super::shell;
 use super::shell::PollChannelData;
-use futures::{
-    channel::mpsc::Receiver, lock::Mutex, stream::SplitSink, SinkExt, StreamExt, TryFutureExt,
-};
+use futures::{channel::mpsc::Receiver, lock::Mutex, stream::SplitSink, SinkExt, StreamExt};
 use hyper::upgrade::Upgraded;
 use russh::{self, client::Handle};
 use serde_json::json;
@@ -25,25 +23,19 @@ pub async fn handle_request(
     let shells = Mutex::new(HashMap::new());
     tokio::spawn(poll_event(event_channel, write.clone()));
     read.for_each_concurrent(10, |data| async {
-        let text: String;
-        match data {
-            Ok(Message::Text(t)) => {
-                text = t;
-            }
-            Ok(Message::Binary(bytes)) => {
-                if let Ok(t) = String::from_utf8(bytes) {
-                    text = t;
-                } else {
-                    return;
-                }
-            }
+        let text = match data {
+            Ok(Message::Text(t)) => t,
+            Ok(Message::Binary(bytes)) => match String::from_utf8(bytes) {
+                Ok(t) => t,
+                Err(_) => return,
+            },
             Ok(Message::Ping(bytes)) => {
                 let mut write = write.lock().await;
                 let _ = write.send(Message::Pong(bytes)).await;
                 return;
             }
             _ => return,
-        }
+        };
         if let Ok(serde_json::Value::Object(mut m)) =
             serde_json::from_str::<serde_json::Value>(text.as_str())
         {
@@ -115,10 +107,12 @@ async fn build_response(
             match key.as_str() {
                 "internal" => {}
                 "shell" => {
-                    return shell::handle_request(value, &client_connection, &session, &shells)
-                        .map_ok(|_| serde_json::Value::Null)
-                        .map_err(|_| RequestError::InternalError)
-                        .await;
+                    return match shell::handle_request(value, &client_connection, &session, &shells)
+                        .await
+                    {
+                        Ok(_) => Ok(serde_json::Value::Null),
+                        Err(_) => Err(RequestError::InternalError),
+                    };
                 }
                 "token" => {
                     return Ok(json!(token));

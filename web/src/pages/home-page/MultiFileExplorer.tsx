@@ -14,9 +14,6 @@ import Loading from "./file-explorer/Loading";
 import ErrorPreview from "./file-explorer/ErrorPreview";
 import Common from './file-explorer/Common';
 
-// @ts-ignore: Unreachable code error
-import CompressWorker from './FileExplorer.worker';
-
 let tag = 0;
 
 class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFileExplorer.State>{
@@ -30,7 +27,9 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
     };
   }
   _controller: MultiFileExplorer.Controller;
-  protected readonly _worker: Worker = new CompressWorker();
+  static readonly _worker: Worker = new Worker(
+    new URL('./FileExplorer.worker.js', import.meta.url),
+    { type: 'module', });
   protected _mounted = true;
 
   protected _readFileAsArrayBuffer(file: File) {
@@ -49,13 +48,13 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
       const listener = (msg: MessageEvent) => {
         const { tag, data, error } = msg.data;
         if (messageTag === tag) {
-          this._worker.removeEventListener('message', listener);
+          MultiFileExplorer._worker.removeEventListener('message', listener);
           if (error) reject(error);
           else resolve(data);
         }
       };
-      this._worker.addEventListener('message', listener);
-      this._worker.postMessage({ tag: messageTag, requestDeflate: buffer }, [buffer]);
+      MultiFileExplorer._worker.addEventListener('message', listener);
+      MultiFileExplorer._worker.postMessage({ tag: messageTag, requestDeflate: buffer }, [buffer]);
     });
   }
 
@@ -65,13 +64,13 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
       const listener = (msg: MessageEvent) => {
         const { tag, data, error } = msg.data;
         if (messageTag === tag) {
-          this._worker.removeEventListener('message', listener);
+          MultiFileExplorer._worker.removeEventListener('message', listener);
           if (error) reject(error);
           else resolve(data);
         }
       };
-      this._worker.addEventListener('message', listener);
-      this._worker.postMessage({ tag: messageTag, requestInflate: buffer }, [buffer]);
+      MultiFileExplorer._worker.addEventListener('message', listener);
+      MultiFileExplorer._worker.postMessage({ tag: messageTag, requestInflate: buffer }, [buffer]);
     });
   }
 
@@ -156,7 +155,7 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
       }
     }
     controller.addEventListener('change', listener);
-    this.setState({ uploadItems: [...this.state.uploadItems, controller] });
+    this.setState({ uploadItems: [...this.state.uploadItems, controller], uploadManagementOpen: true });
   }
 
   override componentWillUnmount(): void {
@@ -176,6 +175,13 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
         upload: (file, dest) => this._upload(file, dest),
         openUploadManagement: () => this.setState({ uploadManagementOpen: true }),
       }}>
+        <MyResize>
+          <Elevation className='full-size column' depth={2}
+            style={{ paddingBottom: 16, }}>
+            <MultiFileExplorer.FileExplorer controller={this._controller} />
+          </Elevation>
+        </MyResize>
+
         <Dialog open={uploadManagementOpen}
           fullscreen
           onScrimClick={closeUploadManagement}
@@ -199,9 +205,6 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
             })}
           </AnimatedList>
         </Dialog>
-        <Elevation className='column' depth={2} style={{ width: 320, paddingBottom: 16 }}>
-          <MultiFileExplorer.FileExplorer controller={this._controller} />
-        </Elevation>
       </Common.Context.Provider>
     );
   }
@@ -354,6 +357,41 @@ namespace MultiFileExplorer {
   }
 }
 
+function MyResize({ children }: { children: React.ReactNode }) {
+  const [enable, setEnable] = React.useState(0);
+  const [width, setWidth] = React.useState(320);
+  const startDrag = enable > 0;
+  React.useEffect(() => {
+    const onUp = () => setEnable(v => Math.max(v - 1, 0));
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mouseup', onUp);
+    }
+  });
+  React.useEffect(() => {
+    if (startDrag) {
+      const onMove = (e: Event) => {
+        e.preventDefault();
+        setWidth(width => Math.max(width - (e as MouseEvent).movementX, 200));
+      };
+      window.addEventListener('mousemove', onMove);
+      return () => {
+        window.removeEventListener('mousemove', onMove);
+      }
+    }
+  }, [startDrag]);
+  return (
+    <div style={{ position: 'relative', height: '100%', width }}>
+      {children}
+      <div style={{ position: 'absolute', height: '100%', width: 8, left: 0, top: 0, cursor: 'ew-resize' }}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          setEnable(v => v + 1);
+        }}></div>
+    </div>
+  );
+}
+
 function Content({ state }: { state?: MultiFileExplorer.ControllerState }) {
   if (state === undefined) return <Loading />;
   else if ('error' in state) return <ErrorPreview state={state} />;
@@ -391,19 +429,19 @@ function UploadItem(props: { controller: Common.UploadController }) {
                     const progress = upload.loaded / upload.total;
                     return (
                       <Tooltip label={`${(progress * 100).toFixed(1)} %; ${FileSize(upload.loaded)}; ${FileSize(upload.total)}`}>
-                        <CircularProgress progress={progress} />
+                        <CircularProgress progress={progress} sizing='Small' />
                       </Tooltip>
                     );
                   } else {
                     return (
                       <Tooltip label={FileSize(upload.loaded)}>
-                        <CircularProgress />
+                        <CircularProgress sizing='Small' />
                       </Tooltip>
                     );
                   }
                 } else {
                   return <Tooltip label='Initialization'>
-                    <CircularProgress />
+                    <CircularProgress sizing='Small' />
                   </Tooltip>;
                 }
 

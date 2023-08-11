@@ -24,7 +24,7 @@ export namespace Rest {
     'fs.rm': { parameter: [path: PathLike], return: Awaited<ReturnType<typeof fs.rm>> },
     'fs.exists': { parameter: [path: PathLike], return: boolean },
     'fs.mkdir': { parameter: [path: PathLike], return: Awaited<ReturnType<typeof fs.mkdir>> },
-    'fs.writeFile': { parameter: [path: PathLike, data: string], return: Awaited<ReturnType<typeof fs.writeFile>> },
+    'fs.writeFile': { parameter: [path: PathLike, data: string], return: Awaited<ReturnType<typeof fs.writeFile>> }, // can't overwrite file
     'fs.cp': { parameter: [oldPath: PathLike, newPath: PathLike], return: Awaited<ReturnType<typeof fs.cp>> },
     'shell': {
       parameter:

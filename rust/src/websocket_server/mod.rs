@@ -5,20 +5,33 @@ mod shell;
 use crate::{app_config::AppConfig, connection_peer::WebSocketPeer};
 use futures::lock::Mutex;
 use hyper::{upgrade::Upgraded, Request};
-use std::{collections::HashMap, error::Error, net::SocketAddr, sync::Arc};
+use std::{
+    collections::HashMap,
+    error::Error,
+    net::{IpAddr, SocketAddr},
+    sync::Arc,
+};
 use tokio_tungstenite::WebSocketStream;
 
 pub async fn handle_request(
     app_config: &Arc<AppConfig>,
     peer_map: &Arc<Mutex<HashMap<String, WebSocketPeer>>>,
+    wait_duration: &Arc<Mutex<HashMap<IpAddr, u64>>>,
     addr: &SocketAddr,
     req: Request<hyper::body::Incoming>,
     ws_stream: WebSocketStream<Upgraded>,
 ) -> Result<(), Box<dyn Error>> {
     match req.uri().path() {
         "/" | "/rest" | "/rest/" => {
-            on_request_authenticate::handle_request(app_config, peer_map, addr, req, ws_stream)
-                .await
+            on_request_authenticate::handle_request(
+                app_config,
+                peer_map,
+                wait_duration,
+                addr,
+                req,
+                ws_stream,
+            )
+            .await
         }
         "/client" => {
             let is_loopback = match addr {

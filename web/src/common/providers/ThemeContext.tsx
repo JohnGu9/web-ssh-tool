@@ -7,6 +7,7 @@ const mediaQueryList = window.matchMedia('(prefers-color-scheme: dark)');
 
 export function ThemeService({ children }: ThemeService.Props) {
   const setting = React.useContext(Settings.Context);
+  const [, setUpdate] = React.useState(false);
   const isDark = (() => {
     switch (setting.darkMode) {
       case 'dark':
@@ -17,6 +18,11 @@ export function ThemeService({ children }: ThemeService.Props) {
         return mediaQueryList.matches;
     }
   })();
+  React.useEffect(() => {
+    const listener = () => { setUpdate(v => !v) };
+    mediaQueryList.addEventListener('change', listener);
+    return () => { mediaQueryList.removeEventListener('change', listener); };
+  });
   const themeData = isDark ? defaultDarkTheme : defaultLightTheme;
   return (
     <ThemeContext.Provider value={{ isDark, themeData }}>

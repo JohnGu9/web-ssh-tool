@@ -12,7 +12,7 @@ pub async fn on_client(
     _: &Arc<AppConfig>,
     peer_map: &Arc<Mutex<HashMap<String, WebSocketPeer>>>,
     mut req: Request<Incoming>,
-    addr: &SocketAddr,
+    addr: SocketAddr,
 ) -> Result<ResponseType, Infallible> {
     let is_loopback = match addr {
         SocketAddr::V4(v4) => v4.ip().is_loopback(),

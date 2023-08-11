@@ -78,10 +78,16 @@ pub async fn handle_request(
                 header::CONTENT_TYPE,
                 HeaderValue::from_str(mime_guess::mime::TEXT_PLAIN.to_string().as_str())?,
             );
-            headers.append(
-                header::CONTENT_LENGTH,
-                HeaderValue::from_str(bytes.len().to_string().as_str())?,
-            );
+            if let Ok(h) = HeaderValue::from_str(bytes.len().to_string().as_str()) {
+                headers.append(header::CONTENT_LENGTH, h);
+            } else {
+                headers.append(
+                    header::TRANSFER_ENCODING,
+                    HeaderValue::from_static("chunked"),
+                );
+            }
+
+            headers.append(header::CONNECTION, HeaderValue::from_static("close"));
 
             let mut response = sender.send_request(req).await?;
 

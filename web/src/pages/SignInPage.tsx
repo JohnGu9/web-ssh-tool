@@ -178,7 +178,7 @@ class Auth implements Server.Authentication.Type {
   async rest<T extends keyof Rest.Map>(type: T, parameter: Rest.Map.Parameter<T>): Promise<Rest.Map.Return<T> | Rest.Error> {
     return new Promise(resolve => {
       const tag = this._tag++;
-      console.log(`rest ${tag} ${type} ${JSON.stringify(parameter)}`);
+      // console.log(`rest ${tag} ${type} ${JSON.stringify(parameter)}`);
       this._callbacks.set(tag, resolve);
       this._ws.send(JSON.stringify({ tag, request: { [type]: parameter } }));
     });

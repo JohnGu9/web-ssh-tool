@@ -26,7 +26,7 @@ use preview::on_preview;
 pub async fn on_http(
     app_config: &Arc<AppConfig>,
     peer_map: &Arc<Mutex<HashMap<String, WebSocketPeer>>>,
-    addr: &SocketAddr,
+    addr: SocketAddr,
     req: Request<hyper::body::Incoming>,
 ) -> Result<ResponseType, Infallible> {
     app_config.logger.info(format!(
@@ -90,7 +90,7 @@ pub async fn on_http(
 
     match (req.method(), req.uri().path()) {
         (_, "/client") => on_client(app_config, peer_map, req, addr).await,
-        (&Method::GET | &Method::HEAD, "/") => file_send(app_config, "index.html").await,
+        (&Method::GET | &Method::HEAD, "" | "/") => file_send(app_config, "index.html").await,
         (&Method::GET | &Method::HEAD, path) => file_send(app_config, &path[1..]).await,
         (m, path) => Ok(not_found(app_config, format!("Unknown request {:?} {:?}", m, path)).await),
     }
