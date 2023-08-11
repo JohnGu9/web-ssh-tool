@@ -1,6 +1,0 @@
-{
-    "port": 7200,
-    "https-key": "https/server.key",
-    "https-cert": "https/server.crt",
-    "upload": "upload-test"
-}

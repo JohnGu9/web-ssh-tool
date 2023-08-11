@@ -1,7 +1,0 @@
-{
-    "watch": [
-        "debug.js",
-        "config.json",
-        "nodemon.json"
-    ]
-}

@@ -1,7 +1,7 @@
 import { promises as fs, createWriteStream } from 'fs';
 import path from 'path';
 import posixPath from 'node:path/posix';
-import { licenseBundle } from './build-liscense'
+import { licenseBundle } from './build-license'
 
 async function main() {
     console.log("running build-rust-assets.ts");

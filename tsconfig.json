@@ -16,7 +16,7 @@
     "outDir": "./build"
   },
   "files": [
-    "build.ts",
-    "deploy.ts"
+    "build-license.ts",
+    "build-rust-assets.ts",
   ]
 }

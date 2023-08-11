@@ -12,22 +12,15 @@ function checker(start: string) {
 
 export async function licenseBundle(target: string) {
     const writeStream = createWriteStream(target);
-    const [nodeLicenses, licenses] = await Promise.all([
-        checker(path.join(__dirname, 'node')),
+    const [licenses, webLicense] = await Promise.all([
         checker(__dirname),
-        // (async () => {
-        //     const dir = path.join(__dirname, 'web', 'build', 'static', 'js');
-        //     for await (const { name: file } of await fs.opendir(dir)) {
-        //         if (file.endsWith('LICENSE.txt')) {
-        //             for await (const chunk of createReadStream(path.join(dir, file)))
-        //                 writeStream.write(chunk);
-        //         }
-        //     }
-        // })(),
+        checker(path.join(__dirname, 'web')),
+
+        // @TODO: Add rust license
     ]);
 
     const buffer2 = Buffer.from('\n\n');
-    for (const [name, { licenseFile }] of [...Object.entries(nodeLicenses), ...Object.entries(licenses)]) {
+    for (const [name, { licenseFile }] of [...Object.entries(webLicense), ...Object.entries(licenses)]) {
         if (licenseFile) {
             writeStream.write(Buffer.from(`\n${name}\n`));
             for await (const chunk of createReadStream(licenseFile))
