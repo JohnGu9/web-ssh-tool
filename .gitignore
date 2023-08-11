@@ -27,3 +27,5 @@ index.js
 **/*.log
 .test
 **/.DS_Store
+
+.VSCodeCounter
