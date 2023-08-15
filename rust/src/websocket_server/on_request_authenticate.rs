@@ -4,18 +4,18 @@ use crate::connection_peer::Client;
 use crate::connection_peer::ClientConnection;
 use crate::connection_peer::WebSocketPeer;
 use futures::channel::mpsc::Receiver;
+use futures::channel::{mpsc, oneshot};
 use futures::lock::Mutex;
 use futures::{SinkExt, StreamExt};
 use hyper::{upgrade::Upgraded, Request};
 use serde_json::json;
-use std::net::IpAddr;
 use std::{collections::HashMap, error::Error, net::SocketAddr, sync::Arc};
 use tokio_tungstenite::{tungstenite::Message, WebSocketStream};
 
 pub async fn handle_request(
     app_config: &Arc<AppConfig>,
     peer_map: &Arc<Mutex<HashMap<String, WebSocketPeer>>>,
-    wait_duration: &Arc<Mutex<HashMap<IpAddr, u64>>>,
+    authenticate_queues: &Arc<Mutex<HashMap<String, mpsc::Sender<oneshot::Receiver<()>>>>>,
     addr: &SocketAddr,
     _: Request<hyper::body::Incoming>,
     mut ws_stream: WebSocketStream<Upgraded>,
@@ -39,12 +39,10 @@ pub async fn handle_request(
     while let Some(Ok(data)) = ws_stream.next().await {
         let text = match data {
             Message::Text(t) => t,
-            Message::Binary(bytes) => {
-                match String::from_utf8(bytes) {
-                    Ok(t) => t,
-                    Err(_) => continue,
-                }
-            }
+            Message::Binary(bytes) => match String::from_utf8(bytes) {
+                Ok(t) => t,
+                Err(_) => continue,
+            },
             Message::Ping(bytes) => {
                 ws_stream.send(Message::Pong(bytes)).await?;
                 continue;
@@ -65,22 +63,31 @@ pub async fn handle_request(
                 Some((username, password)) => (username, password),
                 None => return Err("Sign in message format error"),
             };
+
+            // limit one user authentication at the same time
+            let (complete_authenticate, rx) = oneshot::channel();
+            let mut one_buffer_channel = {
+                let mut lock = authenticate_queues.lock().await;
+                match lock.get(&username) {
+                    Some(sender) => sender.clone(),
+                    None => {
+                        let (t, mut r) = mpsc::channel(0);
+                        tokio::spawn(async move {
+                            while let Some(rx) = r.next().await {
+                                let _ = rx.await;
+                            }
+                        });
+                        lock.insert(username.clone(), t.clone());
+                        t
+                    }
+                }
+            };
+            let _ = one_buffer_channel.send(rx).await;
+
             match session.authenticate_password(username, password).await {
                 Ok(false) => {
-                    let mut lock = wait_duration.lock().await;
-                    let ip = addr.ip();
-                    match lock.get_mut(&ip) {
-                        Some(wait_duration) => {
-                            if *wait_duration >= (u64::MAX / 2) {
-                                *wait_duration = u64::MAX
-                            } else {
-                                *wait_duration += *wait_duration;
-                            }
-                        }
-                        None => {
-                            lock.insert(ip, 2);
-                        }
-                    }
+                    use tokio::time::{sleep, Duration};
+                    sleep(Duration::from_secs(5)).await;
                     return Err("Username and password authenticate failed");
                 }
                 Err(err) => {
@@ -101,6 +108,7 @@ pub async fn handle_request(
                 }
                 _ => {}
             };
+            let _ = complete_authenticate.send(());
 
             let mut channel = match session.channel_open_session().await {
                 Ok(ch) => ch,
@@ -132,21 +140,6 @@ pub async fn handle_request(
             return Ok((token, client_connection, rx));
         }
         .await;
-
-        let wait = {
-            let lock = wait_duration.lock().await;
-            let ip = addr.ip();
-            match lock.get(&ip) {
-                Some(s) => Some(s.clone()),
-                None => None,
-            }
-        };
-        if let Some(wait) = wait {
-            // Username and password authenticate failed
-            // Login limit protection
-            tokio::time::sleep(tokio::time::Duration::from_secs(wait)).await;
-            tokio::task::yield_now().await;
-        }
 
         match result {
             Err(cause) => {

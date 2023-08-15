@@ -8,6 +8,7 @@ mod websocket_server;
 use app_config::AppConfig;
 use components::{ResponseType, ResponseUnit};
 use connection_peer::WebSocketPeer;
+use futures::channel::{mpsc, oneshot};
 use futures::lock::Mutex;
 use http_body_util::StreamBody;
 use http_server::on_http;
@@ -21,7 +22,7 @@ use hyper::{Method, Request, Response, StatusCode, Version};
 use std::collections::HashMap;
 use std::convert::Infallible;
 use std::error::Error;
-use std::net::{IpAddr, SocketAddr};
+use std::net::SocketAddr;
 use std::sync::Arc;
 use tls::{load_certs, load_keys};
 use tokio::net::TcpStream;
@@ -51,7 +52,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         ));
         let (client, _) =
             connect_async_tls_with_config(master_server, None, false, Some(connector)).await?;
-        websocket_client::handle_request(&app_config, token, client).await?;
+        let _ = websocket_client::handle_request(&app_config, token, client).await;
         std::process::exit(0);
         // return Ok(());
     }
@@ -75,10 +76,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     app_config
         .logger
-        .info(format!("App pid: {}", std::process::id()));
+        .info(format!("App pid: {}\n", std::process::id()));
     let peer_map = Arc::new(Mutex::new(HashMap::new()));
-    let wait_duration = Arc::new(Mutex::new(HashMap::new()));
-    tokio::spawn(recycle_wait_duration(wait_duration.clone()));
+    let queues = Arc::new(Mutex::new(HashMap::new()));
     loop {
         match listener.accept().await {
             Ok((stream, addr)) => {
@@ -88,7 +88,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     acceptor.clone(),
                     app_config.clone(),
                     peer_map.clone(),
-                    wait_duration.clone(),
+                    queues.clone(),
                 ));
             }
             Err(e) => app_config.logger.err(format!(
@@ -105,11 +105,11 @@ async fn handle_connection(
     acceptor: TlsAcceptor,
     app_config: Arc<AppConfig>,
     peer_map: Arc<Mutex<HashMap<String, WebSocketPeer>>>,
-    wait_duration: Arc<Mutex<HashMap<IpAddr, u64>>>,
+    authenticate_queues: Arc<Mutex<HashMap<String, mpsc::Sender<oneshot::Receiver<()>>>>>,
 ) -> Result<(), std::io::Error> {
     let stream = acceptor.accept(stream).await?;
     let service = |req: Request<hyper::body::Incoming>| {
-        http_websocket_classify(&app_config, &peer_map, &wait_duration, addr, req)
+        http_websocket_classify(&app_config, &peer_map, &authenticate_queues, addr, req)
     };
     if let Err(e) = http1::Builder::new()
         .serve_connection(stream, service_fn(service))
@@ -126,7 +126,7 @@ async fn handle_connection(
 async fn http_websocket_classify(
     app_config: &Arc<AppConfig>,
     peer_map: &Arc<Mutex<HashMap<String, WebSocketPeer>>>,
-    wait_duration: &Arc<Mutex<HashMap<IpAddr, u64>>>,
+    authenticate_queues: &Arc<Mutex<HashMap<String, mpsc::Sender<oneshot::Receiver<()>>>>>,
     addr: SocketAddr,
     req: Request<hyper::body::Incoming>,
 ) -> Result<ResponseType, Infallible> {
@@ -170,7 +170,7 @@ async fn http_websocket_classify(
                 tokio::spawn(upgrade_web_socket(
                     app_config.to_owned(),
                     peer_map.to_owned(),
-                    wait_duration.to_owned(),
+                    authenticate_queues.to_owned(),
                     addr,
                     req,
                 ));
@@ -184,7 +184,7 @@ async fn http_websocket_classify(
 async fn upgrade_web_socket(
     app_config: Arc<AppConfig>,
     peer_map: Arc<Mutex<HashMap<String, WebSocketPeer>>>,
-    wait_duration: Arc<Mutex<HashMap<IpAddr, u64>>>,
+    authenticate_queues: Arc<Mutex<HashMap<String, mpsc::Sender<oneshot::Receiver<()>>>>>,
     addr: SocketAddr,
     mut req: Request<hyper::body::Incoming>,
 ) {
@@ -199,7 +199,7 @@ async fn upgrade_web_socket(
             if let Err(err) = websocket_server::handle_request(
                 &app_config,
                 &peer_map,
-                &wait_duration,
+                &authenticate_queues,
                 &addr,
                 req,
                 ws_stream,
@@ -214,27 +214,5 @@ async fn upgrade_web_socket(
         Err(e) => app_config
             .logger
             .err(format!("Websocket upgrade error: {}", e)),
-    }
-}
-
-// reset the login limit protect in period time
-async fn recycle_wait_duration(wait_duration: Arc<Mutex<HashMap<IpAddr, u64>>>) {
-    use tokio::time::{sleep, Duration};
-    let mut need_to_clean_up = vec![];
-    loop {
-        sleep(Duration::from_secs(60 * 5)).await;
-        {
-            let mut wait_duration = wait_duration.lock().await;
-            for (ip, duration) in wait_duration.iter_mut() {
-                *duration = *duration / 2;
-                if *duration <= 2 {
-                    need_to_clean_up.push(ip.clone());
-                }
-            }
-            for ip in &need_to_clean_up {
-                let _ = wait_duration.remove(&ip);
-            }
-            need_to_clean_up.clear();
-        }
     }
 }

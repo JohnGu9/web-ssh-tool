@@ -3,20 +3,16 @@ mod on_client;
 mod on_request_authenticate;
 mod shell;
 use crate::{app_config::AppConfig, connection_peer::WebSocketPeer};
+use futures::channel::{mpsc, oneshot};
 use futures::lock::Mutex;
 use hyper::{upgrade::Upgraded, Request};
-use std::{
-    collections::HashMap,
-    error::Error,
-    net::{IpAddr, SocketAddr},
-    sync::Arc,
-};
+use std::{collections::HashMap, error::Error, net::SocketAddr, sync::Arc};
 use tokio_tungstenite::WebSocketStream;
 
 pub async fn handle_request(
     app_config: &Arc<AppConfig>,
     peer_map: &Arc<Mutex<HashMap<String, WebSocketPeer>>>,
-    wait_duration: &Arc<Mutex<HashMap<IpAddr, u64>>>,
+    authenticate_queues: &Arc<Mutex<HashMap<String, mpsc::Sender<oneshot::Receiver<()>>>>>,
     addr: &SocketAddr,
     req: Request<hyper::body::Incoming>,
     ws_stream: WebSocketStream<Upgraded>,
@@ -26,7 +22,7 @@ pub async fn handle_request(
             on_request_authenticate::handle_request(
                 app_config,
                 peer_map,
-                wait_duration,
+                authenticate_queues,
                 addr,
                 req,
                 ws_stream,
