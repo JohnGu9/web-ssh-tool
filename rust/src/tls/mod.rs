@@ -1,3 +1,5 @@
+// If this file cause build-failed, checkout readme.md
+
 use bytes::Buf;
 use rustls_pemfile::{certs, read_one, Item};
 use std::io::{self, ErrorKind};

@@ -41,7 +41,7 @@ async function buildAssetsMap(p: string) {
     for (const assets of assetsMap) {
         const p0 = posixPath.join(...assets);
         const p1 = path.join("build", ...assets);
-        writeStream.write(Buffer.from(`        "${p0}" => Ok(include_bytes!("${p1}")),
+        writeStream.write(Buffer.from(`        "${p0}" => Ok(include_bytes!(r"${p1}")),
 `));
     }
     writeStream.write(Buffer.from(

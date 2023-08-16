@@ -93,6 +93,7 @@ class MultiTerminalView extends React.Component<MultiTerminalView.Props, MultiTe
           style={{ flex: 1, padding: '0 24px', overflow: 'hidden' }}>
           {controller
             ? <XTerminalView
+              key={controller.id}
               controller={controller}
               remove={value => this.removeOf(value)} />
             : <div className='full-size row' style={{ justifyContent: 'center' }}>
