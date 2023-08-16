@@ -97,7 +97,7 @@ pub async fn download_single(
                 return Ok((
                     file_to_stream(file, on_end_callback),
                     on_end,
-                    format!("attachment; filename=\"{}\"", file_name),
+                    format!("attachment; filename=\"{}\";", file_name),
                 ));
             }
         } else if p.is_dir() {
@@ -114,7 +114,7 @@ pub async fn download_single(
             return Ok((
                 rx,
                 on_end,
-                format!("attachment; filename=\"{}.zip\"", file_name),
+                format!("attachment; filename=\"{}.zip\";", file_name),
             ));
         }
     }
@@ -151,7 +151,7 @@ async fn download_multi(
         }
         let _ = on_end_callback.send(());
     });
-    return Ok((rx, on_end, format!("attachment; filename=\"bundle.zip\"")));
+    return Ok((rx, on_end, format!("attachment; filename=\"bundle.zip\";")));
 }
 
 async fn zip_multi(

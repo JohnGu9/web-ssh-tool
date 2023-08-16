@@ -14,6 +14,13 @@ pub async fn handle_request(
 ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     if let serde_json::Value::String(argument) = argument {
         let path = Path::new(argument.as_str());
+        let filename = match path.file_name() {
+            Some(filename) => match filename.to_str() {
+                Some(filename) => Some(filename),
+                None => None,
+            },
+            None => None,
+        };
         let guess = mime_guess::from_path(path);
         let guess = guess.first_or_text_plain();
         let file = tokio::fs::File::open(path).await?;
@@ -36,6 +43,12 @@ pub async fn handle_request(
             header::CONTENT_TYPE,
             HeaderValue::from_str(guess.to_string().as_str())?,
         );
+        if let Some(filename) = filename {
+            let content = format!("inline; filename=\"{}\";", filename);
+            if let Ok(value) = HeaderValue::from_str(content.as_str()) {
+                headers.append(header::CONTENT_DISPOSITION, value);
+            }
+        }
         match size {
             Some(size) => headers.append(
                 header::CONTENT_LENGTH,
@@ -46,10 +59,6 @@ pub async fn handle_request(
                 HeaderValue::from_static("chunked"),
             ),
         };
-        headers.append(
-            header::CONNECTION,
-            HeaderValue::from_static("close"),
-        );
 
         let mut response = sender.send_request(req).await?;
         tokio::spawn(async move {

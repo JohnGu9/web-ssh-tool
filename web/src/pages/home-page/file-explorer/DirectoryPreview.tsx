@@ -1,6 +1,6 @@
 import React from "react";
 import { Lstat, Watch } from "../../../common/Type";
-import { SharedAxisTransition } from "../../../components/Transitions"
+import { SharedAxis, SharedAxisTransform } from 'material-design-transform';
 import { FixedSizeList } from "../../../components/AdaptedWindow";
 import EventListenerBuilder from "../../../components/EventListenerBuilder";
 
@@ -22,12 +22,12 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
     : ([key]) => !key.startsWith('.')), config.sort);
   return (
     <div className='full-size column' >
-      <SharedAxisTransition className='row' style={{ height: 56, padding: '0 8px 0 0' }}
-        type={SharedAxisTransition.Type.fromTopToBottom} id={onSelecting}>
+      <SharedAxis className='row' style={{ height: 56, padding: '0 8px 0 0' }}
+        transform={SharedAxisTransform.fromTopToBottom} keyId={onSelecting ? 0 : 1}>
         {onSelecting
           ? <SelectingToolsBar setOnSelect={setOnSelecting} state={state} selected={selected} setSelected={setSelected} />
           : <ToolsBar path={path} realPath={realPath} setOnSelect={setOnSelecting} />}
-      </SharedAxisTransition>
+      </SharedAxis>
       <DropZone style={{ flex: 1, width: '100%', minHeight: 0 }} dirname={path}>
         {fileList.length === 0
           ? <div className='column' style={{ width: '100%', justifyContent: 'center', alignItems: 'center' }}>

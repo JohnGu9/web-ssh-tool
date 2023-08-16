@@ -3,7 +3,7 @@ import React from "react";
 import { Card, TextField, Checkbox, Typography, LinearProgress, Button, FormField } from 'rmcw';
 import lazy from 'react-lazy-with-preload';
 
-import { SharedAxisTransition } from '../components/Transitions';
+import { SharedAxis, SharedAxisTransform } from 'material-design-transform';
 import { LocaleContext, LocaleContextType, Server, Settings } from '../common/Providers';
 import { Rest } from '../common/Type';
 import { wsSafeClose } from '../common/DomTools';
@@ -59,10 +59,10 @@ class Content extends React.Component<Content.Props, Content.State> {
     return (
       <>
         <LinearProgress closed={!loading} style={{ position: 'absolute', top: 0 }} />
-        <SharedAxisTransition
+        <SharedAxis
           className='full-size row'
-          id={auth}
-          type={SharedAxisTransition.Type.fromRightToLeft}>
+          keyId={auth === undefined ? 0 : 1}
+          transform={SharedAxisTransform.fromRightToLeft}>
           {auth
             ? <Server.Authentication.Context.Provider value={auth}>
               {this.props.children}
@@ -107,7 +107,7 @@ class Content extends React.Component<Content.Props, Content.State> {
               </Card>
               <div style={{ flex: 1 }} />
             </>}
-        </SharedAxisTransition>
+        </SharedAxis>
       </>
     );
   }

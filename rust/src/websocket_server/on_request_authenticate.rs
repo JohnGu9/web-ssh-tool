@@ -66,7 +66,7 @@ pub async fn handle_request(
 
             // limit one user authentication at the same time
             let (complete_authenticate, rx) = oneshot::channel();
-            let mut one_buffer_channel = {
+            let mut authenticate_queue = {
                 let mut lock = authenticate_queues.lock().await;
                 match lock.get(&username) {
                     Some(sender) => sender.clone(),
@@ -82,8 +82,7 @@ pub async fn handle_request(
                     }
                 }
             };
-            let _ = one_buffer_channel.send(rx).await;
-
+            let _ = authenticate_queue.send(rx).await;
             match session.authenticate_password(username, password).await {
                 Ok(false) => {
                     use tokio::time::{sleep, Duration};
@@ -129,7 +128,7 @@ pub async fn handle_request(
             }
 
             let command = format!(
-                "{} --client {} --listen-address 127.0.0.1:{}",
+                "{} --client {} --listen-address localhost:{}",
                 app_config.bin, token, app_config.listen_address.port
             );
             let (tx, rx) = futures::channel::mpsc::channel(1);

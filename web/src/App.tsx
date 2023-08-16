@@ -3,7 +3,7 @@ import { CircularProgress } from 'rmcw';
 import delay from './common/Delay';
 import { wsSafeClose } from './common/DomTools';
 import { LocaleContext, LocaleContextType, LocaleService, Server, SettingsService, ThemeService } from './common/Providers';
-import { SharedAxisTransition } from './components/Transitions';
+import { SharedAxis, SharedAxisTransform } from 'material-design-transform';
 import SignInPage from './pages/SignInPage';
 import Scaffold from './components/Scaffold';
 
@@ -94,10 +94,10 @@ class Service extends React.Component<Service.Props, Service.State> {
     const { server } = this.state;
     const { children, locale: { locale } } = this.props;
     return (
-      <SharedAxisTransition
+      <SharedAxis
         className='full-size'
-        type={SharedAxisTransition.Type.fromTopToBottom}
-        id={server}>
+        transform={SharedAxisTransform.fromTopToBottom}
+        keyId={server === undefined ? 0 : 1}>
         {server
           ? <Server.Context.Provider value={server}>
             {children}
@@ -107,7 +107,7 @@ class Service extends React.Component<Service.Props, Service.State> {
             <div style={{ minWidth: 16 }} />
             {locale.connecting} .....
           </div>}
-      </SharedAxisTransition>
+      </SharedAxis>
     );
   }
 }

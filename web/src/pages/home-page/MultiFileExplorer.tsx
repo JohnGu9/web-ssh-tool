@@ -5,7 +5,6 @@ import { v1 as uuid } from 'uuid';
 import { FileSize } from "../../common/Tools";
 import { Server, Settings } from "../../common/Providers";
 import { Lstat, Rest } from "../../common/Type";
-import { SharedAxisTransition } from "../../components/Transitions";
 import AnimatedList from "../../components/AnimatedList";
 
 import FilePreview from "./file-explorer/FilePreview";
@@ -13,6 +12,7 @@ import DirectoryPreView from "./file-explorer/DirectoryPreview";
 import Loading from "./file-explorer/Loading";
 import ErrorPreview from "./file-explorer/ErrorPreview";
 import Common from './file-explorer/Common';
+import { SharedAxis, SharedAxisTransform } from "material-design-transform";
 
 let tag = 0;
 
@@ -313,21 +313,21 @@ namespace MultiFileExplorer {
 
   export function FileExplorer({ controller }: { controller: Controller }) {
     const [{ updating: loading, state }, setState] = React.useState(controller.state);
-    const [transitionStyle, setTransitionStyle] = React.useState({ t: SharedAxisTransition.Type.fromRightToLeft, p: state?.path });
+    const [transitionStyle, setTransitionStyle] = React.useState({ t: SharedAxisTransform.fromRightToLeft, p: state?.path });
     React.useEffect(() => {
       const listener = () => {
         setTransitionStyle(current => {
           const path = controller.state.state?.path;
           const currentPath = current.p;
           if (path === undefined || path === null) {
-            return { t: SharedAxisTransition.Type.fromRightToLeft, p: path };
+            return { t: SharedAxisTransform.fromRightToLeft, p: path };
           } else if (currentPath === undefined || currentPath === null) {
-            return { t: SharedAxisTransition.Type.fromLeftToRight, p: path };
+            return { t: SharedAxisTransform.fromLeftToRight, p: path };
           } else {
             return {
               t: path.length > currentPath.length ?
-                SharedAxisTransition.Type.fromRightToLeft :
-                SharedAxisTransition.Type.fromLeftToRight,
+                SharedAxisTransform.fromRightToLeft :
+                SharedAxisTransform.fromLeftToRight,
               p: path
             };
           }
@@ -340,19 +340,17 @@ namespace MultiFileExplorer {
       };
     }, [controller]);
     return (
-      <SharedAxisTransition
+      <SharedAxis
         className='full-size'
-        type={transitionStyle.t}
-        id={state?.path}
+        transform={transitionStyle.t}
+        keyId={state?.path}
         style={{
           pointerEvents: loading ? 'none' : 'auto',
-          opacity: loading ? 0.5 : 1,
-          transition: 'opacity 300ms',
           position: 'relative'
         }}>
         <LinearProgress style={{ position: 'absolute', top: 0 }} closed={!loading} />
         <Content state={state} />
-      </SharedAxisTransition>
+      </SharedAxis>
     );
   }
 }
@@ -372,7 +370,7 @@ function MyResize({ children }: { children: React.ReactNode }) {
     if (startDrag) {
       const onMove = (e: Event) => {
         e.preventDefault();
-        setWidth(width => Math.max(width - (e as MouseEvent).movementX, 200));
+        setWidth(width => Math.max(width - (e as MouseEvent).movementX, 300));
       };
       window.addEventListener('mousemove', onMove);
       return () => {
@@ -417,9 +415,9 @@ function UploadItem(props: { controller: Common.UploadController }) {
   return (
     <ListItem
       graphic={
-        <SharedAxisTransition
-          id={state}
-          type={SharedAxisTransition.Type.fromRightToLeft}
+        <SharedAxis
+          keyId={state}
+          transform={SharedAxisTransform.fromRightToLeft}
           style={{ width: 24 }}>
           {(() => {
             switch (state) {
@@ -459,14 +457,14 @@ function UploadItem(props: { controller: Common.UploadController }) {
 
             }
           })()}
-        </SharedAxisTransition>
+        </SharedAxis>
       }
       primaryText={file.name}
       secondaryText={dest}
       meta={
-        <SharedAxisTransition
-          id={state}
-          type={SharedAxisTransition.Type.fromTopToBottom}>
+        <SharedAxis
+          keyId={state}
+          transform={SharedAxisTransform.fromTopToBottom}>
           {(() => {
             switch (state) {
               case Common.UploadController.State.running:
@@ -479,7 +477,7 @@ function UploadItem(props: { controller: Common.UploadController }) {
                 </IconButton>;
             }
           })()}
-        </SharedAxisTransition>
+        </SharedAxis>
       }
     />
   );

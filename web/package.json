@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "core-js": "^3.31.1",
+    "material-design-transform": "^2.1.2",
     "material-icons": "^1.13.8",
     "pako": "^2.1.0",
     "raf": "^3.4.1",
@@ -41,9 +42,7 @@
   },
   "scripts": {
     "start": "vite",
-    "build": "vite build",
-    "test": "react-app-rewired test --env=jsdom",
-    "eject": "react-scripts eject"
+    "build": "vite build"
   },
   "eslintConfig": {
     "extends": [

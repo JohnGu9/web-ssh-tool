@@ -5,8 +5,7 @@ import { Icon, IconButton, Card, Button, Dialog, LinearProgress, Typography, Tab
 import { Server, Settings, ThemeContext } from "../../common/Providers";
 import { Rest } from '../../common/Type';
 import XTerminal from "../../components/XTerminal";
-import FadeCrossTransition from "../../components/FadeCrossTransition";
-import { SharedAxisTransition } from "../../components/Transitions";
+import { SharedAxis, SharedAxisTransform, FadeThrough } from 'material-design-transform';
 import { FixedSizeList } from "../../components/AdaptedWindow";
 
 class MultiTerminalView extends React.Component<MultiTerminalView.Props, MultiTerminalView.State> {
@@ -89,8 +88,8 @@ class MultiTerminalView extends React.Component<MultiTerminalView.Props, MultiTe
             })}
           </TabBar>
         </div>
-        <SharedAxisTransition
-          id={controller?.id} type={SharedAxisTransition.Type.fromRightToLeft}
+        <SharedAxis
+          keyId={controller?.id} transform={SharedAxisTransform.fromRightToLeft}
           style={{ flex: 1, padding: '0 24px', overflow: 'hidden' }}>
           {controller
             ? <XTerminalView
@@ -99,7 +98,7 @@ class MultiTerminalView extends React.Component<MultiTerminalView.Props, MultiTe
             : <div className='full-size row' style={{ justifyContent: 'center' }}>
               No shell yet
             </div>}
-        </SharedAxisTransition>
+        </SharedAxis>
       </div>
     );
   }
@@ -279,7 +278,7 @@ function XTerminalView({ controller, remove }: {
       cursor: theme.onSurface,
       cursorAccent: theme.secondary
     };
-  return <FadeCrossTransition id={closed} className='full-size'>
+  return <FadeThrough keyId={closed ? 0 : 1} className='full-size'>
     {closed
       ? <div className='full-size column'>
         <div style={{ height: 8 }} />
@@ -323,7 +322,7 @@ function XTerminalView({ controller, remove }: {
         </div>
         <div style={{ height: 16 }} />
       </div>}
-  </FadeCrossTransition>;
+  </FadeThrough>;
 }
 
 function SizeHint({ controller }: {
@@ -365,7 +364,7 @@ class License extends React.Component<{}, { value?: string[] }> {
 
   override render() {
     const { value } = this.state;
-    return <FadeCrossTransition id={value === undefined} className='full-size'>
+    return <FadeThrough keyId={value === undefined ? 0 : 1} className='full-size'>
       {value === undefined
         ? <LinearProgress></LinearProgress>
         : <FixedSizeList
@@ -375,6 +374,6 @@ class License extends React.Component<{}, { value?: string[] }> {
           {({ index, style }) => {
             return <code style={{ ...style, padding: '0 1em', opacity: 0.5 }}>{value[index]}</code>;
           }}</FixedSizeList>}
-    </FadeCrossTransition>;
+    </FadeThrough>;
   }
 }

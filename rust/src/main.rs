@@ -70,13 +70,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let listener = tokio::net::TcpListener::bind(&app_config.listen_address.addr).await?;
     println!("{}", app_config);
     println!(
-        "Please visit: https://127.0.0.1:{}",
+        "Please visit: https://localhost:{}\n",
         app_config.listen_address.port
     );
 
     app_config
         .logger
-        .info(format!("App pid: {}\n", std::process::id()));
+        .info(format!("App pid: {}", std::process::id()));
     let peer_map = Arc::new(Mutex::new(HashMap::new()));
     let queues = Arc::new(Mutex::new(HashMap::new()));
     loop {

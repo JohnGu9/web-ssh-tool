@@ -1,7 +1,7 @@
 import React from "react";
 import { Checkbox, Icon, IconButton, ListItem } from "rmcw";
 import { FileType, Lstat } from "../../../../common/Type";
-import { SharedAxisTransition } from "../../../../components/Transitions";
+import { SharedAxis, SharedAxisTransform } from 'material-design-transform';
 import DropZone from "./DropZone";
 import { Server } from "../../../../common/Providers";
 
@@ -47,14 +47,14 @@ function FileListTile({ name, stats, uploading, selected, onSelecting: onSelect,
       event.dataTransfer.dropEffect = 'copy';
     }}
     onDragEnd={() => setDisabled(false)}
-    graphic={<SharedAxisTransition
-      type={SharedAxisTransition.Type.fromLeftToRight} id={onSelect}
+    graphic={<SharedAxis
+      transform={SharedAxisTransform.fromLeftToRight} keyId={onSelect ? 0 : 1}
       className='column'
       style={{ justifyContent: 'center', alignItems: 'center' }}>
       {onSelect
         ? <Checkbox readOnly checked={selected} style={{ height: 24 }}></Checkbox>
         : <Icon>{uploading ? 'file_upload' : FileIcon(name, stats)}</Icon>}
-    </SharedAxisTransition>}
+    </SharedAxis>}
     primaryText={<div style={{ flex: 1, minWidth: 0, overflowX: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>}
     meta={<IconButton
       style={{ opacity: hover ? 1 : 0, transition: 'opacity 300ms' }}
