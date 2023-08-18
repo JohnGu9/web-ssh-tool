@@ -1,6 +1,6 @@
 import '../components/Layout.css';
 import React from "react";
-import { Card, TextField, Checkbox, Typography, LinearProgress, Button, FormField } from 'rmcw';
+import { Card, TextField, Checkbox, Typography, LinearProgress, Button, FormField, IconButton, Icon } from 'rmcw';
 import lazy from 'react-lazy-with-preload';
 
 import { SharedAxis, SharedAxisTransform } from 'material-design-transform';
@@ -8,6 +8,7 @@ import { LocaleContext, LocaleContextType, Server, Settings } from '../common/Pr
 import { Rest } from '../common/Type';
 import { wsSafeClose } from '../common/DomTools';
 import Scaffold from '../components/Scaffold';
+import LayoutBuilder from '../components/LayoutBuilder';
 
 const HomePage = lazy(() => import('./HomePage'));
 HomePage.preload();
@@ -28,7 +29,17 @@ class Content extends React.Component<Content.Props, Content.State> {
   constructor(props: Content.Props) {
     super(props);
     const { settings } = this.props;
-    this.state = { loading: false, username: settings.sshUserName ?? "", password: settings.sshPassword ?? "" };
+    this.state = { visibility: null, loading: false, username: settings.sshUserName ?? "", password: settings.sshPassword ?? "" };
+  }
+
+  protected _usernameRef = React.createRef<HTMLLabelElement>();
+  protected _passwordRef = React.createRef<HTMLLabelElement>();
+  static _focusInput(ref: React.RefObject<Element>) {
+    const { current } = ref;
+    if (current !== null) {
+      const input = current.querySelector('input');
+      input?.focus();
+    }
   }
 
   async _submit() {
@@ -39,8 +50,8 @@ class Content extends React.Component<Content.Props, Content.State> {
     const result = await server.signIn({ username, password });
     if (Rest.isError(result)) {
       this.setState({ loading: false });
-      this.props.snackbar.clearAll();
       this.props.snackbar.showMessage({ content: `${result.error}` });
+      Content._focusInput(this._passwordRef);
     } else {
       settings.setSshUserName(username);
       settings.setSshPassword(password);
@@ -51,11 +62,14 @@ class Content extends React.Component<Content.Props, Content.State> {
   override componentDidMount() {
     const { settings } = this.props;
     if (settings.keepSignIn) this._submit();
+    else {
+      Content._focusInput(this._usernameRef);
+    }
   }
 
   override render() {
     const { settings, locale: { locale } } = this.props;
-    const { auth, loading } = this.state;
+    const { auth, loading, visibility } = this.state;
     return (
       <>
         <LinearProgress closed={!loading} style={{ position: 'absolute', top: 0 }} />
@@ -82,20 +96,42 @@ class Content extends React.Component<Content.Props, Content.State> {
                 }}>
                   <Typography.Headline5>{locale.signIn}</Typography.Headline5>
                   <div style={{ height: '16px' }} />
-                  <TextField outlined type='text'
-                    id='username' name='username'
+                  <TextField ref={this._usernameRef}
+                    outlined
+                    type='text'
+                    name='username'
                     style={{ width: '100%' }}
                     label={locale.username}
                     value={this.state.username}
                     onChange={(e) => this.setState({ username: e.target.value })}
+                    onFocus={e => e.target.select()}
                   />
                   <div style={{ height: '16px' }} />
-                  <TextField outlined type='password'
-                    id='password' name='password'
+                  <TextField ref={this._passwordRef}
+                    outlined
+                    type={visibility !== null ? 'text' : 'password'}
+                    name='password'
                     style={{ width: '100%' }}
                     label={locale.password}
                     value={this.state.password}
+                    trailingIcon={<IconButton
+                      type='button'
+                      style={{ alignSelf: 'center', margin: '0 4px' }}
+                      onClick={e => {
+                        e.preventDefault();
+                        if (visibility) {
+                          window.clearTimeout(visibility);
+                          this.setState({ visibility: null });
+                        } else {
+                          const visibility = window.setTimeout(() => {
+                            this.setState({ visibility: null });
+                          }, 2000);
+                          this.setState({ visibility });
+                        }
+                      }}><Icon>{visibility !== null ? "visibility" : "visibility_off"}</Icon>
+                    </IconButton>}
                     onChange={(e) => this.setState({ password: e.target.value })}
+                    onFocus={e => e.target.select()}
                   />
                   <div style={{ height: '16px' }} />
                   <FormField input={<Checkbox
@@ -115,27 +151,35 @@ class Content extends React.Component<Content.Props, Content.State> {
 
 namespace Content {
   export type Props = {
-    readonly locale: LocaleContextType,
-    readonly server: Server.Type,
-    readonly settings: Settings.Type,
-    readonly snackbar: Scaffold.Snackbar.Type,
-    readonly children: React.ReactNode,
+    locale: LocaleContextType,
+    server: Server.Type,
+    settings: Settings.Type,
+    snackbar: Scaffold.Snackbar.Type,
+    children: React.ReactNode,
   };
-  export type State = {
-    readonly auth?: Server.Authentication.Type,
-    readonly loading: boolean,
-    readonly username: string,
-    readonly password: string,
-  };
+  export type State = Readonly<{
+    auth?: Server.Authentication.Type,
+    loading: boolean,
+    username: string,
+    password: string,
+    visibility: number | null,
+  }>;
 }
 
 function Title() {
-  return <div className='full-size column' style={{ justifyContent: 'center', alignItems: 'center' }}>
-    <Typography.Headline3 style={{ margin: '32px 0' }}>SSH TOOL FOR WEB</Typography.Headline3>
-    <Typography.Body1>On browser, nothing to install, everywhere, anytime</Typography.Body1>
-    <Typography.Body1>Feature with shell terminal and file explorer</Typography.Body1>
-    <Typography.Body1>Ease to deploy, ease to use</Typography.Body1>
-  </div>;
+  return (
+    <LayoutBuilder
+      className='full-size column' style={{ justifyContent: 'center', alignItems: 'center' }}
+      builder={(size, children) => {
+        if (size && size.width < 500) return;
+        return children;
+      }}>
+      <Typography.Headline3 style={{ margin: '32px 0' }}>SSH TOOL FOR WEB</Typography.Headline3>
+      <Typography.Body1>On browser, nothing to install, everywhere, anytime</Typography.Body1>
+      <Typography.Body1>Feature with shell terminal and file explorer</Typography.Body1>
+      <Typography.Body1>Ease to deploy, ease to use</Typography.Body1>
+    </LayoutBuilder>
+  );
 }
 
 class Auth implements Server.Authentication.Type {
@@ -169,8 +213,8 @@ class Auth implements Server.Authentication.Type {
   })();
 
   readonly watch = new (class extends EventTarget {
-    invoke({ id, ...props }: Server.Authentication.WatchEventDetail & { id: string }) {
-      const event = new CustomEvent(id, { detail: props });
+    invoke({ id, data }: Server.Authentication.WatchEventDetail & { id: string, data: unknown }) {
+      const event = new CustomEvent(id, { detail: data });
       this.dispatchEvent(event);
     }
   })();

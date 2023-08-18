@@ -23,7 +23,8 @@ export function NavigatorBar({ path }: { path: string }) {
       }}>
         <TextField label="Path" outlined readOnly
           value={path}
-          style={{ flex: 1 }} />
+          style={{ flex: 1 }}
+          onFocus={e => e.target.select()} />
         <div style={{ width: 8 }} />
         <Tooltip label="Go To">
           <IconButton

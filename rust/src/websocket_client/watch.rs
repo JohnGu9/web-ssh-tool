@@ -44,7 +44,10 @@ pub async fn handle_request(
         serde_json::Value::Object(request) => {
             if let Some(serde_json::Value::String(id)) = request.get("id") {
                 if let Some(_) = request.get("close") {
-                    watchers.remove(id);
+                    if let Some(watcher) = watchers.remove(id) {
+                        let mut watcher = watcher.lock().await;
+                        watcher.close().await;
+                    }
                 } else if let Some(cd) = request.get("cd") {
                     if let Some(watcher) = watchers.get_mut(id) {
                         let watcher = watcher.clone();
@@ -161,126 +164,42 @@ impl MyWatcher {
                 while let Ok(Some(entry)) = r.next_entry().await {
                     if let Some(file_name) = entry.file_name().to_str() {
                         let path = entry.path();
-                        let meta_data = match entry.metadata().await {
-                            Ok(meta) => {
-                                let c = match meta.created() {
-                                    Ok(data) => Some(system_time_to_string(data)),
-                                    Err(_) => None,
-                                };
-                                let a = match meta.accessed() {
-                                    Ok(data) => Some(system_time_to_string(data)),
-                                    Err(_) => None,
-                                };
-                                let m = match meta.modified() {
-                                    Ok(data) => Some(system_time_to_string(data)),
-                                    Err(_) => None,
-                                };
-
-                                let real_path = if meta.is_symlink() {
-                                    match tokio::fs::read_link(path.clone()).await {
-                                        Ok(real_path) => match real_path.to_str() {
-                                            Some(s) => Some(s.to_string()),
-                                            None => None,
-                                        },
-                                        Err(_) => None,
-                                    }
-                                } else {
-                                    None
-                                };
-
-                                let real_type = match &real_path {
-                                    Some(real_path) => {
-                                        let path = Path::new(real_path.as_str());
-                                        let real_meta = tokio::fs::metadata(path).await;
-                                        match real_meta {
-                                            Ok(real_meta) => {
-                                                file_type_to_string(real_meta.file_type())
-                                            }
-                                            Err(_) => None,
-                                        }
-                                    }
-                                    None => None,
-                                };
-
-                                Some((
-                                    meta.len(),
-                                    file_type_to_string(meta.file_type()),
-                                    c,
-                                    a,
-                                    m,
-                                    real_path,
-                                    real_type,
-                                ))
-                            }
-                            Err(_) => None,
-                        };
-                        if let Some((
-                            size,
-                            file_type,
-                            created,
-                            accessed,
-                            modified,
-                            real_path,
-                            real_type,
-                        )) = meta_data
+                        if let Ok(object_json) =
+                            object_to_json(Some(file_name), path.as_path(), None, false).await
                         {
-                            let basename = match path.file_name() {
-                                Some(os_str) => match os_str.to_str() {
-                                    Some(str) => Some(str),
-                                    None => None,
-                                },
-                                None => None,
-                            };
-                            let path = path.to_str();
-                            m.insert(
-                                file_name.to_string(),
-                                json!({
-                                    "path":path,
-                                    "basename":basename,
-                                    "realPath":real_path,
-                                    "type":file_type,
-                                    "realType": real_type,
-                                    "size":size,
-                                    "createdTime":created,
-                                    "accessedTime":accessed,
-                                    "modifiedTime":modified
-                                }),
-                            );
+                            m.insert(file_name.to_string(), object_json);
                         }
                     }
                 }
-                let real_path = path_buf_to_real_path(&self.current_path);
-                let basename = match self.current_path.file_name() {
+                let path = self.current_path.as_path();
+                let basename = match path.file_name() {
                     Some(os_str) => match os_str.to_str() {
                         Some(str) => Some(str),
                         None => None,
                     },
                     None => None,
                 };
-                let file_type = "directory";
-                self.event_channel
-                    .send(json!({
-                        "id":self.id,
-                        "path":self.current_path.to_str(),
-                        "basename":basename,
-                        "realPath":real_path,
-                        "type":file_type,
-                        "entries":m
-                    }))
-                    .await
+                let dir_json = object_to_json(basename, path, Some(m), true).await;
+                match dir_json {
+                    Ok(dir_json) => self.send_json(dir_json).await,
+                    Err(err) => self.send_error(err).await,
+                }
             }
             Err(err) => self.send_error(err).await,
         }
     }
 
     async fn handle_file_on_change(&mut self) -> Result<(), futures::channel::mpsc::SendError> {
-        match tokio::fs::read(self.current_path.as_path()).await {
-            Ok(_) => {
-                let real_path = path_buf_to_real_path(&self.current_path);
-                self.event_channel
-                .send(json!({"id":self.id, "path":self.current_path.to_str(), "realPath":real_path}))
-                .await
-            }
+        let path = self.current_path.as_path();
+        let basename = match path.file_name() {
+            Some(os_str) => match os_str.to_str() {
+                Some(str) => Some(str),
+                None => None,
+            },
+            None => None,
+        };
+        match object_to_json(basename, path, None, true).await {
+            Ok(file_json) => self.send_json(file_json).await,
             Err(err) => self.send_error(err).await,
         }
     }
@@ -303,35 +222,40 @@ impl MyWatcher {
         }
     }
 
+    async fn send_json(
+        &mut self,
+        data: serde_json::Value,
+    ) -> Result<(), futures::channel::mpsc::SendError> {
+        self.event_channel
+            .send(json!({
+                "id":self.id,
+                "data":data,
+            }))
+            .await
+    }
+
     async fn send_error(
         &mut self,
         err: impl std::error::Error,
     ) -> Result<(), futures::channel::mpsc::SendError> {
         let error_message = format!("{}", err);
         self.event_channel
-            .send(json!({"id":self.id, "path":self.current_path.to_str(), "error":error_message}))
+            .send(json!({
+                "id":self.id,
+                "data":{
+                    "path":self.current_path.to_str(),
+                    "error":error_message,
+                },
+            }))
             .await
     }
-}
 
-impl Drop for MyWatcher {
-    fn drop(&mut self) {
+    async fn close(&mut self) {
         let _ = self.watcher.unwatch(&self.current_path);
-        let id = self.id.to_owned();
-        let mut event_channel = self.event_channel.to_owned();
-        tokio::spawn(async move {
-            let _ = event_channel.send(json!({"id":id, "close":{}})).await;
-        });
-    }
-}
-
-fn path_buf_to_real_path(path_buf: &PathBuf) -> Option<String> {
-    match std::fs::canonicalize(path_buf) {
-        Ok(p) => match p.to_str() {
-            Some(s) => Some(s.to_string()),
-            None => None,
-        },
-        Err(_) => None,
+        let _ = self
+            .event_channel
+            .send(json!({"id":self.id, "close":{}}))
+            .await;
     }
 }
 
@@ -344,6 +268,88 @@ fn file_type_to_string(file_type: FileType) -> Option<&'static str> {
         Some("symbolic link")
     } else {
         None
+    }
+}
+
+async fn object_to_json(
+    file_name: Option<&str>,
+    path: &Path,
+    entries: Option<Map<String, serde_json::Value>>,
+    include_parent: bool,
+) -> std::io::Result<serde_json::Value> {
+    let meta = tokio::fs::metadata(path).await?;
+    let created = match meta.created() {
+        Ok(data) => Some(system_time_to_string(data)),
+        Err(_) => None,
+    };
+    let accessed = match meta.accessed() {
+        Ok(data) => Some(system_time_to_string(data)),
+        Err(_) => None,
+    };
+    let modified = match meta.modified() {
+        Ok(data) => Some(system_time_to_string(data)),
+        Err(_) => None,
+    };
+
+    let real_path = if meta.is_symlink() {
+        match tokio::fs::read_link(path.clone()).await {
+            Ok(real_path) => match real_path.to_str() {
+                Some(s) => Some(s.to_string()),
+                None => None,
+            },
+            Err(_) => None,
+        }
+    } else {
+        None
+    };
+
+    let real_type = match &real_path {
+        Some(real_path) => {
+            let path = Path::new(real_path.as_str());
+            let real_meta = tokio::fs::metadata(path).await;
+            match real_meta {
+                Ok(real_meta) => file_type_to_string(real_meta.file_type()),
+                Err(_) => None,
+            }
+        }
+        None => None,
+    };
+    let parent = match include_parent {
+        true => match path.parent() {
+            Some(parent) => parent.to_str(),
+            None => None,
+        },
+        false => None,
+    };
+    let path = path.to_str();
+    let file_type = file_type_to_string(meta.file_type());
+    let size = meta.len();
+    match entries {
+        Some(entries) => Ok(json!({
+            "path":path,
+            "basename":file_name,
+            "realPath":real_path,
+            "type":file_type,
+            "realType": real_type,
+            "size":size,
+            "createdTime":created,
+            "accessedTime":accessed,
+            "modifiedTime":modified,
+            "parent":parent,
+            "entries":entries,
+        })),
+        None => Ok(json!({
+            "path":path,
+            "basename":file_name,
+            "realPath":real_path,
+            "type":file_type,
+            "realType": real_type,
+            "size":size,
+            "createdTime":created,
+            "accessedTime":accessed,
+            "modifiedTime":modified,
+            "parent":parent,
+        })),
     }
 }
 
@@ -380,6 +386,7 @@ fn async_watcher() -> notify::Result<(RecommendedWatcher, Receiver<notify::Resul
 }
 
 async fn poll_event(mut rx: Receiver<notify::Result<Event>>, watcher: Arc<Mutex<MyWatcher>>) {
+    // @TODO: fix watcher object not release issue
     while let Some(res) = rx.next().await {
         let mut watcher = watcher.lock().await;
         match res {

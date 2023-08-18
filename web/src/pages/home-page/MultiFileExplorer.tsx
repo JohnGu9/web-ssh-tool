@@ -4,7 +4,7 @@ import { v1 as uuid } from 'uuid';
 
 import { FileSize } from "../../common/Tools";
 import { Server, Settings } from "../../common/Providers";
-import { Lstat, Rest } from "../../common/Type";
+import { Rest, Watch } from "../../common/Type";
 import AnimatedList from "../../components/AnimatedList";
 
 import FilePreview from "./file-explorer/FilePreview";
@@ -223,19 +223,7 @@ namespace MultiFileExplorer {
     uploadManagementOpen: boolean,
   };
 
-  export type ControllerState = {
-    path: string | null | undefined,
-    error: string,
-  } | {
-    path: string | null | undefined,
-    realPath: string | null | undefined,
-  } | {
-    path: string | null | undefined,
-    realPath: string | null | undefined,
-    entries: {
-      [filename: string]: Lstat,
-    },
-  };
+  export type ControllerState = Watch.Error | Watch.File | Watch.Directory;
 
   export class Controller extends EventTarget {
     constructor({ auth }: { auth: Server.Authentication.Type }) {
@@ -291,13 +279,7 @@ namespace MultiFileExplorer {
         if (typeof error === 'string') {
           this._state = { path, error };
         } else {
-          const realPath = detail.realPath as string | null | undefined;
-          const entries = detail.entries;
-          if (typeof entries === 'object' && entries !== null) {
-            this._state = { path, realPath, entries: entries };
-          } else {
-            this._state = { path, realPath };
-          }
+          this._state = detail;
         }
         this._updating = false;
         this.dispatchEvent(new Event('change'));
@@ -418,6 +400,7 @@ function UploadItem(props: { controller: Common.UploadController }) {
         <SharedAxis
           keyId={state}
           transform={SharedAxisTransform.fromRightToLeft}
+          forceRebuildAfterSwitched={false}
           style={{ width: 24 }}>
           {(() => {
             switch (state) {
@@ -464,7 +447,8 @@ function UploadItem(props: { controller: Common.UploadController }) {
       meta={
         <SharedAxis
           keyId={state}
-          transform={SharedAxisTransform.fromTopToBottom}>
+          transform={SharedAxisTransform.fromTopToBottom}
+          forceRebuildAfterSwitched={false}>
           {(() => {
             switch (state) {
               case Common.UploadController.State.running:

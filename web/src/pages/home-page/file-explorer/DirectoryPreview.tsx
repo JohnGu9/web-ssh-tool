@@ -6,10 +6,10 @@ import EventListenerBuilder from "../../../components/EventListenerBuilder";
 
 import FileExplorer, { NavigatorBar } from "./Common";
 import InformationDialog from "./directory-preview/InformationDialog";
-import RenameDialog from "./directory-preview/RenameDialog";
 import FileListTile from "./directory-preview/FileListTile";
 import DropZone from "./directory-preview/DropZone";
 import ToolsBar, { SelectingToolsBar } from "./directory-preview/ToolsBar";
+import FileMoveDialog from "./directory-preview/FileMoveDialog";
 
 function DirectoryPreView({ state }: { state: Watch.Directory }) {
   const { path, realPath, entries } = state;
@@ -17,32 +17,64 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
   const [onSelecting, setOnSelecting] = React.useState(false);
   const [selected, setSelected] = React.useState(new Set<Lstat>());
   const [information, setInformation] = React.useState<InformationDialog.State>({ open: false, stats: {} as Lstat, dirname: path ?? "" });
+  const [fileMove, setFileMove] = React.useState<FileMoveDialog.State>({ open: false, filename: "", path: "", target: "" });
   const fileList = FileExplorer.sortArray(Object.entries(entries).filter(config.showAll
     ? () => true
     : ([key]) => !key.startsWith('.')), config.sort);
+
+  React.useEffect(() => {
+    const l = Object.values(entries);
+    const e = new Set(l.map(v => v.path));
+    setSelected(current => {
+      const c = Array.from(current);
+      return new Set(
+        c.filter(v => e.has(v.path))
+          .map(v => entries[v.basename]));
+    });
+    setInformation(current => {
+      if (e.has(current.stats.path)) {
+        const newState = l.find(v => v.path === current.stats.path);
+        if (newState !== undefined) {
+          return { ...current, stats: newState };
+        }
+      }
+      return { ...current, open: false };
+    });
+  }, [entries]);
+
   return (
     <div className='full-size column' >
       <SharedAxis className='row' style={{ height: 56, padding: '0 8px 0 0' }}
-        transform={SharedAxisTransform.fromTopToBottom} keyId={onSelecting ? 0 : 1}>
+        transform={SharedAxisTransform.fromTopToBottom} keyId={onSelecting ? 0 : 1}
+        forceRebuildAfterSwitched={false}>
         {onSelecting
           ? <SelectingToolsBar setOnSelect={setOnSelecting} state={state} selected={selected} setSelected={setSelected} />
-          : <ToolsBar path={path} realPath={realPath} setOnSelect={setOnSelecting} />}
+          : <ToolsBar stats={state} setOnSelect={setOnSelecting} setInformation={setInformation} setFileMove={setFileMove} />}
       </SharedAxis>
       <DropZone style={{ flex: 1, width: '100%', minHeight: 0 }} dirname={path}>
-        {fileList.length === 0
-          ? <div className='column' style={{ width: '100%', justifyContent: 'center', alignItems: 'center' }}>
+        {fileList.length === 0 ?
+          <div className='column' style={{ width: '100%', justifyContent: 'center', alignItems: 'center' }}>
             Nothing here...
-          </div>
-          : <List dirname={path} realPath={realPath}
+          </div> :
+          <List dirname={path} realPath={realPath}
             fileList={fileList} cd={cd}
-            selected={selected} setSelected={setSelected} onSelecting={onSelecting}
-            setInformation={setInformation} uploadItems={uploadItems} />}
+            selected={selected}
+            setSelected={setSelected}
+            onSelecting={onSelecting}
+            setInformation={setInformation}
+            setFileMove={setFileMove}
+            uploadItems={uploadItems} />}
       </DropZone>
       <div style={{ height: 16 }} />
       {path === undefined || path === null ?
         <></> : // @TODO: new navigator bar
         <NavigatorBar path={path} />}
-      <Dialogs key={information.stats.path} information={information} setInformation={setInformation} />
+      <InformationDialog
+        key={information.stats.path}
+        state={information}
+        close={() => setInformation({ ...information, open: false })} />
+      <FileMoveDialog {...fileMove}
+        close={() => setFileMove(v => { return { ...v, open: false } })} />
     </div>
   );
 }
@@ -57,7 +89,8 @@ class List extends React.Component<{
   setSelected: (value: Set<Lstat>) => unknown,
   onSelecting: boolean,
   cd: (value: string | null) => unknown,
-  setInformation: (value: InformationDialog.State) => unknown
+  setInformation: (value: InformationDialog.State) => unknown,
+  setFileMove: (value: FileMoveDialog.State) => unknown,
   uploadItems: FileExplorer.UploadController[],
 }> {
 
@@ -73,7 +106,7 @@ class List extends React.Component<{
   builder = ({ index, style }: { index: number, style?: React.CSSProperties }) => {
     return <EventListenerBuilder eventName='change' eventTarget={this.eventTarget}
       builder={() => {
-        const { dirname, realPath, fileList, selected, setSelected, onSelecting, cd, setInformation } = this.props;
+        const { dirname, realPath, fileList, selected, setSelected, onSelecting, cd, setInformation, setFileMove } = this.props;
         if (index >= fileList.length) return <React.Fragment key={index}></React.Fragment>;
         const [key, value] = fileList[index];
         const { path, basename } = value;
@@ -102,7 +135,8 @@ class List extends React.Component<{
             if (dirname !== undefined && dirname !== null) {
               setInformation({ open: true, stats, dirname });
             }
-          }} />;
+          }}
+          onFileMove={(filename, path, target) => setFileMove({ open: true, filename, path, target })} />;
       }} />;
   }
 
@@ -116,22 +150,3 @@ class List extends React.Component<{
   }
 }
 
-function Dialogs({ information, setInformation }: {
-  information: InformationDialog.State,
-  setInformation: (state: InformationDialog.State) => unknown,
-}) {
-  const closeInformation = () => setInformation({ ...information, open: false });
-  const [rename, setRename] = React.useState<RenameDialog.State>({ open: false, dirname: information.dirname, file: information.stats });
-  const closeRename = () => setRename(v => { return { ...v, open: false } });
-  return (
-    <>
-      <InformationDialog
-        state={information}
-        close={closeInformation}
-        rename={() => setRename(v => { return { ...v, open: true } })} />
-      <RenameDialog
-        state={rename}
-        close={closeRename} />
-    </>
-  );
-}

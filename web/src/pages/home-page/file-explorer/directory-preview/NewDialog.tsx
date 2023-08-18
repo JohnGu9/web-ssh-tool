@@ -6,6 +6,7 @@ import Scaffold, { SnackbarQueueMessage } from "../../../../components/Scaffold"
 import { Rest } from "../../../../common/Type";
 import { delay } from "../../../../common/Tools";
 import { useUuidV4 } from "../Common";
+import useInputAutoFocusRef from "../../../../components/InputAutoFocusRef";
 
 export function NewFileDialog({ state, close }: { state: NewFileDialog.State, close: () => unknown }) {
   const auth = React.useContext(Server.Authentication.Context);
@@ -15,6 +16,9 @@ export function NewFileDialog({ state, close }: { state: NewFileDialog.State, cl
   const onError = (message: SnackbarQueueMessage) =>
     showMessage({ action: <Button label="close" />, ...message, });
   const id = useUuidV4();
+
+  const ref = useInputAutoFocusRef(state.open);
+
   return (
     <Dialog open={state.open}
       onScrimClick={close}
@@ -39,9 +43,9 @@ export function NewFileDialog({ state, close }: { state: NewFileDialog.State, cl
           await delay(150);
           showMessage({ content: `Created (${target})`, action: <Button label="close" /> });
         }}>
-        <TextField autoFocus required value={name} onChange={e => setName(e.target.value)} label='name' style={{ width: 480 }} />
+        <TextField ref={ref} required value={name} onChange={e => setName(e.target.value)} label='name' style={{ width: 480 }} />
         <div style={{ height: 32 }} />
-        <TextArea autoFocus value={content} onChange={e => setContent(e.target.value)} outlined rows={8} label='content' style={{ width: 480 }} />
+        <TextArea value={content} onChange={e => setContent(e.target.value)} outlined rows={8} label='content' style={{ width: 480 }} />
       </form>
     </Dialog>
   );
@@ -61,6 +65,9 @@ export function NewDirectoryDialog({ state, close }: { state: NewFileDialog.Stat
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
   const onError = (message: SnackbarQueueMessage) =>
     showMessage({ action: <Button label="close" />, ...message, });
+
+  const ref = useInputAutoFocusRef(state.open);
+
   return (
     <Dialog open={state.open} onScrimClick={close} onEscapeKey={close}
       title="New Directory"
@@ -83,7 +90,8 @@ export function NewDirectoryDialog({ state, close }: { state: NewFileDialog.Stat
           await delay(150);
           showMessage({ content: `Created (${target})`, action: <Button label="close" /> });
         }}>
-        <TextField autoFocus required value={value} onChange={e => setValue(e.target.value)} label='name' style={{ width: 480 }} />
+        <TextField ref={ref} required value={value} label='name' style={{ width: 480 }}
+          onChange={e => setValue(e.target.value)} />
       </form>
     </Dialog>
   );

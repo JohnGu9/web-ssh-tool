@@ -1,16 +1,20 @@
 import React from "react";
-import { Button, Icon } from "rmcw";
+import { Button, Icon, Typography } from "rmcw";
 import FileExplorer from "./Common";
 import GoToDialog from "./common/GoToDialog";
 
-function ErrorPreview({ state: { error, path } }: { state: { error: any, path: string | null | undefined } }) {
-  const { cd } = React.useContext(FileExplorer.Context);
+function ErrorPreview({ state: { error, path } }: { state: { error: any, path?: string | null } }) {
+  const { cd, cdToParent } = React.useContext(FileExplorer.Context);
   return (
     <div className='full-size column' style={{ alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ margin: '16px 0' }}>Error Occur ({error.name ?? error.code})</div>
+      <Typography.Subtitle1 style={{
+        margin: '8px 16px', display: 'flex', flexDirection: 'row', alignItems: 'center'
+      }}><Icon style={{ marginRight: 8 }}>error</Icon>Error Occur</Typography.Subtitle1>
+      <Typography.Body1 style={{ margin: '0 16px', opacity: 0.7 }}>{error}</Typography.Body1>
       <div style={{ height: 16 }} />
-      <Button buttonStyle="raised" label='Return to home' onClick={() => cd(null)} />
+      <Button buttonStyle="raised" label='Return to parent' onClick={() => cdToParent()} />
       <div style={{ height: 16 }} />
+      <Button trailing={<Icon>home</Icon>} label='home' onClick={() => cd(null)} />
       <GoToButton path={path} />
     </div>
   );
@@ -39,7 +43,7 @@ function GoToButton({ path }: { path: string | null | undefined }) {
   const close = () => setDialog({ ...dialog, open: false });
   return (
     <>
-      <Button label='go to' onClick={() => setDialog({ open: true, path: path ?? '' })} ><Icon>reply</Icon></Button>
+      <Button label='go to' trailing={<Icon>reply</Icon>} onClick={() => setDialog({ open: true, path: path ?? '' })} />
       <GoToDialog state={dialog} close={close} />
     </>
   );

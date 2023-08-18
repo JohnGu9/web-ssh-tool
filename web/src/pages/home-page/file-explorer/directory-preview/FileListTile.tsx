@@ -5,7 +5,7 @@ import { SharedAxis, SharedAxisTransform } from 'material-design-transform';
 import DropZone from "./DropZone";
 import { Server } from "../../../../common/Providers";
 
-function FileListTile({ name, stats, uploading, selected, onSelecting: onSelect, onClick, onSelected, onDetail, style }: {
+function FileListTile({ name, stats, uploading, selected, onSelecting: onSelect, onClick, onSelected, onDetail, onFileMove, style }: {
   name: string,
   stats: Lstat,
   uploading: boolean,
@@ -14,41 +14,68 @@ function FileListTile({ name, stats, uploading, selected, onSelecting: onSelect,
   onClick: (() => unknown) | undefined, // cd
   onSelected: ((selected: boolean) => unknown) | undefined,
   onDetail: (stats: Lstat) => unknown,
+  onFileMove: (filename: string, path: string, target: string) => unknown,
   style?: React.CSSProperties,
 }) {
-  const { setDisabled } = React.useContext(DropZone.Context);
+  const { hovering, dragging, setDragging } = React.useContext(DropZone.Context);
   const auth = React.useContext(Server.Authentication.Context);
   const [hover, setHover] = React.useState(false);
-  const [disabled, isPreview] = (() => {
+  const { path, type, realType } = stats;
+  const [disabled, isFile, isDirectory] = (() => {
     if (!uploading) {
-      switch (stats.type) {
+      switch (type) {
         case FileType.file:
-          return [false, true];
+          return [false, true, false];
         case FileType.directory:
-          return [false, false];
+          return [false, false, true];
         case FileType.symbolicLink:
-          switch (stats.realType) {
+          switch (realType) {
             case FileType.file:
-              return [false, true];
+              return [false, true, false];
             case FileType.directory:
-              return [false, false];
+              return [false, false, true];
           }
       }
     }
-    return [true, false];
+    return [true, false, false];
   })();
-  return <ListItem draggable
+  const onDragging = dragging === path;
+  const onHovering = isDirectory &&
+    hovering instanceof HTMLLIElement &&
+    hovering.dataset['dropzone'] === path;
+  return <ListItem
+    style={{
+      ...style,
+      opacity: disabled || onHovering || onDragging ? 0.5 : 1,
+      border: onHovering ? '3px dotted #666' : '3px dotted rgba(0,0,0,0)',
+    }}
+    data-dropzone={isDirectory ? path : DropZone.noDrop}
+    draggable={onDragging || dragging === null}
     nonInteractive={disabled}
     onDragStart={event => {
-      const { path } = stats;
       if (path === undefined || path === null) return;
-      setDisabled(true);
+      setDragging(path);
+      event.dataTransfer.setData('filename', name);
       event.dataTransfer.setData('text', path);
+      event.dataTransfer.effectAllowed = 'all';
       event.dataTransfer.dropEffect = 'copy';
     }}
-    onDragEnd={() => setDisabled(false)}
+    onDragEnd={() => setDragging(null)}
+    onDragOver={isDirectory ? e => e.preventDefault() : undefined}
+    onDrop={isDirectory ? event => {
+      event.preventDefault();
+      const filename = event.dataTransfer.getData('filename');
+      const path = event.dataTransfer.getData('text');
+      if (stats.path === path) return;
+      if (stats.path === undefined || stats.path === null) return;
+      if (path.length !== 0 && filename.length !== 0) {
+        onFileMove(filename, path, stats.path);
+      }
+    } : undefined}
     graphic={<SharedAxis
-      transform={SharedAxisTransform.fromLeftToRight} keyId={onSelect ? 0 : 1}
+      keyId={onSelect ? 0 : 1}
+      transform={SharedAxisTransform.fromLeftToRight}
+      forceRebuildAfterSwitched={false}
       className='column'
       style={{ justifyContent: 'center', alignItems: 'center' }}>
       {onSelect
@@ -71,7 +98,7 @@ function FileListTile({ name, stats, uploading, selected, onSelecting: onSelect,
           onSelected?.(!selected);
         }
         : () => {
-          if (isPreview) {
+          if (isFile) {
             if (typeof stats.path === 'string') {
               auth.preview(stats.path);
               return;
@@ -80,7 +107,6 @@ function FileListTile({ name, stats, uploading, selected, onSelecting: onSelect,
           return onClick?.();
         })}
     activated={selected && onSelect}
-    style={{ ...style, opacity: disabled ? 0.5 : 1 }}
     onMouseEnter={() => setHover(true)}
     onMouseLeave={() => setHover(false)} />
 }

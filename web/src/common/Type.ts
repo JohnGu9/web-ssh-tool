@@ -20,8 +20,8 @@ export namespace Rest {
     'token': { parameter: any, return: string },
     'unzip': { parameter: [string /** src */, PathLike /** dest */], return: void },
     'fs.rename': { parameter: [oldPath: PathLike, newPath: PathLike], return: Awaited<ReturnType<typeof fs.rename>> },
-    'fs.unlink': { parameter: [path: PathLike], return: Awaited<ReturnType<typeof fs.unlink>> },
-    'fs.rm': { parameter: [path: PathLike], return: Awaited<ReturnType<typeof fs.rm>> },
+    'fs.unlink': { parameter: [path: PathLike], return: Awaited<ReturnType<typeof fs.unlink>> }, // delete file
+    'fs.rm': { parameter: [path: PathLike], return: Awaited<ReturnType<typeof fs.rm>> }, // delete directory
     'fs.exists': { parameter: [path: PathLike], return: boolean },
     'fs.mkdir': { parameter: [path: PathLike], return: Awaited<ReturnType<typeof fs.mkdir>> },
     'fs.writeFile': { parameter: [path: PathLike, data: string], return: Awaited<ReturnType<typeof fs.writeFile>> }, // can't overwrite file
@@ -55,12 +55,14 @@ export namespace Rest {
 }
 
 export type Lstat = {
-  type?: FileType | null, path?: string | null, basename?: string | null, size?: number,
+  type?: FileType | null, path?: string | null, basename: string, size?: number,
   createdTime?: string | null, accessedTime?: string | null, modifiedTime?: string | null,
   realPath?: string | null, realType?: FileType | null,
+  parent?: string | null,
 };
 
 export namespace Watch {
   export type File = Lstat;
   export type Directory = Lstat & { entries: { [filename: string]: Lstat } };
+  export type Error = { path?: string | null, error: string }
 }

@@ -1,9 +1,7 @@
 use super::on_authenticate;
 use crate::app_config::AppConfig;
 use crate::connection_peer::Client;
-use crate::connection_peer::ClientConnection;
 use crate::connection_peer::WebSocketPeer;
-use futures::channel::mpsc::Receiver;
 use futures::channel::{mpsc, oneshot};
 use futures::lock::Mutex;
 use futures::{SinkExt, StreamExt};
@@ -26,13 +24,6 @@ pub async fn handle_request(
 
     let config = russh::client::Config::default();
     let config = Arc::new(config);
-    let sh = Client {};
-    let mut session = russh::client::connect(
-        config.clone(),
-        format!("localhost:{}", app_config.local_ssh_port),
-        sh,
-    )
-    .await?;
 
     let mut token_and_connection = None;
 
@@ -51,17 +42,25 @@ pub async fn handle_request(
         };
 
         let mut cause_cache = String::new();
-        let result: Result<
-            (
-                String,
-                Arc<Mutex<ClientConnection>>,
-                Receiver<serde_json::Value>,
-            ),
-            &str,
-        > = async {
+        let result = async {
             let (username, password) = match parse_username_and_password(text) {
                 Some((username, password)) => (username, password),
                 None => return Err("Sign in message format error"),
+            };
+
+            let sh = Client {};
+            let mut session = match russh::client::connect(
+                config.clone(),
+                format!("localhost:{}", app_config.local_ssh_port),
+                sh,
+            )
+            .await
+            {
+                Ok(session) => session,
+                Err(err) => {
+                    cause_cache = format!("Internal error: {:?}", err);
+                    return Err(cause_cache.as_str());
+                }
             };
 
             // limit one user authentication at the same time
@@ -90,32 +89,12 @@ pub async fn handle_request(
                     return Err("Username and password authenticate failed");
                 }
                 Err(err) => {
-                    // renew session
-                    let sh = Client {};
-                    if let Ok(s) = russh::client::connect(
-                        config.clone(),
-                        format!("localhost:{}", app_config.local_ssh_port),
-                        sh,
-                    )
-                    .await
-                    {
-                        session = s;
-                    }
-
                     cause_cache = format!("Internal error: {:?}", err);
                     return Err(cause_cache.as_str());
                 }
                 _ => {}
             };
             let _ = complete_authenticate.send(());
-
-            let mut channel = match session.channel_open_session().await {
-                Ok(ch) => ch,
-                Err(err) => {
-                    cause_cache = format!("Local ssh establishing failed: {:?}", err);
-                    return Err(cause_cache.as_str());
-                }
-            };
 
             let mut map = peer_map.lock().await;
             let token_uuid = uuid::Uuid::new_v4();
@@ -127,6 +106,14 @@ pub async fn handle_request(
                 return Err("user already sign in");
             }
 
+            let mut channel = match session.channel_open_session().await {
+                Ok(ch) => ch,
+                Err(err) => {
+                    cause_cache = format!("Local ssh establishing failed: {:?}", err);
+                    return Err(cause_cache.as_str());
+                }
+            };
+
             let command = format!(
                 "{} --client {} --listen-address localhost:{}",
                 app_config.bin, token, app_config.listen_address.port
@@ -136,7 +123,7 @@ pub async fn handle_request(
             let peer = WebSocketPeer::new(token.clone(), addr.clone(), tx);
             let client_connection = peer.client_connection.clone();
             map.insert(token.clone(), peer);
-            return Ok((token, client_connection, rx));
+            return Ok((session, token, client_connection, rx));
         }
         .await;
 
@@ -147,14 +134,14 @@ pub async fn handle_request(
                 let response = json!({"error": message});
                 ws_stream.send(Message::text(response.to_string())).await?;
             }
-            Ok((token, client_connection, rx)) => {
-                token_and_connection = Some((token, client_connection, rx));
+            Ok(res) => {
+                token_and_connection = Some(res);
                 break;
             }
         }
     }
 
-    if let Some((token, client_connection, rx)) = token_and_connection {
+    if let Some((session, token, client_connection, rx)) = token_and_connection {
         let response = json!({ "token": token });
         ws_stream.send(Message::text(response.to_string())).await?;
         on_authenticate::handle_request(&token, &client_connection, ws_stream, rx, session).await?;

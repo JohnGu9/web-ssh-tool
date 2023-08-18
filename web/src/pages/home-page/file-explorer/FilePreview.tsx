@@ -29,11 +29,13 @@ function FilePreview({ state }: { state: Watch.File }) {
           </IconButton>
         </Tooltip>
       </div>
-      <Center><Button buttonStyle="raised"
-        onClick={() => {
-          if (typeof filePath === 'string')
-            auth.preview(filePath);
-        }}>Preview</Button></Center>
+      <Center>
+        <Button buttonStyle="raised"
+          onClick={() => {
+            if (typeof filePath === 'string')
+              auth.preview(filePath);
+          }}>Preview</Button>
+      </Center>
       <div style={{ height: 16 }} />
       {filePath === undefined || filePath === null ? <></> : <NavigatorBar path={filePath} />}
     </div>

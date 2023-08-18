@@ -5,6 +5,7 @@ import { Rest } from "../Type";
 export namespace Server {
   export interface Type {
     readonly ws: WebSocket;
+    readonly id: number;
     signIn: (props: { username: string, password: string }) => Promise<{ token: string } | { error: Error }>;
   };
   export const Context = React.createContext<Type>(undefined as unknown as Type);

@@ -1,27 +1,53 @@
 import React from "react";
-import { Button, Checkbox, Icon, IconButton, ListDivider, ListItem, Menu, Radio, Switch, Tooltip } from "rmcw";
+import { Checkbox, Icon, IconButton, ListDivider, ListItem, Menu, Radio, Switch, Tooltip } from "rmcw";
 import { Server, ThemeContext } from "../../../../common/Providers";
-import { FileType, Lstat, Rest, Watch } from "../../../../common/Type";
-import { LongPressIconButton } from "../../../../components/LongPressButton";
+import { Lstat, Watch } from "../../../../common/Type";
 import Scaffold from "../../../../components/Scaffold";
 import FileExplorer from "../Common";
 import CopyToDialog from "./CopyToDialog";
 import MoveToDialog from "./MoveToDialog";
 import { NewDirectoryDialog, NewFileDialog } from "./NewDialog";
+import DeleteDialog from "./DeleteDialog";
+import InformationDialog from "./InformationDialog";
+import FileMoveDialog from "./FileMoveDialog";
 
-function ToolsBar({ path: dir, realPath, setOnSelect }: {
-  path: string | null | undefined,
-  realPath: string | null | undefined,
-  setOnSelect: (value: boolean) => unknown
+function ToolsBar({ stats, setOnSelect, setInformation, setFileMove }: {
+  stats: Watch.Directory,
+  setOnSelect: (value: boolean) => unknown,
+  setInformation: (value: InformationDialog.State) => unknown,
+  setFileMove: (value: FileMoveDialog.State) => unknown,
 }) {
   const { cdToParent } = React.useContext(FileExplorer.Context);
   const { themeData: theme } = React.useContext(ThemeContext);
+  const { parent } = stats;
+  const hasParent = parent !== null && parent !== undefined;
   return (
     <>
-      <IconButton style={{ color: theme.primary }}
-        onClick={cdToParent} ><Icon>arrow_back</Icon></IconButton>
+      <div style={{ minWidth: 8 }} />
+      <IconButton
+        style={{ color: hasParent ? theme.primary : undefined }}
+        onClick={cdToParent}
+        disabled={!hasParent}
+        draggable={hasParent}
+        onDragStart={hasParent ? event => {
+          event.dataTransfer.setData('text', parent);
+          event.dataTransfer.effectAllowed = 'all';
+          event.dataTransfer.dropEffect = 'copy';
+        } : undefined}
+        onDragOver={hasParent ? e => e.preventDefault() : undefined}
+        onDrop={hasParent ? event => {
+          event.preventDefault();
+          const filename = event.dataTransfer.getData('filename');
+          const path = event.dataTransfer.getData('text');
+          if (parent === path) return;
+          if (path.length !== 0 && filename.length !== 0) {
+            setFileMove({ open: true, filename, path, target: parent });
+          }
+        } : undefined}>
+        <Icon>arrow_back</Icon>
+      </IconButton>
       <div className='expanded' />
-      <MoreButton dest={dir} />
+      <MoreButton stats={stats} setInformation={setInformation} />
       <UploadManagementButton />
       <CheckListButton setOnSelect={setOnSelect} />
     </>
@@ -42,7 +68,13 @@ function UploadManagementButton() {
   );
 }
 
-function MoreButton({ dest }: { dest: string | null | undefined }) {
+function MoreButton({ stats, setInformation }: {
+  stats: Watch.Directory,
+  setInformation: (value: InformationDialog.State) => unknown,
+}) {
+  const { path: dest } = stats;
+  const { parent, entries, ...rest } = stats;
+
   const [file, setFile] = React.useState<NewFileDialog.State>({ open: false, path: "" });
   const closeFile = () => setFile({ ...file, open: false });
 
@@ -67,6 +99,19 @@ function MoreButton({ dest }: { dest: string | null | undefined }) {
         anchorCorner="bottom-right"
         anchorQuadrant="bottom-left"
         surface={<div>
+
+          {parent !== undefined && parent !== null ?
+            <ListItem
+              primaryText="About Directory"
+              meta={<Icon>info</Icon>}
+              onClick={e => {
+                e.preventDefault();
+                setInformation({ open: true, dirname: parent, stats: rest })
+              }} /> :
+            <ListItem
+              primaryText="About Directory"
+              meta={<Icon>info</Icon>}
+              disabled />}
           {typeof dest === 'string' ? <>
             <ListItem primaryText="New file"
               meta={<Icon>text_snippet</Icon>}
@@ -122,149 +167,77 @@ function CheckListButton({ setOnSelect }: { setOnSelect: (value: boolean) => unk
 }
 
 export function SelectingToolsBar({ state: { path: dir, entries }, selected, setSelected, setOnSelect }: { state: Watch.Directory, selected: Set<Lstat>, setSelected: (value: Set<Lstat>) => unknown, setOnSelect: (value: boolean) => unknown }) {
-  const auth = React.useContext(Server.Authentication.Context);
-  const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
   const selectedList = Array.from(selected);
-  const checked = Object.entries(entries).length === selectedList.length;
+  const entriesList = Object.entries(entries);
+  const checked = (() => {
+    const len = entriesList.length;
+    if (len === selectedList.length) return true;
+    if (selectedList.length === 0) return false;
+    else return "mixed";
+  })();
   return (
     <>
       <div style={{ width: 16 + 3 }} />
       <div className='column' style={{ width: 24, justifyContent: 'center', alignItems: 'center' }}>
-        <Tooltip label={checked ? 'cancel select' : 'select all'}>
-          <Checkbox checked={checked}
-            onChange={() => {
-              if (checked) setSelected(new Set());
-              else setSelected(new Set(Object.values(entries)));
-            }} />
-        </Tooltip>
+        <Checkbox checked={checked}
+          onChange={() => {
+            switch (checked) {
+              case true:
+                setSelected(new Set());
+                break;
+              case false:
+              case "mixed":
+                setSelected(new Set(entriesList.map(v => v[1])));
+                break;
+            }
+          }} />
       </div>
       <div style={{ width: 16 }} />
-      <DownloadButton callback={async () => auth.download(Array.from(selected)
-        .map(v => v.path)
-        .filter(v => v !== undefined && v !== null) as string[])
-        .catch(e => showMessage({ content: `Download failed: ${e}` }))} />
-      <MoveButton path={dir}
-        onSubmit={async (newPath) => {
-          const onCompleted = () => showMessage({ content: 'Move completed', action: <Button label="close" /> });
-          const value = await Promise.all(Array.from(selected).map(async value => {
-            const { type, path } = value;
-            const onError = (error: any) => {
-              showMessage({ content: `Move [${value}] failed (${error})`, action: <Button label="close" /> })
-              return false;
-            };
-            if (path === undefined || path === null) {
-              onError(`No path associate with file ${value}`);
-              return;
-            }
-            switch (type) {
-              case FileType.file:
-              case FileType.directory:
-                const result = await auth.rest('fs.rename', [[path], [newPath]]);
-                if (Rest.isError(result)) return onError(result.error);
-                return;
-            }
-          }));
-          if (value.length === 0) return true;
-          if (value.some(value => value === false)) return false;
-          setSelected(new Set());
-          onCompleted();
-          setOnSelect(false);
-          return true;
-        }} />
-      <CopyButton path={dir}
-        onSubmit={async (newPath) => {
-          const onCompleted = () => showMessage({ content: 'Copy completed', action: <Button label="close" /> });
-          const value = await Promise.all(Array.from(selected).map(async value => {
-            const { type, path } = value;
-            const onError = (error: any) => {
-              showMessage({ content: `Copy [${value}] failed (${error})`, action: <Button label="close" /> });
-              return false;
-            };
-            if (path === undefined || path === null) {
-              onError(`No path associate with file ${value}`);
-              return;
-            }
-            switch (type) {
-              case FileType.file:
-              case FileType.directory:
-                const result = await auth.rest('fs.cp',
-                  [[path], [newPath]]);
-                if (Rest.isError(result)) return onError(result.error);
-                return;
-            }
-          }));
-          if (value.length === 0) return true;
-          if (value.some(value => value === false)) return false;
-          onCompleted();
-          setOnSelect(false);
-          return true;
-        }} />
-      <LongPressIconButton
-        icon='delete'
-        onLongPress={async () => {
-          const onCompleted = () => showMessage({ content: 'Deleted completed', action: <Button label="close" /> });
-          const value = await Promise.all(Array.from(selected).map(async value => {
-            const { type, path } = value;
-            const onError = (error: any) => {
-              showMessage({ content: `Delete [${value}] failed (${error})`, action: <Button label="close" /> });
-              return false;
-            };
-            if (path === undefined || path === null) {
-              onError(`No path associate with file ${value}`);
-              return;
-            }
-            switch (type) {
-              case FileType.file: {
-                const result = await auth.rest('fs.unlink', [[path]]);
-                if (Rest.isError(result)) return onError(result.error);
-                return;
-              }
-              case FileType.directory: {
-                const result = await auth.rest('fs.rm', [[path]]);
-                if (Rest.isError(result)) return onError(result.error);
-                return;
-              }
-            }
-          }));
-          setSelected(new Set());
-          if (value.length === 0) return true;
-          if (value.some(value => value === false)) return false;
-          onCompleted();
-          setOnSelect(false);
-          return true;
-        }} />
+      <DownloadButton objects={selectedList} />
+      <MoveButton
+        initialPath={dir ?? ""}
+        objects={selectedList} />
+      <CopyButton
+        objects={selectedList} />
+      <DeleteButton objects={selectedList} />
       <div className='expanded' />
-      <IconButton onClick={event => setOnSelect(false)} >
+      <IconButton onClick={() => setOnSelect(false)} >
         <Icon>close</Icon>
       </IconButton>
     </>
   );
 }
 
-function DownloadButton({ callback }: { callback: () => unknown }) {
+function DownloadButton({ objects }: { objects: Lstat[], }) {
+  const auth = React.useContext(Server.Authentication.Context);
+  const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
   return (
     <Tooltip label='download'>
       <IconButton
-        onClick={callback} >
+        disabled={objects.length === 0}
+        onClick={async () => auth.download(objects
+          .map(v => v.path)
+          .filter(v => v !== undefined && v !== null) as string[])
+          .catch(e => showMessage({ content: `Download failed: ${e}` }))} >
         <Icon>download</Icon>
       </IconButton>
     </Tooltip>
   );
 }
 
-function MoveButton({ path, onSubmit }: { path: string | null | undefined, onSubmit: (path: string) => PromiseLike<boolean> }) {
+function MoveButton({ objects, initialPath }: { objects: Lstat[], initialPath: string }) {
   const [state, setState] = React.useState<MoveToDialog.State>({
-    path: path ?? "",
+    objects,
+    initialPath,
     open: false,
-    onSubmit: onSubmit,
   });
   const close = () => setState({ ...state, open: false });
   return (
     <>
       <Tooltip label='move'>
         <IconButton
-          disabled={path === undefined || path === null}
-          onClick={() => setState({ ...state, open: true })} >
+          disabled={objects.length === 0}
+          onClick={() => setState({ ...state, objects, open: true })} >
           <Icon>drag_handle</Icon>
         </IconButton>
       </Tooltip>
@@ -273,23 +246,40 @@ function MoveButton({ path, onSubmit }: { path: string | null | undefined, onSub
   );
 }
 
-function CopyButton({ path, onSubmit }: { path: string | null | undefined, onSubmit: (path: string) => PromiseLike<boolean> }) {
+function CopyButton({ objects }: { objects: Lstat[] }) {
   const [state, setState] = React.useState<CopyToDialog.State>({
-    path: path ?? "",
+    objects,
     open: false,
-    onSubmit: onSubmit,
   });
   const close = () => setState({ ...state, open: false });
   return (
     <>
       <Tooltip label='copy'>
         <IconButton
-          disabled={path === undefined || path === null}
-          onClick={() => setState({ ...state, open: true })} >
+          disabled={objects.length === 0}
+          onClick={() => setState({ objects, open: true })} >
           <Icon>file_copy</Icon>
         </IconButton>
       </Tooltip>
       <CopyToDialog state={state} close={close} />
     </>
   );
+}
+
+function DeleteButton({ objects }: { objects: Lstat[] }) {
+  const [state, setState] = React.useState<DeleteDialog.State>({
+    objects,
+    open: false,
+  });
+  const close = () => setState({ ...state, open: false });
+  return (<>
+    <Tooltip label='delete'>
+      <IconButton
+        disabled={objects.length === 0}
+        onClick={() => setState({ objects, open: true })} >
+        <Icon>delete</Icon>
+      </IconButton>
+    </Tooltip>
+    <DeleteDialog state={state} close={close} />
+  </>);
 }

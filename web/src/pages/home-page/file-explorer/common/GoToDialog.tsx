@@ -3,6 +3,7 @@ import { Button, TextField, Dialog } from "rmcw";
 
 import Scaffold, { SnackbarQueueMessage } from "../../../../components/Scaffold";
 import FileExplorer, { useUuidV4 } from "../Common";
+import useInputAutoFocusRef from "../../../../components/InputAutoFocusRef";
 
 function GoToDialog({ state: { open, path }, close }: { state: GoToDialog.State, close: () => unknown }) {
   const [value, setValue] = React.useState(path);
@@ -11,9 +12,9 @@ function GoToDialog({ state: { open, path }, close }: { state: GoToDialog.State,
   const onError = (message: SnackbarQueueMessage) =>
     showMessage({ action: <Button label="close" />, ...message, });
   const id = useUuidV4();
-  React.useEffect(() => {
-    setValue(path);
-  }, [path]);
+
+  const ref = useInputAutoFocusRef(open);
+
   return (
     <Dialog
       open={open}
@@ -32,9 +33,11 @@ function GoToDialog({ state: { open, path }, close }: { state: GoToDialog.State,
           close();
           cd(newPath);
         }}>
-        <TextField autoFocus required
+        <TextField
+          ref={ref}
           label='path'
           value={value}
+          required
           onChange={(e) => setValue(e.target.value)}
           style={{ width: 480 }} />
       </form>

@@ -37,17 +37,20 @@ const { host, hostname } = document.location;
 const wsUri = `wss://${host}/rest`;
 
 class AppServer implements Server.Type {
+  static _id = 0;
   constructor(props: { ws: WebSocket }) {
-    this._ws = props.ws;
+    this.ws = props.ws;
+    this.id = AppServer._id;
+    AppServer._id++;
   }
 
-  protected _ws: WebSocket;
-  get ws() { return this._ws }
+  readonly id: number;
+  readonly ws: WebSocket;
 
   async signIn(props: { username: string, password: string }): Promise<{ token: string; } | { error: Error; }> {
     const config = { ...props };
     return new Promise(resolve => {
-      const ws = this._ws;
+      const ws = this.ws;
       ws.addEventListener('message',
         ({ data }) => resolve(JSON.parse(data)), { once: true });
       ws.send(JSON.stringify(config));
@@ -63,26 +66,37 @@ class Service extends React.Component<Service.Props, Service.State> {
   }
   protected _ws!: WebSocket;
   protected _mounted = true;
+  protected _connectionMayBeLost = false;
 
-  protected readonly _onOpen = () => this.setState({ server: new AppServer({ ws: this._ws! }) })
-  protected readonly _onError = () => { if (this._ws) wsSafeClose(this._ws) }
-  protected readonly _onClose = async () => {
-    if (this._ws) wsSafeClose(this._ws);
-    if (!this._mounted) return;
-    this.setState({ server: undefined });
-    await delay(3000);
-    if (!this._mounted) return;
+  protected _connect() {
     this._ws = new WebSocket(wsUri);
     this._ws.addEventListener('error', this._onError, { once: true });
     this._ws.addEventListener('close', this._onClose);
     this._ws.addEventListener('open', this._onOpen);
   }
 
+  protected readonly _onOpen = () => {
+    this._connectionMayBeLost = false;
+    this.setState({ server: new AppServer({ ws: this._ws! }) });
+  }
+  protected readonly _onError = () => {
+    if (this._ws) wsSafeClose(this._ws)
+  }
+  protected readonly _onClose = async () => {
+    if (this._ws) wsSafeClose(this._ws);
+    if (!this._mounted) return;
+    this.setState({ server: undefined });
+
+    if (this._connectionMayBeLost) {
+      await delay(2000);
+      if (!this._mounted) return;
+    }
+    this._connectionMayBeLost = true;
+    this._connect();
+  }
+
   override componentDidMount() {
-    this._ws = new WebSocket(wsUri);
-    this._ws.addEventListener('error', this._onError, { once: true });
-    this._ws.addEventListener('close', this._onClose);
-    this._ws.addEventListener('open', this._onOpen);
+    this._connect();
   }
 
   override componentWillUnmount() {
@@ -97,7 +111,7 @@ class Service extends React.Component<Service.Props, Service.State> {
       <SharedAxis
         className='full-size'
         transform={SharedAxisTransform.fromTopToBottom}
-        keyId={server === undefined ? 0 : 1}>
+        keyId={server?.id}>
         {server
           ? <Server.Context.Provider value={server}>
             {children}

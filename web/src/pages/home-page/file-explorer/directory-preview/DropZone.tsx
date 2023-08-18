@@ -7,19 +7,38 @@ import Scaffold from "../../../../components/Scaffold";
 function DropZone({ children, style, dirname }: { children: React.ReactNode, dirname: string | null | undefined, style?: React.CSSProperties }) {
   const { upload } = React.useContext(FileExplorer.Context);
   const [drag, setDrag] = React.useState(false);
-  const [disabled, setDisabled] = React.useState(false);
+  const [dragging, setDragging] = React.useState<unknown | null>(null); // when any element is dragging
+  const [hovering, setHovering] = React.useState<HTMLElement | null>(null);
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
   const auth = React.useContext(Server.Authentication.Context);
+
+  React.useEffect(() => {
+    if (dragging === null) {
+      setHovering(null);
+    }
+  }, [dragging]);
+
   return <div style={{
     ...style,
     transition: 'opacity 300ms, border 300ms',
     boxSizing: 'border-box', position: 'relative',
-    opacity: drag && disabled === false ? 0.5 : 1,
-    border: drag && disabled === false ? '3px dotted #666' : '3px dotted rgba(0,0,0,0)',
+    opacity: drag && dragging === null ? 0.5 : 1,
+    border: drag && dragging === null ? '3px dotted #666' : '3px dotted rgba(0,0,0,0)',
   }}
     onDragEnter={event => {
       event.preventDefault();
-      setDrag(true);
+      const { items, files } = event.dataTransfer;
+      if ((items && items.length > 0 && 'webkitGetAsEntry' in items[0]) || files.length > 0)
+        setDrag(true);
+
+      if (dragging !== null) {
+        const { target } = event;
+        if (target instanceof HTMLElement) {
+          if (target.dataset['dropzone'] !== undefined)
+            setHovering(target);
+        }
+
+      }
     }}
     onDragLeave={event => {
       event.preventDefault();
@@ -27,12 +46,14 @@ function DropZone({ children, style, dirname }: { children: React.ReactNode, dir
     }}
     onDragOver={event => {
       event.preventDefault();
-      if (drag === false) setDrag(true);
+      const { items, files } = event.dataTransfer;
+      if ((items && items.length > 0 && 'webkitGetAsEntry' in items[0]) || files.length > 0)
+        setDrag(true);
     }}
     onDrop={event => {
       event.preventDefault();
       setDrag(false);
-      if (disabled) return;
+      if (dragging !== undefined) return;
       if (dirname === undefined || dirname === null) return; // @TODO: dialog show error message
       const { items, files } = event.dataTransfer;
       if (items && items.length > 0 && 'webkitGetAsEntry' in items[0]) {
@@ -51,15 +72,16 @@ function DropZone({ children, style, dirname }: { children: React.ReactNode, dir
         upload(files[i], [dirname]);
     }}
   >
-    <DropZone.Context.Provider value={{ setDisabled: setDisabled }}>
+    <DropZone.Context.Provider value={{ hovering, dragging, setDragging }}>
       {children}
     </DropZone.Context.Provider>
   </div>;
 }
 
 namespace DropZone {
-  export type Type = { setDisabled: (value: boolean) => unknown };
+  export type Type = { hovering: HTMLElement | null, dragging: unknown | null, setDragging: (value: unknown | null) => unknown };
   export const Context = React.createContext<Type>(undefined as unknown as Type);
+  export const noDrop = {};
 }
 
 export default DropZone;
