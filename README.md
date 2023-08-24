@@ -37,10 +37,23 @@ Get run help
 
 The software does't need any permission like root permission. It can run by any user. Software will get the right permissions after you correctly login with your username and password on the website (login root and act like root, login guest and act like guest).
 
+# Software Runtime Structure
+
+When bin run, generally run in master mode. Master mode just provide http server for web and reverse http proxy for loopback.
+
+<img src="doc/structure.svg"/>
+
+When user login, master server will help user to create a ssh connection on the server locally and use the ssh connection to create a new process (the same bin but run in client mode) in the target user space. Because the new process created by the target user and running in the target user space, it has the same permission as the target user.
+
+Now all the operation send to master will be forwarded to the client server. The client server will do the real job for user under the right permission. And also the master server doesn't need any permission.
+
+Both master and client handle request and response in stream, so the total memory usage will be controlled as low as possible.
+
+<img src="doc/memory-usage.png"/>
+
 # Develop this software
 
 Request node and rust's build toolchain.
 
-Backend is written in rust (tokio/hyper).
-
-Frontend is written in react and built by vite.
+Backend is written in rust (tokio/hyper).<br/>
+Frontend is written in react and built by vite.<br/>

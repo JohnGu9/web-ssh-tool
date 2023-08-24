@@ -1,9 +1,6 @@
 use chrono::{DateTime, Utc};
 use futures::{
-    channel::{
-        mpsc::{channel, Receiver, Sender},
-        oneshot,
-    },
+    channel::{mpsc, oneshot},
     lock::Mutex,
     FutureExt, SinkExt, StreamExt,
 };
@@ -19,14 +16,14 @@ use std::{
 
 pub async fn handle_request(
     request: &serde_json::Value,
-    event_channel: &Mutex<Sender<serde_json::Value>>,
+    event_channel: &Mutex<mpsc::Sender<serde_json::Value>>,
     watchers: &Mutex<HashMap<String, Arc<Mutex<MyWatcher>>>>,
 ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     let mut watchers = watchers.lock().await;
     match request {
         serde_json::Value::String(request) => {
             if let None = watchers.get(request) {
-                let (tx, mut rx) = channel::<serde_json::Value>(1);
+                let (tx, mut rx) = mpsc::channel::<serde_json::Value>(1);
                 let mut event_channel = event_channel.lock().await.clone();
                 tokio::spawn(async move {
                     while let Some(data) = rx.next().await {
@@ -48,6 +45,8 @@ pub async fn handle_request(
             if let Some(serde_json::Value::String(id)) = request.get("id") {
                 if let Some(_) = request.get("close") {
                     if let Some(watcher) = watchers.remove(id) {
+                        let watcher = watcher.clone();
+                        drop(watchers);
                         let mut watcher = watcher.lock().await;
                         watcher.close().await;
                     }
@@ -55,15 +54,14 @@ pub async fn handle_request(
                     if let Some(watcher) = watchers.get_mut(id) {
                         let watcher = watcher.clone();
                         drop(watchers);
+                        let mut watcher = watcher.lock().await;
                         match cd {
                             serde_json::Value::String(cd) => {
                                 let path = PathBuf::from(cd);
-                                watcher.lock().await.watch(path).await?;
+                                watcher.watch(path).await?;
                             }
                             serde_json::Value::Null => {
                                 watcher
-                                    .lock()
-                                    .await
                                     .watch(
                                         std::env::current_dir()
                                             .unwrap_or_else(|_| std::env::temp_dir()),
@@ -101,14 +99,14 @@ pub struct MyWatcher {
     id: String,
     watcher: RecommendedWatcher,
     current_path: PathBuf,
-    event_channel: Sender<serde_json::Value>,
+    event_channel: mpsc::Sender<serde_json::Value>,
     on_close: Option<oneshot::Sender<()>>,
 }
 
 impl MyWatcher {
     async fn new(
         id: String,
-        event_channel: Sender<serde_json::Value>,
+        event_channel: mpsc::Sender<serde_json::Value>,
         path: PathBuf,
     ) -> notify::Result<Arc<Mutex<MyWatcher>>> {
         let (tx, on_close) = oneshot::channel();
@@ -128,7 +126,7 @@ impl MyWatcher {
     }
 
     async fn poll_event(
-        mut rx: Receiver<notify::Result<Event>>,
+        mut rx: mpsc::Receiver<notify::Result<Event>>,
         watcher: Arc<Mutex<MyWatcher>>,
         on_close: oneshot::Receiver<()>,
     ) {
@@ -155,6 +153,7 @@ impl MyWatcher {
     }
 
     async fn watch(&mut self, path: PathBuf) -> Result<(), futures::channel::mpsc::SendError> {
+        let _ = self.watcher.unwatch(&self.current_path);
         self.current_path = path;
         let res = self
             .watcher
@@ -403,8 +402,8 @@ impl std::fmt::Display for MyWatcherError {
 
 impl std::error::Error for MyWatcherError {}
 
-fn async_watcher() -> notify::Result<(RecommendedWatcher, Receiver<notify::Result<Event>>)> {
-    let (mut tx, rx) = channel(1);
+fn async_watcher() -> notify::Result<(RecommendedWatcher, mpsc::Receiver<notify::Result<Event>>)> {
+    let (mut tx, rx) = mpsc::channel(1);
 
     // Automatically select the best implementation for your platform.
     // You can also access each implementation directly e.g. INotifyWatcher.

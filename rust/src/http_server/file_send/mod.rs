@@ -2,7 +2,7 @@ mod assets_map;
 mod external_file_send;
 mod internal_file_send;
 use external_file_send::external_file_send;
-use hyper::{header, http::HeaderValue};
+use hyper::{header, http::HeaderValue, Request};
 use internal_file_send::internal_file_send;
 
 use super::not_found::not_found;
@@ -11,6 +11,7 @@ use std::{convert::Infallible, sync::Arc};
 
 pub async fn file_send(
     app_config: &Arc<AppConfig>,
+    req: &Request<hyper::body::Incoming>,
     filename: &str,
 ) -> Result<ResponseType, Infallible> {
     let guess = mime_guess::from_path(filename);
@@ -25,7 +26,7 @@ pub async fn file_send(
             }
             Err(_) => Ok(not_found(app_config, format!("No such file: {}", filename)).await),
         },
-        None => match internal_file_send(filename).await {
+        None => match internal_file_send(filename, &req).await {
             Ok(mut res) => {
                 res.headers_mut().append(header::CONTENT_TYPE, mime);
                 Ok(res)
