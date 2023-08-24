@@ -12,10 +12,8 @@ use futures::channel::{mpsc, oneshot};
 use futures::lock::Mutex;
 use http_body_util::StreamBody;
 use http_server::on_http;
-use hyper::header::{
-    HeaderValue, CONNECTION, SEC_WEBSOCKET_ACCEPT, SEC_WEBSOCKET_KEY, SEC_WEBSOCKET_VERSION,
-    UPGRADE,
-};
+use hyper::header;
+use hyper::header::HeaderValue;
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{Method, Request, Response, StatusCode, Version};
@@ -133,14 +131,14 @@ async fn http_websocket_classify(
     const UPGRADE_HEADER_VALUE: HeaderValue = HeaderValue::from_static("Upgrade");
     const WEBSOCKET_HEADER_VALUE: HeaderValue = HeaderValue::from_static("websocket");
     let headers = req.headers();
-    let key = headers.get(SEC_WEBSOCKET_KEY);
+    let key = headers.get(header::SEC_WEBSOCKET_KEY);
     if let Some(key) = key {
         let derived = tungstenite::handshake::derive_accept_key(key.as_bytes()).parse();
         if let Ok(derived) = derived {
             if req.method() == Method::GET
                 && req.version() >= Version::HTTP_11
                 && headers
-                    .get(CONNECTION)
+                    .get(header::CONNECTION)
                     .and_then(|h| h.to_str().ok())
                     .map(|h| {
                         h.split(|c| c == ' ' || c == ',')
@@ -148,12 +146,12 @@ async fn http_websocket_classify(
                     })
                     .unwrap_or(false)
                 && headers
-                    .get(UPGRADE)
+                    .get(header::UPGRADE)
                     .and_then(|h| h.to_str().ok())
                     .map(|h| h.eq_ignore_ascii_case("websocket"))
                     .unwrap_or(false)
                 && headers
-                    .get(SEC_WEBSOCKET_VERSION)
+                    .get(header::SEC_WEBSOCKET_VERSION)
                     .map(|h| h == "13")
                     .unwrap_or(false)
             {
@@ -164,9 +162,9 @@ async fn http_websocket_classify(
                 *res.status_mut() = StatusCode::SWITCHING_PROTOCOLS;
                 *res.version_mut() = ver;
                 let headers = res.headers_mut();
-                headers.append(CONNECTION, UPGRADE_HEADER_VALUE);
-                headers.append(UPGRADE, WEBSOCKET_HEADER_VALUE);
-                headers.append(SEC_WEBSOCKET_ACCEPT, derived);
+                headers.append(header::CONNECTION, UPGRADE_HEADER_VALUE);
+                headers.append(header::UPGRADE, WEBSOCKET_HEADER_VALUE);
+                headers.append(header::SEC_WEBSOCKET_ACCEPT, derived);
                 tokio::spawn(upgrade_web_socket(
                     app_config.to_owned(),
                     peer_map.to_owned(),

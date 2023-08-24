@@ -3,7 +3,7 @@ import { Button, IconButton, Tooltip, Typography, Dialog, ListDivider, Icon, Tex
 
 import { Server, ThemeContext } from "../../../../common/Providers";
 import { FileSize } from "../../../../common/Tools";
-import { FileType, Lstat, Rest } from "../../../../common/Type";
+import { FileType, Lstat, Rest, Watch } from "../../../../common/Type";
 import LongPressButton from "../../../../components/LongPressButton";
 import Scaffold from "../../../../components/Scaffold";
 import styles from "./InformationDialog.module.css";
@@ -19,7 +19,7 @@ function InformationDialog({ state, close }: {
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
   const onError = (error: any) => showMessage({ content: `Delete failed (${error})`, action: <Button label="close" /> });
   const onDeleted = (path: string) => showMessage({ content: `Deleted (${path})`, action: <Button label="close" /> });
-  const { type, size, path, basename, ...stats } = state.stats;
+  const { type, size, path, basename, entries, ...stats } = state.stats as Watch.Directory;
 
   const [rename, setRename] = React.useState<RenameDialog.State>({ open: false, dirname: state.dirname, file: state.stats });
   const closeRename = () => setRename(v => { return { ...v, open: false } });
@@ -88,7 +88,13 @@ function InformationDialog({ state, close }: {
         <div><Typography.Button className={styles.title}>path</Typography.Button>: {path}</div>
         <div><Typography.Button className={styles.title}>basename</Typography.Button>: {basename}</div>
         {type === undefined ? <></> : <Typography.Button className={styles.title}>type: {type}</Typography.Button>}
-        <div ><Typography.Button className={styles.title}>size</Typography.Button>: {size === undefined ? "undefined" : FileSize(size)}</div>
+        {(() => {
+          if (entries !== undefined) {
+            return <div><Typography.Button className={styles.title}>file amount</Typography.Button>: {Object.entries(entries).length}</div>
+          } else {
+            return <div ><Typography.Button className={styles.title}>size</Typography.Button>: {size === undefined ? "undefined" : FileSize(size)}</div>
+          }
+        })()}
         <div style={{ height: 8 }} />
         <ListDivider />
         <div style={{ margin: '16px 0 8px', opacity: 0.5 }}>Advance</div>
@@ -114,7 +120,7 @@ namespace InformationDialog {
   export type State = {
     open: boolean,
     dirname: string,
-    stats: Lstat,
+    stats: Watch.Directory | Watch.File,
   };
 }
 

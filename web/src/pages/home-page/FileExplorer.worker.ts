@@ -1,6 +1,6 @@
 import pako from 'pako';
 
-/* eslint-disable no-restricted-globals */
+/*eslint no-restricted-globals: "off"*/
 self.onmessage = msg => {
   const { tag, requestDeflate, requestInflate } = msg.data;
   if (requestDeflate !== undefined) {

@@ -158,8 +158,12 @@ namespace MultiTerminalView {
 
     protected readonly _listener = (event: Event) => {
       const { detail } = event as CustomEvent;
-      if ('close' in detail) this.onClose.invoke();
-      else if ('data' in detail) this.xterm.write(detail.data);
+      if ('close' in detail) {
+        this.onClose.invoke();
+      } else if ('data' in detail) {
+        const data = Uint8Array.from(atob(detail.data), c => c.charCodeAt(0));
+        this.xterm.write(data);
+      }
     }
 
     protected async open() {
@@ -214,7 +218,8 @@ function MoreButton() {
         <ListDivider />
         <ListItem
           graphic={<Icon>terminal</Icon>}
-          primaryText="Use system ssh tool"
+          primaryText="System SSH Tool"
+          meta={<span style={{ minWidth: 36 }}></span>}
           onClick={() => {
             const { hostname } = document.location;
             window.open(`ssh://${hostname}`);
@@ -279,8 +284,8 @@ function XTerminalView({ controller, remove }: {
       cursorAccent: theme.secondary
     };
   return <FadeThrough keyId={closed ? 0 : 1} className='full-size'>
-    {closed
-      ? <div className='full-size column'>
+    {closed ?
+      <div className='full-size column'>
         <div style={{ height: 8 }} />
         <Card
           style={{
@@ -296,8 +301,8 @@ function XTerminalView({ controller, remove }: {
           <div className='expanded' />
         </div>
         <div style={{ height: 16 }} />
-      </div>
-      : <div className='full-size column'>
+      </div> :
+      <div className='full-size column'>
         <div style={{ height: 8 }} />
         <Card style={{ flex: 1, width: '100%', overflow: 'auto', padding: 8 }}
           onDragOver={event => event.preventDefault()}

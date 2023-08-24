@@ -5,23 +5,23 @@ export namespace Settings {
   export const Context = React.createContext<Type>(undefined as unknown as Type);
   export type Type = {
     locale: string | null,
-    setLocale: (_: string | null) => void,
+    setLocale: (value: string | null) => void,
 
     keepSignIn: boolean,
-    setKeepSignIn: (_: boolean) => void,
+    setKeepSignIn: (value: boolean) => void,
 
     sshUserName: string | null,
-    setSshUserName: (_: string | null) => void,
+    setSshUserName: (value: string | null) => void,
 
     sshPassword: string | null,
-    setSshPassword: (_: string | null) => void,
+    setSshPassword: (value: string | null) => void,
 
     lastPath: string | null,
-    setLastPath: (_: string | null) => void,
+    setLastPath: (value: string | null) => void,
 
 
     darkMode: 'dark' | 'light' | null,
-    setDarkMode: (_: 'dark' | 'light' | null) => void,
+    setDarkMode: (value: 'dark' | 'light' | null) => void,
   };
 
   export class Service extends React.Component<Service.Props> {

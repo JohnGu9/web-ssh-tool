@@ -1,3 +1,4 @@
+use futures::channel::mpsc;
 use futures::SinkExt;
 use futures::{lock::Mutex, StreamExt};
 use russh::{client::Handle, client::Msg, Channel, ChannelMsg};
@@ -9,7 +10,7 @@ pub async fn handle_request(
     request: serde_json::Value,
     client_connection: &Arc<Mutex<ClientConnection>>,
     session: &Mutex<Handle<Client>>,
-    shells: &Mutex<HashMap<String, futures::channel::mpsc::Sender<PollChannelData>>>,
+    shells: &Mutex<HashMap<String, mpsc::Sender<PollChannelData>>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut shells = shells.lock().await;
 
@@ -23,15 +24,10 @@ pub async fn handle_request(
                     .request_pty(true, "xterm", 83, 34, 512, 512, &[])
                     .await?;
                 channel.request_shell(true).await?;
-                let (tx, rx) = futures::channel::mpsc::channel(1);
+                let (tx, rx) = mpsc::channel(1);
                 shells.insert(id.clone(), tx);
                 drop(shells);
-                tokio::spawn(poll_channel(
-                    channel,
-                    rx,
-                    client_connection.clone(),
-                    id.clone(),
-                ));
+                tokio::spawn(poll_channel(channel, rx, client_connection.clone(), id));
             }
         }
         serde_json::Value::Object(mut request) => {
@@ -112,7 +108,7 @@ impl PollChannelData {
 
 async fn poll_channel(
     mut channel: Channel<Msg>,
-    mut rx: futures::channel::mpsc::Receiver<PollChannelData>,
+    mut rx: mpsc::Receiver<PollChannelData>,
     client_connection: Arc<Mutex<ClientConnection>>,
     id: String,
 ) -> Result<(), russh::Error> {
@@ -129,11 +125,12 @@ async fn poll_channel(
             msg = channel.wait() => {
                 if let Some(msg) = msg {
                     if let ChannelMsg::Data{data} = msg {
-                        if let Ok(data) = String::from_utf8(data.to_vec()) {
-                            let obj = json!({"shell":{"id": id, "data": data}});
-                            let mut conn = client_connection.lock().await;
-                            conn.forward_event(obj).await.map_err(|_|russh::Error::SendError)?;
-                        }
+                        use base64::engine::general_purpose;
+                        use base64::Engine;
+                        let data = general_purpose::STANDARD_NO_PAD.encode(data.to_vec());
+                        let obj = json!({"shell":{"id": id, "data": data}});
+                        let mut conn = client_connection.lock().await;
+                        conn.forward_event(obj).await.map_err(|_|russh::Error::SendError)?;
                     }
                 } else {
                     break;

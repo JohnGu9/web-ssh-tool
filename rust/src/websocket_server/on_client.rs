@@ -1,7 +1,4 @@
-use crate::{
-    app_config::AppConfig,
-    connection_peer::{ClientConnection, WebSocketPeer},
-};
+use crate::{app_config::AppConfig, connection_peer::WebSocketPeer};
 use futures::{lock::Mutex, StreamExt};
 use hyper::upgrade::Upgraded;
 use std::{collections::HashMap, error::Error, sync::Arc};
@@ -33,8 +30,7 @@ pub async fn handle_request(
                 if let Ok(serde_json::Value::Object(mut m)) =
                     serde_json::from_str::<serde_json::Value>(text.as_str())
                 {
-                    let mut conn: futures::lock::MutexGuard<'_, ClientConnection> =
-                        client_connection.lock().await;
+                    let mut conn = client_connection.lock().await;
                     if let (Some(id), Some(response)) = (m.remove("id"), m.remove("response")) {
                         if let Err(err) = conn.feed_response(id, response) {
                             app_config.logger.info(format!(

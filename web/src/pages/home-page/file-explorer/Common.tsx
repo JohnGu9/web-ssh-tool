@@ -82,11 +82,12 @@ namespace FileExplorer {
           return false;
         },
       ).then(() => {
-        this.detail.state = UploadController.State.completed;
-        this.dispatchEvent(new Event('change'));
+        if (this.detail.state === UploadController.State.running) {
+          this.detail.state = UploadController.State.completed;
+          this.dispatchEvent(new Event('change'));
+        }
       }).catch((error) => {
         if (this.detail.state === UploadController.State.running) {
-          try { this.cancel(); } catch (e) { }
           this.detail.error = error;
           console.log(error);
           this.detail.state = UploadController.State.error;
@@ -122,7 +123,7 @@ namespace FileExplorer {
 
     readonly cancel: () => void;
 
-    cleanup() {
+    close() {
       if (this.detail.state !== UploadController.State.completed) {
         this.cancel();
       }

@@ -1,0 +1,10 @@
+.wrap-outer {
+    display: flex;
+    width: 100%;
+}
+
+.wrap-inter {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}

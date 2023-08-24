@@ -106,10 +106,10 @@ class List extends React.Component<{
   builder = ({ index, style }: { index: number, style?: React.CSSProperties }) => {
     return <EventListenerBuilder eventName='change' eventTarget={this.eventTarget}
       builder={() => {
-        const { dirname, realPath, fileList, selected, setSelected, onSelecting, cd, setInformation, setFileMove } = this.props;
+        const { dirname, fileList, selected, setSelected, onSelecting, cd, setInformation, setFileMove } = this.props;
         if (index >= fileList.length) return <React.Fragment key={index}></React.Fragment>;
         const [key, value] = fileList[index];
-        const { path, basename } = value;
+        const { path } = value;
         return <FileListTile
           key={key}
           style={style}

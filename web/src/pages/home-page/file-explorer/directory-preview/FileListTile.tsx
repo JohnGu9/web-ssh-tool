@@ -5,7 +5,7 @@ import { SharedAxis, SharedAxisTransform } from 'material-design-transform';
 import DropZone from "./DropZone";
 import { Server } from "../../../../common/Providers";
 
-function FileListTile({ name, stats, uploading, selected, onSelecting: onSelect, onClick, onSelected, onDetail, onFileMove, style }: {
+function FileListTile({ name, stats, uploading, selected, onSelecting, onClick, onSelected, onDetail, onFileMove, style }: {
   name: string,
   stats: Lstat,
   uploading: boolean,
@@ -47,10 +47,10 @@ function FileListTile({ name, stats, uploading, selected, onSelecting: onSelect,
     style={{
       ...style,
       opacity: disabled || onHovering || onDragging ? 0.5 : 1,
-      border: onHovering ? '3px dotted #666' : '3px dotted rgba(0,0,0,0)',
+      outline: onHovering ? '3px dotted #666' : '3px dotted rgba(0,0,0,0)',
     }}
     data-dropzone={isDirectory ? path : DropZone.noDrop}
-    draggable={onDragging || dragging === null}
+    draggable={(onDragging || dragging === null) && !onSelecting}
     nonInteractive={disabled}
     onDragStart={event => {
       if (path === undefined || path === null) return;
@@ -73,12 +73,12 @@ function FileListTile({ name, stats, uploading, selected, onSelecting: onSelect,
       }
     } : undefined}
     graphic={<SharedAxis
-      keyId={onSelect ? 0 : 1}
+      keyId={onSelecting ? 0 : 1}
       transform={SharedAxisTransform.fromLeftToRight}
       forceRebuildAfterSwitched={false}
       className='column'
       style={{ justifyContent: 'center', alignItems: 'center' }}>
-      {onSelect
+      {onSelecting
         ? <Checkbox readOnly checked={selected} style={{ height: 24 }}></Checkbox>
         : <Icon>{uploading ? 'file_upload' : FileIcon(name, stats)}</Icon>}
     </SharedAxis>}
@@ -93,7 +93,7 @@ function FileListTile({ name, stats, uploading, selected, onSelecting: onSelect,
     </IconButton>}
     onClick={disabled
       ? undefined
-      : (onSelect
+      : (onSelecting
         ? () => {
           onSelected?.(!selected);
         }
@@ -106,7 +106,7 @@ function FileListTile({ name, stats, uploading, selected, onSelecting: onSelect,
           }
           return onClick?.();
         })}
-    activated={selected && onSelect}
+    activated={selected && onSelecting}
     onMouseEnter={() => setHover(true)}
     onMouseLeave={() => setHover(false)} />
 }

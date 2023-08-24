@@ -1,8 +1,11 @@
 use chrono::{DateTime, Utc};
 use futures::{
-    channel::mpsc::{channel, Receiver, Sender},
+    channel::{
+        mpsc::{channel, Receiver, Sender},
+        oneshot,
+    },
     lock::Mutex,
-    SinkExt, StreamExt,
+    FutureExt, SinkExt, StreamExt,
 };
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use serde_json::{json, Map};
@@ -99,6 +102,7 @@ pub struct MyWatcher {
     watcher: RecommendedWatcher,
     current_path: PathBuf,
     event_channel: Sender<serde_json::Value>,
+    on_close: Option<oneshot::Sender<()>>,
 }
 
 impl MyWatcher {
@@ -107,6 +111,7 @@ impl MyWatcher {
         event_channel: Sender<serde_json::Value>,
         path: PathBuf,
     ) -> notify::Result<Arc<Mutex<MyWatcher>>> {
+        let (tx, on_close) = oneshot::channel();
         let (mut watcher, rx) = async_watcher()?;
         let res = watcher.watch(&path, RecursiveMode::NonRecursive);
         let mut this = Self {
@@ -114,11 +119,39 @@ impl MyWatcher {
             watcher,
             event_channel,
             current_path: path,
+            on_close: Some(tx),
         };
         let _ = this.handle_watch_result(res).await;
         let this = Arc::new(Mutex::new(this));
-        tokio::spawn(poll_event(rx, this.clone()));
+        tokio::spawn(MyWatcher::poll_event(rx, this.clone(), on_close));
         Ok(this)
+    }
+
+    async fn poll_event(
+        mut rx: Receiver<notify::Result<Event>>,
+        watcher: Arc<Mutex<MyWatcher>>,
+        on_close: oneshot::Receiver<()>,
+    ) {
+        let on_close = on_close.shared();
+        loop {
+            let on_close = on_close.clone();
+            tokio::select! {
+                _ = on_close => {
+                    break;
+                }
+                res = rx.next() => {
+                    let mut watcher = watcher.lock().await;
+                    if let Some(res) = res {
+                        match res {
+                            Ok(_) => { let _ = watcher.handle_on_change().await; }
+                            Err(e) => { let _ = watcher.send_error(e).await; }
+                        }
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     async fn watch(&mut self, path: PathBuf) -> Result<(), futures::channel::mpsc::SendError> {
@@ -254,8 +287,11 @@ impl MyWatcher {
         let _ = self.watcher.unwatch(&self.current_path);
         let _ = self
             .event_channel
-            .send(json!({"id":self.id, "close":{}}))
+            .send(json!({"id":self.id, "data":{"close":{}}}))
             .await;
+        if let Some(on_close) = self.on_close.take() {
+            let _ = on_close.send(());
+        }
     }
 }
 
@@ -383,17 +419,6 @@ fn async_watcher() -> notify::Result<(RecommendedWatcher, Receiver<notify::Resul
     )?;
 
     Ok((watcher, rx))
-}
-
-async fn poll_event(mut rx: Receiver<notify::Result<Event>>, watcher: Arc<Mutex<MyWatcher>>) {
-    // @TODO: fix watcher object not release issue
-    while let Some(res) = rx.next().await {
-        let mut watcher = watcher.lock().await;
-        match res {
-            Ok(_) => watcher.handle_on_change().await.unwrap_or_default(),
-            Err(e) => watcher.send_error(e).await.unwrap_or_default(),
-        }
-    }
 }
 
 fn system_time_to_string(time: SystemTime) -> String {

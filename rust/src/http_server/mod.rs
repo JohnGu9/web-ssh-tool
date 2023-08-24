@@ -40,7 +40,6 @@ pub async fn on_http(
         if let Some((_, token)) = peers.find(|(key, _)| key.as_str() == "t") {
             let peer_map = peer_map.lock().await;
             let peer = peer_map.get(&token);
-            // @TODO: move logic to client
             match peer {
                 Some(peer) => {
                     let queue = peer.client_response_queue.clone();
@@ -81,7 +80,6 @@ pub async fn on_http(
                     return Ok(not_found(app_config, "Unknown request").await);
                 }
                 None => {
-                    drop(peer_map);
                     return Ok(not_found(app_config, "Auth request failed").await);
                 }
             }

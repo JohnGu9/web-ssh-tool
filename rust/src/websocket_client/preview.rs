@@ -23,14 +23,17 @@ pub async fn handle_request(
         };
         let guess = mime_guess::from_path(path);
         let guess = guess.first_or_text_plain();
-        let file = tokio::fs::File::open(path).await?;
+
+        let (sender, file) = tokio::join!(http_to_master(app_config), tokio::fs::File::open(path),);
+        let mut sender = sender?;
+        let file = file?;
         let size = match file.metadata().await {
             Ok(meta) => Some(meta.len()),
             Err(_) => None,
         };
+
         let (on_end_callback, on_end) = oneshot::channel();
         let rx = file_to_stream(file, on_end_callback);
-        let mut sender = http_to_master(app_config).await?;
         let body = StreamBody::new(rx);
         let mut req = Request::new(body);
         *req.uri_mut() = "/client".parse()?;

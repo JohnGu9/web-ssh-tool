@@ -1,5 +1,5 @@
 import React from "react";
-import { Checkbox, Icon, IconButton, ListDivider, ListItem, Menu, Radio, Switch, Tooltip } from "rmcw";
+import { Checkbox, Icon, IconButton, ListDivider, ListItem, Menu, Radio, Switch, Tooltip, Typography } from "rmcw";
 import { Server, ThemeContext } from "../../../../common/Providers";
 import { Lstat, Watch } from "../../../../common/Type";
 import Scaffold from "../../../../components/Scaffold";
@@ -73,7 +73,7 @@ function MoreButton({ stats, setInformation }: {
   setInformation: (value: InformationDialog.State) => unknown,
 }) {
   const { path: dest } = stats;
-  const { parent, entries, ...rest } = stats;
+  const { parent } = stats;
 
   const [file, setFile] = React.useState<NewFileDialog.State>({ open: false, path: "" });
   const closeFile = () => setFile({ ...file, open: false });
@@ -99,24 +99,23 @@ function MoreButton({ stats, setInformation }: {
         anchorCorner="bottom-right"
         anchorQuadrant="bottom-left"
         surface={<div>
-
           {parent !== undefined && parent !== null ?
             <ListItem
               primaryText="About Directory"
               meta={<Icon>info</Icon>}
               onClick={e => {
                 e.preventDefault();
-                setInformation({ open: true, dirname: parent, stats: rest })
+                setInformation({ open: true, dirname: parent, stats })
               }} /> :
             <ListItem
               primaryText="About Directory"
               meta={<Icon>info</Icon>}
               disabled />}
           {typeof dest === 'string' ? <>
-            <ListItem primaryText="New file"
+            <ListItem primaryText="New File"
               meta={<Icon>text_snippet</Icon>}
               onClick={() => setFile({ open: true, path: dest })} />
-            <ListItem primaryText="New directory"
+            <ListItem primaryText="New Directory"
               meta={<Icon>folder</Icon>}
               onClick={() => setDirectory({ open: true, path: dest })} />
             <ListDivider />
@@ -127,15 +126,15 @@ function MoreButton({ stats, setInformation }: {
           {[FileExplorer.SortType.alphabetically,
           FileExplorer.SortType.date,
           FileExplorer.SortType.type].map(t =>
-            <ListItem key={t} primaryText={t}
+            <ListItem key={t} primaryText={<Typography.Button>{t}</Typography.Button>}
               meta={<Radio checked={config.sort === t} />}
               onClick={() => setConfig({ ...config, sort: t })} />
           )}
           <ListDivider />
-          <ListItem primaryText={<span style={{ marginRight: 16 }}>Show hidden items</span>}
+          <ListItem primaryText={<span style={{ marginRight: 16 }}>Show Hidden Items</span>}
             meta={<Switch selected={config.showAll} />}
             onClick={() => setConfig({ ...config, showAll: !config.showAll })} />
-          <ListItem primaryText="Upload compress"
+          <ListItem primaryText="Upload Compress"
             meta={<Switch selected={config.uploadCompress} />}
             onClick={() => setConfig({ ...config, uploadCompress: !config.uploadCompress })} />
         </div>}

@@ -103,7 +103,7 @@ pub async fn handle_request(
                 return Err("Internal error: id generation failed");
             }
             if let Some(_) = map.iter().find(|(_, value)| value.addr == *addr) {
-                return Err("user already sign in");
+                return Err("User already sign in");
             }
 
             let mut channel = match session.channel_open_session().await {
@@ -143,8 +143,11 @@ pub async fn handle_request(
 
     if let Some((session, token, client_connection, rx)) = token_and_connection {
         let response = json!({ "token": token });
-        ws_stream.send(Message::text(response.to_string())).await?;
-        on_authenticate::handle_request(&token, &client_connection, ws_stream, rx, session).await?;
+        if let Ok(_) = ws_stream.send(Message::text(response.to_string())).await {
+            let _ =
+                on_authenticate::handle_request(&token, &client_connection, ws_stream, rx, session)
+                    .await;
+        }
         let mut map = peer_map.lock().await;
         if let Some(peer) = map.remove(&token) {
             peer.disconnect().await;

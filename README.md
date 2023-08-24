@@ -1,6 +1,6 @@
 # Web ssh tool
 
-This tool is a web server that support normal web browser for ssh connect to server. It work as a ssh reverse proxy. It request be deploy on server and provide a website for client. Client side has not need to install any tools but visit the website and access the server ssh. It is convenient for the device not ready with ssh tools but has browsers like pad or guest pc.
+This tool is a web server that support normal web browser for ssh connect to server. It work as a ssh reverse proxy. It request to deploy on server. Client side has not need to install any tools but visit the website and access the server ssh. It is convenient for the device not ready with ssh tools but has browsers like pad or guest pc.
 
 At the same time, it also provide file system service. You can preview/download server's file or upload file to server.
 
@@ -17,8 +17,8 @@ npm i
 npm run build
 ```
 
+The bin will appear in
 
-The bin will appear in 
 ```console
 rust/target/release/rust
 ```
@@ -26,6 +26,8 @@ rust/target/release/rust
 # Run the software
 
 Just run the bin, or create a system service for bin.
+
+IMPORTANT: make sure the bin has the right permission that can be executed by the user that you will login later.
 
 Get run help
 

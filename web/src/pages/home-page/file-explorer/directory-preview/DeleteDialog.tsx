@@ -1,5 +1,5 @@
 import React from "react";
-import { Button, TextField, Dialog, Icon } from "rmcw";
+import { Button, Dialog, Icon } from "rmcw";
 import { useUuidV4 } from "../Common";
 import { Server } from "../../../../common/Providers";
 import Scaffold from "../../../../components/Scaffold";
@@ -19,27 +19,15 @@ function DeleteDialog({ state, close }: { state: DeleteDialog.State, close: () =
       <form id={id}
         onSubmit={async event => {
           event.preventDefault();
-          for (const { type, path } of state.objects) {
-            if (type !== null && type !== undefined &&
-              path !== null && path !== undefined) {
-              switch (type) {
-                case FileType.file:
-                case FileType.symbolicLink:
-
-                case FileType.directory:
-              }
-            }
-
-          }
           const value = await Promise.all(state.objects.map(async ({ type, path }) => {
             if (path !== null && path !== undefined) {
               switch (type) {
-                case FileType.file:
-                case FileType.symbolicLink: {
+                case FileType.file: {
                   const res = await auth.rest('fs.unlink', [[path]]);
                   if (Rest.isError(res)) return false;
                   return true;
                 }
+                case FileType.symbolicLink:
                 case FileType.directory: {
                   const res = await auth.rest('fs.rm', [[path]]);
                   if (Rest.isError(res)) return false;

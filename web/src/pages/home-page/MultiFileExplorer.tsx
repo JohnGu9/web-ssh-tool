@@ -13,6 +13,7 @@ import Loading from "./file-explorer/Loading";
 import ErrorPreview from "./file-explorer/ErrorPreview";
 import Common from './file-explorer/Common';
 import { SharedAxis, SharedAxisTransform } from "material-design-transform";
+import { AnimatedSize } from "animated-size";
 
 let tag = 0;
 
@@ -20,15 +21,17 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
   constructor(props: MultiFileExplorer.Props) {
     super(props);
     this._controller = new MultiFileExplorer.Controller({ auth: props.auth });
+    this._uploadItems = [];
     this.state = {
       config: { showAll: false, sort: Common.SortType.alphabetically, uploadCompress: false },
-      uploadItems: [],
+      uploadItems: this._uploadItems,
       uploadManagementOpen: false,
     };
   }
   _controller: MultiFileExplorer.Controller;
+  _uploadItems: Common.UploadController[];
   static readonly _worker: Worker = new Worker(
-    new URL('./FileExplorer.worker.js', import.meta.url),
+    new URL('./FileExplorer.worker.ts', import.meta.url),
     { type: 'module', });
   protected _mounted = true;
 
@@ -78,89 +81,135 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
     const { auth } = this.props;
     const abort = new AbortController();
     const target = [...dest, file.name];
-    const cancel = () => {
-      abort.abort();
-      return auth.rest('fs.unlink', [target]);
-    };
-    const createPlaceholderFile = () => auth.rest('fs.writeFile',
-      [target, "# Web-ssh-tool try to create file here. Don't edit, move or delete this file"]);
-    const controller = !this.state.config.uploadCompress ? new Common.UploadController({
-      id: uuid(), file, dest, basename: file.name,
-      upload: async (onUploadProgress, onDownloadProgress, isClosed) => {
-        const result = await createPlaceholderFile();
-        if (isClosed()) return;
-        if (Rest.isError(result)) throw result.error;
-        await auth.upload(file, dest, file.name, {
-          signal: abort.signal,
-          onUploadProgress,
-          onDownloadProgress,
-        });
-      },
-      cancel,
-    }) : new Common.UploadController({
-      id: uuid(), file, dest, basename: file.name,
-      upload: async (onUploadProgress, onDownloadProgress, isClosed) => {
-        const [compressed, result] = await Promise.all([
-          (async () => {
-            // build compress data
-            const buffer = await this._readFileAsArrayBuffer(file);
-            if (buffer && buffer instanceof ArrayBuffer) {
-              return await this._compressFile(buffer);
-            } else {
-              throw new Error(`Read file [${file.name}] failed`);
-            }
-          })(),
-          createPlaceholderFile(),
-        ]);
-        if (isClosed()) return;
-        if (Rest.isError(result)) throw result.error;
 
-        const compressedFile = new File([compressed], file.name);
-        const multer = await auth.upload(compressedFile, dest, null, {
-          signal: abort.signal,
-          onUploadProgress,
-          onDownloadProgress,
-        });
-        if (isClosed()) {
-          await auth.rest('fs.unlink', [[multer.path]]);
-        } else {
-          const unzipResult = await auth.rest('unzip', [multer.path, target]);
-          await auth.rest('fs.unlink', [[multer.path]]);
-          if (Rest.isError(unzipResult)) {
-            await auth.rest('fs.unlink', [target]);
-            throw unzipResult.error;
+    let fileGuard = false;
+    const createPlaceholderFile = async () => {
+      let res = await auth.rest('fs.writeFile',
+        [target, "# Web-ssh-tool try to create file here. Don't edit/move/delete this file"]);
+      if (Rest.isError(res)) {
+      } else {
+        fileGuard = true;
+      }
+      return res;
+    }
+    const releaseFileGuard = async () => {
+      if (fileGuard) {
+        fileGuard = false;
+        console.trace();
+        await auth.rest('fs.unlink', [target]);
+      }
+    };
+
+    const cancel = async () => {
+      abort.abort();
+      releaseFileGuard();
+    };
+
+    const controller = !this.state.config.uploadCompress ?
+      new Common.UploadController({
+        id: uuid(), file, dest, basename: file.name,
+        upload: async (onUploadProgress, onDownloadProgress, isClosed) => {
+          const result = await createPlaceholderFile();
+          if (Rest.isError(result)) throw result.error;
+          if (isClosed()) return await releaseFileGuard();
+          try {
+            await auth.upload(file, dest, file.name, {
+              signal: abort.signal,
+              onUploadProgress,
+              onDownloadProgress,
+            });
+            fileGuard = false;
+          } catch (error) {
+            await releaseFileGuard();
+            throw error;
           }
-        }
-      },
-      cancel,
-    });
+
+        },
+        cancel,
+      }) :
+      new Common.UploadController({
+        id: uuid(), file, dest, basename: file.name,
+        upload: async (onUploadProgress, onDownloadProgress, isClosed) => {
+          const [compressed, result] = await Promise.all([
+            (async () => {
+              // build compress data
+              try {
+                const buffer = await this._readFileAsArrayBuffer(file);
+                if (buffer !== null && buffer instanceof ArrayBuffer) {
+                  return await this._compressFile(buffer);
+                } else {
+                  throw new Error(`Read file [${file.name}] failed`);
+                }
+              } catch (error) {
+                return { error };
+              }
+
+            })(),
+            createPlaceholderFile(),
+          ]);
+          if (Rest.isError(result)) throw result.error;
+          if (isClosed()) return await releaseFileGuard();
+          if ('error' in compressed) {
+            await releaseFileGuard();
+            throw compressed.error;
+          }
+
+          const compressedFile = new File([compressed], file.name);
+          let multer: Express.Multer.File;
+          try {
+            multer = await auth.upload(compressedFile, dest, null, {
+              signal: abort.signal,
+              onUploadProgress,
+              onDownloadProgress,
+            });
+          } catch (error) {
+            await releaseFileGuard();
+            throw error;
+          }
+
+          if (isClosed()) {
+            await Promise.all([
+              releaseFileGuard(),
+              auth.rest('fs.unlink', [[multer.path]]),
+            ]);
+          } else {
+            const unzipResult = await auth.rest('unzip', [multer.path, target]);
+            await auth.rest('fs.unlink', [[multer.path]]);
+            if (Rest.isError(unzipResult)) {
+              await releaseFileGuard();
+              throw unzipResult.error;
+            } else {
+              fileGuard = false;
+            }
+          }
+        },
+        cancel,
+      });
     const listener = () => {
       const { detail: { state } } = controller;
       switch (state) {
         case Common.UploadController.State.close:
           controller.removeEventListener('change', listener);
           if (this._mounted) {
-            const { uploadItems } = this.state;
-            const index = uploadItems.indexOf(controller);
-            if (index > -1) this.setState({
-              uploadItems: [...uploadItems.filter(value => {
-                switch (value.detail.state) {
-                  case Common.UploadController.State.close:
-                    return false;
-                }
-                return true;
-              })]
+            this._uploadItems = this._uploadItems.filter(value => {
+              return value.detail.state !== Common.UploadController.State.close;
             });
+            this.setState({ uploadItems: this._uploadItems });
           }
       }
     }
     controller.addEventListener('change', listener);
-    this.setState({ uploadItems: [...this.state.uploadItems, controller], uploadManagementOpen: true });
+    this._uploadItems.push(controller);
+    this.setState({
+      uploadItems: [...this._uploadItems],
+      uploadManagementOpen: true,
+    });
   }
 
   override componentWillUnmount(): void {
     this._mounted = false;
     this._controller.dispose();
+    this._uploadItems.forEach(v => v.close());
   }
 
   override render() {
@@ -175,6 +224,7 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
         upload: (file, dest) => this._upload(file, dest),
         openUploadManagement: () => this.setState({ uploadManagementOpen: true }),
       }}>
+
         <MyResize>
           <Elevation className='full-size column' depth={2}
             style={{ paddingBottom: 16, }}>
@@ -188,14 +238,44 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
           onEscapeKey={closeUploadManagement}
           title="Upload"
           actions={<>
-            <Button onClick={() => {
-              this.setState({ uploadItems: [] });
-              for (const item of Array.from(uploadItems))
-                item.cleanup();
-            }}>clear all</Button>
+            <Button
+              leading={<Icon>upload</Icon>}
+              onClick={(e) => {
+                e.preventDefault();
+                const input = document.createElement('input');
+                input.type = "file";
+                input.multiple = true;
+                input.onchange = (e) => {
+                  const input = e.target as HTMLInputElement;
+                  const { files } = input;
+                  const { state } = this._controller.state;
+                  console.log(files);
+                  if (files !== null && state !== undefined && typeof state.path === 'string') {
+                    for (let i = 0; i < files.length; i++) {
+                      const file = files.item(i);
+                      if (file !== null) {
+                        this._upload(file, [state.path]);
+                      }
+                    }
+                  }
+                };
+                input.click();
+              }}>Upload local files</Button>
+            <div style={{ flex: 1 }} />
+            <Button
+              disabled={uploadItems.length === 0}
+              onClick={() => {
+                const uploadItems = this._uploadItems;
+                this._uploadItems = [];
+                this.setState({ uploadItems: this._uploadItems });
+                for (const item of Array.from(uploadItems))
+                  item.close();
+              }}>clear all</Button>
             <Button onClick={closeUploadManagement}>close</Button>
           </>}>
-          {uploadItems.length === 0 ? <>No upload task</> : <></>}
+          <AnimatedSize heightFactor={uploadItems.length === 0 ?
+            {} :
+            { size: 0 }}>No upload task</AnimatedSize>
           <AnimatedList>
             {uploadItems.map(value => {
               return {
@@ -205,6 +285,7 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
             })}
           </AnimatedList>
         </Dialog>
+
       </Common.Context.Provider>
     );
   }
@@ -393,7 +474,7 @@ function UploadItem(props: { controller: Common.UploadController }) {
       controller.removeEventListener('upload', onUpload);
     };
   });
-  const { controller: { detail: { file, dest } } } = props;
+  const { controller: { detail: { file, dest, error } } } = props;
   return (
     <ListItem
       graphic={
@@ -428,10 +509,7 @@ function UploadItem(props: { controller: Common.UploadController }) {
 
               }
               case Common.UploadController.State.error: {
-                const { error } = props.controller.detail;
-                return <Tooltip label={error !== undefined ? `${JSON.stringify(error)}` : 'Unknown error'}>
-                  <Icon>error</Icon>
-                </Tooltip>;
+                return <Icon>error</Icon>;
               }
               case Common.UploadController.State.cancel:
                 return <Icon >cancel</Icon>;
@@ -443,7 +521,14 @@ function UploadItem(props: { controller: Common.UploadController }) {
         </SharedAxis>
       }
       primaryText={file.name}
-      secondaryText={dest}
+      secondaryText={(() => {
+        switch (state) {
+          case Common.UploadController.State.error: {
+            return <>{`${error}`}</>;
+          }
+        }
+        return <>{dest}</>;
+      })()}
       meta={
         <SharedAxis
           keyId={state}
@@ -456,7 +541,7 @@ function UploadItem(props: { controller: Common.UploadController }) {
                   <Icon>close</Icon>
                 </IconButton>;
               default:
-                return <IconButton onClick={() => props.controller.cleanup()} >
+                return <IconButton onClick={() => props.controller.close()} >
                   <Icon>close</Icon>
                 </IconButton>;
             }

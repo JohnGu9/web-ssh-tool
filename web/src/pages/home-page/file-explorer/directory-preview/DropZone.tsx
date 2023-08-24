@@ -20,10 +20,11 @@ function DropZone({ children, style, dirname }: { children: React.ReactNode, dir
 
   return <div style={{
     ...style,
-    transition: 'opacity 300ms, border 300ms',
-    boxSizing: 'border-box', position: 'relative',
+    boxSizing: 'border-box',
+    position: 'relative',
     opacity: drag && dragging === null ? 0.5 : 1,
     border: drag && dragging === null ? '3px dotted #666' : '3px dotted rgba(0,0,0,0)',
+    transition: 'opacity 300ms, border 300ms',
   }}
     onDragEnter={event => {
       event.preventDefault();
@@ -53,8 +54,9 @@ function DropZone({ children, style, dirname }: { children: React.ReactNode, dir
     onDrop={event => {
       event.preventDefault();
       setDrag(false);
-      if (dragging !== undefined) return;
-      if (dirname === undefined || dirname === null) return; // @TODO: dialog show error message
+      if (dragging !== null) return; // filter internal drag item
+      // only handle external drag item for upload
+      if (typeof dirname !== 'string') return; // @TODO: dialog show error message
       const { items, files } = event.dataTransfer;
       if (items && items.length > 0 && 'webkitGetAsEntry' in items[0]) {
         try {
@@ -68,8 +70,9 @@ function DropZone({ children, style, dirname }: { children: React.ReactNode, dir
           showMessage({ content: `Upload failed (${error})` });
         }
       }
-      for (let i = 0; i < files.length; i++)
+      for (let i = 0; i < files.length; i++) {
         upload(files[i], [dirname]);
+      }
     }}
   >
     <DropZone.Context.Provider value={{ hovering, dragging, setDragging }}>
@@ -88,16 +91,16 @@ export default DropZone;
 
 async function uploadItem(dest: Rest.PathLike, entry: FileSystemEntry, upload: (file: File, dest: Rest.PathLike) => void, auth: Server.Authentication.Type, depth: number): Promise<unknown> {
   if (entry.isFile) {
-    const file = await new Promise<File>(resolve => (entry as unknown as any).file(resolve));
+    const file = await new Promise<File>((resolve, reject) => (entry as FileSystemFileEntry).file(resolve, reject));
     return upload(file, dest);
   } else if (entry.isDirectory) {
     const MAX_DEPTH = 2;
     if (depth >= MAX_DEPTH) return;
-    const dirReader = (entry as unknown as any).createReader();
+    const dirReader = (entry as FileSystemDirectoryEntry).createReader();
     const newDest = [...dest, entry.name];
     const [result, entries] = await Promise.all([
       auth.rest('fs.mkdir', [newDest]),
-      new Promise<FileSystemEntry[]>(resolve => dirReader.readEntries(resolve)),
+      new Promise<FileSystemEntry[]>((resolve, reject) => dirReader.readEntries(resolve, reject)),
     ]);
     if (Rest.isError(result)) return;
     const list = [];

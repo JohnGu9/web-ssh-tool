@@ -1,5 +1,7 @@
+import { AnimatedSizeBuilder } from "animated-size";
 import React from "react";
-import AnimateHeight from "react-animate-height";
+
+import styles from './AnimatedList.module.css';
 
 class AnimatedList extends React.Component<AnimatedList.Props> {
   constructor(props: AnimatedList.Props) {
@@ -66,25 +68,28 @@ namespace AnimatedList {
 
   export function Wrap(props: {
     children: React.ReactNode,
-    style?: React.CSSProperties,
-    className?: string,
   }) {
-    const { style, className } = props;
+    const { children } = props;
     const { state, duration } = React.useContext(AnimatedList.Context);
-    return <AnimateHeight
-      style={style}
-      className={className}
-      height={(() => {
-        switch (state) {
-          case AnimationState.enter:
-          case AnimationState.exit:
-            return 0;
-          default:
-            return 'auto';
-        }
-      })()} duration={duration}>
-      {props.children}
-    </AnimateHeight>;
+    return <AnimatedSizeBuilder
+      className={styles["wrap-outer"]}
+      heightFactor={{
+        size: (() => {
+          switch (state) {
+            case AnimationState.enter:
+            case AnimationState.exit:
+              return 0;
+            default:
+              return 'auto';
+          }
+        })(),
+        duration,
+      }}
+      builder={function (ref) {
+        return <span ref={ref} className={styles["wrap-inter"]}>
+          {children}
+        </span>;
+      }} />;
   }
 }
 
