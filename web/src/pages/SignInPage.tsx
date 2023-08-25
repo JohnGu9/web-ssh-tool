@@ -9,6 +9,7 @@ import { Rest } from '../common/Type';
 import { wsSafeClose } from '../common/DomTools';
 import Scaffold from '../components/Scaffold';
 import LayoutBuilder from '../components/LayoutBuilder';
+import { decompressAndJson, stringifyAndCompress } from './workers/Compress';
 
 const HomePage = lazy(() => import('./HomePage'));
 HomePage.preload();
@@ -185,9 +186,11 @@ function Title() {
 class Auth implements Server.Authentication.Type {
   constructor(props: { server: Server.Type }) {
     this._ws = props.server.ws;
-    this._ws.addEventListener('message', ({ data }) => {
+    this._ws.addEventListener('message', async ({ data }) => {
       // console.log(data);
-      const { tag, response, event } = JSON.parse(data);
+      const obj = await decodeMessage(data);
+      if (obj === undefined) return;
+      const { tag, response, event } = obj;
       if (tag !== undefined) {
         const callback = this._callbacks.get(tag);
         this._callbacks.delete(tag);
@@ -220,11 +223,12 @@ class Auth implements Server.Authentication.Type {
   })();
 
   async rest<T extends keyof Rest.Map>(type: T, parameter: Rest.Map.Parameter<T>): Promise<Rest.Map.Return<T> | Rest.Error> {
-    return new Promise(resolve => {
+    return new Promise(async resolve => {
       const tag = this._tag++;
       // console.log(`rest ${tag} ${type} ${JSON.stringify(parameter)}`);
       this._callbacks.set(tag, resolve);
-      this._ws.send(JSON.stringify({ tag, request: { [type]: parameter } }));
+      const arr = await encodeMessage({ tag, request: { [type]: parameter } });
+      this._ws.send(arr);
     });
   }
 
@@ -284,4 +288,21 @@ class Auth implements Server.Authentication.Type {
 
   signOut() { wsSafeClose(this.ws) }
 
+}
+
+/// https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/message_event
+export async function decodeMessage(data: any) {
+  if (typeof data === 'string') {
+    return JSON.parse(data);
+  } else if (data instanceof Blob) {
+    return await decompressAndJson(await data.arrayBuffer());
+  } else if (data instanceof ArrayBuffer) {
+    return await decompressAndJson(data);
+  } else {
+    return;
+  }
+}
+
+export async function encodeMessage(obj: any) {
+  return await stringifyAndCompress(obj);
 }

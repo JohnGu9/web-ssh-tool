@@ -25,6 +25,5 @@
     "src"
   ],
   "exclude": [
-    "src/pages/home-page/FileExplorer.worker.ts"
   ]
 }

@@ -4,7 +4,7 @@ import delay from './common/Delay';
 import { wsSafeClose } from './common/DomTools';
 import { LocaleContext, LocaleContextType, LocaleService, Server, SettingsService, ThemeService } from './common/Providers';
 import { SharedAxis, SharedAxisTransform } from 'material-design-transform';
-import SignInPage from './pages/SignInPage';
+import SignInPage, { decodeMessage } from './pages/SignInPage';
 import Scaffold from './components/Scaffold';
 
 function App() {
@@ -27,7 +27,7 @@ function App() {
 
 export default App;
 
-const { host, hostname } = document.location;
+const { host } = document.location;
 
 // const isDebug = process.env.NODE_ENV !== 'production'; // do not export this variable
 // const _ = process.env.NODE_ENV !== 'production' ? fetch(`https://${hostname}:7200/`, { mode: 'cors' }).catch(error => { }) : {};
@@ -49,10 +49,14 @@ class AppServer implements Server.Type {
 
   async signIn(props: { username: string, password: string }): Promise<{ token: string; } | { error: Error; }> {
     const config = { ...props };
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
       const ws = this.ws;
       ws.addEventListener('message',
-        ({ data }) => resolve(JSON.parse(data)), { once: true });
+        async ({ data }) => {
+          let obj = await decodeMessage(data);
+          if (obj === undefined) reject(obj);
+          resolve(obj)
+        }, { once: true });
       ws.send(JSON.stringify(config));
     });
   };

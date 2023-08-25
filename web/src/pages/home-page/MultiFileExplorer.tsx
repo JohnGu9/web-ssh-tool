@@ -14,8 +14,7 @@ import ErrorPreview from "./file-explorer/ErrorPreview";
 import Common from './file-explorer/Common';
 import { SharedAxis, SharedAxisTransform } from "material-design-transform";
 import { AnimatedSize } from "animated-size";
-
-let tag = 0;
+import { compress } from "../workers/Compress";
 
 class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFileExplorer.State>{
   constructor(props: MultiFileExplorer.Props) {
@@ -30,9 +29,6 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
   }
   _controller: MultiFileExplorer.Controller;
   _uploadItems: Common.UploadController[];
-  static readonly _worker: Worker = new Worker(
-    new URL('./FileExplorer.worker.ts', import.meta.url),
-    { type: 'module', });
   protected _mounted = true;
 
   protected _readFileAsArrayBuffer(file: File) {
@@ -45,37 +41,7 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
     });
   }
 
-  protected _compressFile(buffer: ArrayBuffer) {
-    return new Promise<Uint8Array>((resolve, reject) => {
-      const messageTag = tag++;
-      const listener = (msg: MessageEvent) => {
-        const { tag, data, error } = msg.data;
-        if (messageTag === tag) {
-          MultiFileExplorer._worker.removeEventListener('message', listener);
-          if (error) reject(error);
-          else resolve(data);
-        }
-      };
-      MultiFileExplorer._worker.addEventListener('message', listener);
-      MultiFileExplorer._worker.postMessage({ tag: messageTag, requestDeflate: buffer }, [buffer]);
-    });
-  }
 
-  protected _decompressFile(buffer: ArrayBuffer) {
-    return new Promise<Uint8Array>((resolve, reject) => {
-      const messageTag = tag++;
-      const listener = (msg: MessageEvent) => {
-        const { tag, data, error } = msg.data;
-        if (messageTag === tag) {
-          MultiFileExplorer._worker.removeEventListener('message', listener);
-          if (error) reject(error);
-          else resolve(data);
-        }
-      };
-      MultiFileExplorer._worker.addEventListener('message', listener);
-      MultiFileExplorer._worker.postMessage({ tag: messageTag, requestInflate: buffer }, [buffer]);
-    });
-  }
 
   protected _upload(file: File, dest: Rest.PathLike) {
     const { auth } = this.props;
@@ -95,7 +61,6 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
     const releaseFileGuard = async () => {
       if (fileGuard) {
         fileGuard = false;
-        console.trace();
         await auth.rest('fs.unlink', [target]);
       }
     };
@@ -136,7 +101,7 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
               try {
                 const buffer = await this._readFileAsArrayBuffer(file);
                 if (buffer !== null && buffer instanceof ArrayBuffer) {
-                  return await this._compressFile(buffer);
+                  return await compress(buffer);
                 } else {
                   throw new Error(`Read file [${file.name}] failed`);
                 }
@@ -249,7 +214,6 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
                   const input = e.target as HTMLInputElement;
                   const { files } = input;
                   const { state } = this._controller.state;
-                  console.log(files);
                   if (files !== null && state !== undefined && typeof state.path === 'string') {
                     for (let i = 0; i < files.length; i++) {
                       const file = files.item(i);

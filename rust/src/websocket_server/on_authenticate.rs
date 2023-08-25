@@ -1,6 +1,8 @@
 use crate::connection_peer::Client;
 use crate::connection_peer::ClientConnection;
 
+use super::encode_value;
+use super::internal_decompress;
 use super::shell;
 use super::shell::PollChannelData;
 use futures::{channel::mpsc::Receiver, lock::Mutex, stream::SplitSink, SinkExt, StreamExt};
@@ -25,7 +27,7 @@ pub async fn handle_request(
     read.for_each_concurrent(10, |data| async {
         let text = match data {
             Ok(Message::Text(t)) => t,
-            Ok(Message::Binary(bytes)) => match String::from_utf8(bytes) {
+            Ok(Message::Binary(bytes)) => match internal_decompress(&bytes[..]) {
                 Ok(t) => t,
                 Err(_) => return,
             },
@@ -59,14 +61,15 @@ pub async fn handle_request(
                 }
             };
 
+            let msg = encode_value(message);
             let mut write = write.lock().await;
-            let _ = write.send(Message::Text(message.to_string())).await;
+            let _ = write.send(msg).await;
             return;
         }
         // unlikely
-        let response = json!({"error": "message format error"});
+        let msg = encode_value(json!({"error": "message format error"}));
         let mut write = write.lock().await;
-        let _ = write.send(Message::text(response.to_string())).await;
+        let _ = write.send(msg).await;
     })
     .await;
 
@@ -86,10 +89,8 @@ async fn poll_event(
 ) {
     while let Some(event) = event_channel.next().await {
         let mut tx = tx.lock().await;
-        if let Err(_) = tx
-            .send(Message::Text(json!({ "event": event }).to_string()))
-            .await
-        {
+        let msg = encode_value(json!({ "event": event }));
+        if let Err(_) = tx.send(msg).await {
             break;
         }
     }

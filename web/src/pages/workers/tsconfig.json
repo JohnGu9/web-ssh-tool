@@ -7,7 +7,7 @@
         ]
     },
     "include": [
-        "FileExplorer.worker.ts"
+        "Compress.worker.ts",
     ],
     "exclude": [],
 }

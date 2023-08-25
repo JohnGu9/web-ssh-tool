@@ -1,3 +1,5 @@
+use super::encode_value;
+use super::internal_decompress;
 use super::on_authenticate;
 use crate::app_config::AppConfig;
 use crate::connection_peer::Client;
@@ -30,7 +32,7 @@ pub async fn handle_request(
     while let Some(Ok(data)) = ws_stream.next().await {
         let text = match data {
             Message::Text(t) => t,
-            Message::Binary(bytes) => match String::from_utf8(bytes) {
+            Message::Binary(bytes) => match internal_decompress(&bytes[..]) {
                 Ok(t) => t,
                 Err(_) => continue,
             },
@@ -132,7 +134,8 @@ pub async fn handle_request(
                 let message = format!("Authenticate failed ({})", cause);
                 app_config.logger.err(format!("{} for {:?}", message, addr));
                 let response = json!({"error": message});
-                ws_stream.send(Message::text(response.to_string())).await?;
+                let msg = encode_value(response);
+                ws_stream.send(msg).await?;
             }
             Ok(res) => {
                 token_and_connection = Some(res);
@@ -143,7 +146,8 @@ pub async fn handle_request(
 
     if let Some((session, token, client_connection, rx)) = token_and_connection {
         let response = json!({ "token": token });
-        if let Ok(_) = ws_stream.send(Message::text(response.to_string())).await {
+        let msg = encode_value(response);
+        if let Ok(_) = ws_stream.send(msg).await {
             let _ =
                 on_authenticate::handle_request(&token, &client_connection, ws_stream, rx, session)
                     .await;
