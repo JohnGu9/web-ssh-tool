@@ -10,14 +10,16 @@ import FileListTile from "./directory-preview/FileListTile";
 import DropZone from "./directory-preview/DropZone";
 import ToolsBar, { SelectingToolsBar } from "./directory-preview/ToolsBar";
 import FileMoveDialog from "./directory-preview/FileMoveDialog";
+import PreviewDialog from "./directory-preview/PreviewDialog";
 
 function DirectoryPreView({ state }: { state: Watch.Directory }) {
-  const { path, realPath, entries } = state;
+  const { path, entries } = state;
   const { cd, config, uploadItems } = React.useContext(FileExplorer.Context);
   const [onSelecting, setOnSelecting] = React.useState(false);
   const [selected, setSelected] = React.useState(new Set<Lstat>());
-  const [information, setInformation] = React.useState<InformationDialog.State>({ open: false, stats: {} as Lstat, dirname: path ?? "" });
+  const [information, setInformation] = React.useState<InformationDialog.State>({ open: false, stat: {} as Lstat, dirPath: path ?? "" });
   const [fileMove, setFileMove] = React.useState<FileMoveDialog.State>({ open: false, filename: "", path: "", target: "" });
+  const [preview, setPreview] = React.useState<PreviewDialog.State>({ open: false, path: "" });
   const fileList = FileExplorer.sortArray(Object.entries(entries).filter(config.showAll
     ? () => true
     : ([key]) => !key.startsWith('.')), config.sort);
@@ -28,14 +30,14 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
     setSelected(current => {
       const c = Array.from(current);
       return new Set(
-        c.filter(v => e.has(v.path))
-          .map(v => entries[v.basename]));
+        c.filter(v => e.has(v.path) && typeof v.basename === 'string')
+          .map(v => entries[v.basename!]));
     });
     setInformation(current => {
-      if (e.has(current.stats.path)) {
-        const newState = l.find(v => v.path === current.stats.path);
+      if (e.has(current.stat.path)) {
+        const newState = l.find(v => v.path === current.stat.path);
         if (newState !== undefined) {
-          return { ...current, stats: newState };
+          return { ...current, stat: newState };
         }
       }
       return { ...current, open: false };
@@ -43,54 +45,66 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
   }, [entries]);
 
   return (
-    <div className='full-size column' >
-      <SharedAxis className='row' style={{ height: 56, padding: '0 8px 0 0' }}
-        transform={SharedAxisTransform.fromTopToBottom} keyId={onSelecting ? 0 : 1}
-        forceRebuildAfterSwitched={false}>
-        {onSelecting
-          ? <SelectingToolsBar setOnSelect={setOnSelecting} state={state} selected={selected} setSelected={setSelected} />
-          : <ToolsBar stats={state} setOnSelect={setOnSelecting} setInformation={setInformation} setFileMove={setFileMove} />}
-      </SharedAxis>
-      <DropZone style={{ flex: 1, width: '100%', minHeight: 0 }} dirname={path}>
-        {fileList.length === 0 ?
-          <div className='column' style={{ width: '100%', justifyContent: 'center', alignItems: 'center' }}>
-            Nothing here...
-          </div> :
-          <List dirname={path} realPath={realPath}
-            fileList={fileList} cd={cd}
-            selected={selected}
-            setSelected={setSelected}
-            onSelecting={onSelecting}
-            setInformation={setInformation}
-            setFileMove={setFileMove}
-            uploadItems={uploadItems} />}
-      </DropZone>
-      <div style={{ height: 16 }} />
-      {path === undefined || path === null ?
-        <></> : // @TODO: new navigator bar
-        <NavigatorBar path={path} />}
-      <InformationDialog
-        key={information.stats.path}
-        state={information}
-        close={() => setInformation({ ...information, open: false })} />
-      <FileMoveDialog {...fileMove}
-        close={() => setFileMove(v => { return { ...v, open: false } })} />
-    </div>
+    <DirectoryPreView.Context.Provider value={{
+      state,
+      selected, setSelected,
+      onSelecting, setOnSelecting,
+      setInformation, setFileMove, setPreview,
+    }}>
+      <div className='full-size column' >
+        <SharedAxis className='row' style={{ height: 56, padding: '0 8px 0 0' }}
+          transform={SharedAxisTransform.fromTopToBottom} keyId={onSelecting ? 0 : 1}
+          forceRebuildAfterSwitched={false}>
+          {onSelecting
+            ? <SelectingToolsBar />
+            : <ToolsBar />}
+        </SharedAxis>
+        <DropZone style={{ flex: 1, width: '100%', minHeight: 0 }} dirPath={path}>
+          {fileList.length === 0 ?
+            <div className='column' style={{ width: '100%', justifyContent: 'center', alignItems: 'center' }}>
+              Nothing here...
+            </div> :
+            <List fileList={fileList} cd={cd} uploadItems={uploadItems} />}
+        </DropZone>
+        <div style={{ height: 16 }} />
+        {path === undefined || path === null ?
+          <></> : // @TODO: new navigator bar
+          <NavigatorBar path={path} />}
+        <InformationDialog
+          key={information.stat.path}
+          state={information}
+          close={() => setInformation({ ...information, open: false })} />
+        <FileMoveDialog {...fileMove}
+          close={() => setFileMove(v => { return { ...v, open: false } })} />
+        <PreviewDialog state={preview}
+          close={() => setPreview(v => { return { ...v, open: false } })} />
+      </div>
+    </DirectoryPreView.Context.Provider>
   );
+}
+
+namespace DirectoryPreView {
+  export type ContextType = {
+    state: Watch.Directory,
+
+    selected: Set<Lstat>,
+    setSelected: React.Dispatch<React.SetStateAction<Set<Lstat>>>,
+
+    onSelecting: boolean,
+    setOnSelecting: React.Dispatch<React.SetStateAction<boolean>>,
+
+    setInformation: React.Dispatch<React.SetStateAction<InformationDialog.State>>,
+    setFileMove: React.Dispatch<React.SetStateAction<FileMoveDialog.State>>,
+    setPreview: React.Dispatch<React.SetStateAction<PreviewDialog.State>>,
+  };
+  export const Context = React.createContext<ContextType>(undefined as unknown as ContextType);
 }
 
 export default DirectoryPreView;
 
 class List extends React.Component<{
-  dirname: string | null | undefined,
-  realPath: string | null | undefined,
   fileList: [string, Lstat][],
-  selected: Set<Lstat>,
-  setSelected: (value: Set<Lstat>) => unknown,
-  onSelecting: boolean,
   cd: (value: string | null) => unknown,
-  setInformation: (value: InformationDialog.State) => unknown,
-  setFileMove: (value: FileMoveDialog.State) => unknown,
   uploadItems: FileExplorer.UploadController[],
 }> {
 
@@ -106,7 +120,7 @@ class List extends React.Component<{
   builder = ({ index, style }: { index: number, style?: React.CSSProperties }) => {
     return <EventListenerBuilder eventName='change' eventTarget={this.eventTarget}
       builder={() => {
-        const { dirname, fileList, selected, setSelected, onSelecting, cd, setInformation, setFileMove } = this.props;
+        const { fileList, cd } = this.props;
         if (index >= fileList.length) return <React.Fragment key={index}></React.Fragment>;
         const [key, value] = fileList[index];
         const { path } = value;
@@ -115,28 +129,11 @@ class List extends React.Component<{
           style={style}
           uploading={this.props.uploadItems.find(v => {
             return false; // @TODO: detect uploading status
-            // return (v.detail.dest === dirname || v.detail.dest === realPath) && v.detail.basename === basename;
+            // return (v.detail.dest === path || v.detail.dest === realPath) && v.detail.basename === basename;
           }) !== undefined}
-          onSelecting={onSelecting}
-          selected={selected.has(value)}
-          onSelected={v => {
-            if (v) {
-              selected.add(value);
-              setSelected(new Set(selected));
-            } else {
-              selected.delete(value);
-              setSelected(new Set(selected));
-            }
-          }}
           name={key}
           stats={value}
-          onClick={path === undefined ? undefined : () => cd(path)}
-          onDetail={(stats) => {
-            if (dirname !== undefined && dirname !== null) {
-              setInformation({ open: true, stats, dirname });
-            }
-          }}
-          onFileMove={(filename, path, target) => setFileMove({ open: true, filename, path, target })} />;
+          onClick={path === undefined ? undefined : () => cd(path)} />;
       }} />;
   }
 

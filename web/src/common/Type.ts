@@ -55,7 +55,7 @@ export namespace Rest {
 }
 
 export type Lstat = {
-  type?: FileType | null, path?: string | null, basename: string, size?: number,
+  type?: FileType | null, path?: string | null, basename?: string | null, size?: number,
   createdTime?: string | null, accessedTime?: string | null, modifiedTime?: string | null,
   realPath?: string | null, realType?: FileType | null,
   parent?: string | null,

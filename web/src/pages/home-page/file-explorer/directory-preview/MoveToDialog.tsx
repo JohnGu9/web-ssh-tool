@@ -15,7 +15,7 @@ function MoveToDialog({ state, close }: { state: MoveToDialog.State, close: () =
     onSubmit={async (newPath) => {
       const value = await Promise.all(state.objects.map(async value => {
         const { type, path, basename } = value;
-        if (path === undefined || path === null) {
+        if (path === undefined || path === null || basename === undefined || basename === null) {
           return false;
         }
         switch (type) {

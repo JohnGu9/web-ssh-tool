@@ -1,4 +1,4 @@
-import pako from 'pako';
+import { deflate, inflate, stringifyAndDeflate, inflateAndJson } from "./CompressCommon.ts";
 
 /*eslint no-restricted-globals: "off"*/
 self.onmessage = msg => {
@@ -30,40 +30,9 @@ self.onmessage = msg => {
     } catch (error) {
       self.postMessage({ tag, error });
     }
+    return;
   }
   self.postMessage({ tag, error: new Error("Unknown request") });
 
 }
 
-function deflate(arr: ArrayBuffer) {
-  return pako.gzip(new Uint8Array(arr)).buffer;
-}
-
-function inflate(arr: ArrayBuffer) {
-  return pako.ungzip(new Uint8Array(arr)).buffer;
-}
-
-function stringifyAndDeflate(obj: any) {
-  const str = JSON.stringify(obj);
-  const buf = utf8TextEncode(str);
-  const arr = deflate(buf.buffer);
-  return arr;
-}
-
-function inflateAndJson(arr: ArrayBuffer) {
-  const buf = inflate(arr);
-  const str = utf8TextDecode(buf);
-  const obj = JSON.parse(str);
-  return obj;
-}
-
-const Utf8TextEncoder = new TextEncoder();// always utf-8
-const Utf8TextDecoder = new TextDecoder("utf-8");
-
-export function utf8TextEncode(input: string) {
-  return Utf8TextEncoder.encode(input);
-}
-
-export function utf8TextDecode(buffer: ArrayBuffer) {
-  return Utf8TextDecoder.decode(buffer);
-}

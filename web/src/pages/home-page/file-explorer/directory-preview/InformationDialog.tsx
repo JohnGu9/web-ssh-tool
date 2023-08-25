@@ -19,9 +19,9 @@ function InformationDialog({ state, close }: {
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
   const onError = (error: any) => showMessage({ content: `Delete failed (${error})`, action: <Button label="close" /> });
   const onDeleted = (path: string) => showMessage({ content: `Deleted (${path})`, action: <Button label="close" /> });
-  const { type, size, path, basename, entries, ...stats } = state.stats as Watch.Directory;
+  const { type, size, path, basename, entries, ...stats } = state.stat as Watch.Directory;
 
-  const [rename, setRename] = React.useState<RenameDialog.State>({ open: false, dirname: state.dirname, file: state.stats });
+  const [rename, setRename] = React.useState<RenameDialog.State>({ open: false, dirPath: state.dirPath, file: state.stat });
   const closeRename = () => setRename(v => { return { ...v, open: false } });
 
   return (
@@ -33,7 +33,7 @@ function InformationDialog({ state, close }: {
         fullscreen
         actions={<>
           {(() => {
-            const { stats: { type, path } } = state;
+            const { stat: { type, path } } = state;
             if (path === undefined || path === null) {
               return (<Button
                 leading={<Icon>delete</Icon>}
@@ -59,7 +59,7 @@ function InformationDialog({ state, close }: {
           })()}
           <div style={{ minWidth: 32, flex: 1 }} />
           {(() => {
-            const { type, path } = state.stats;
+            const { type, path } = state.stat;
             if (path !== undefined && path !== null)
               switch (type) {
                 case FileType.file:
@@ -85,9 +85,9 @@ function InformationDialog({ state, close }: {
           <Button onClick={close} label='close' />
         </>}>
         <div style={{ margin: '16px 0 8px', opacity: 0.5 }}>Basic</div>
-        <div><Typography.Button className={styles.title}>path</Typography.Button>: {path}</div>
-        <div><Typography.Button className={styles.title}>basename</Typography.Button>: {basename}</div>
-        {type === undefined ? <></> : <Typography.Button className={styles.title}>type: {type}</Typography.Button>}
+        <div><Typography.Button className={styles.title}>path</Typography.Button>: {path ?? '<UNKNOWN>'}</div>
+        <div><Typography.Button className={styles.title}>basename</Typography.Button>: {basename ?? '<UNKNOWN>'}</div>
+        {type === undefined ? <></> : <Typography.Button className={styles.title}>type: {type ?? '<UNKNOWN>'}</Typography.Button>}
         {(() => {
           if (entries !== undefined) {
             return <div><Typography.Button className={styles.title}>file amount</Typography.Button>: {Object.entries(entries).length}</div>
@@ -119,8 +119,8 @@ function InformationDialog({ state, close }: {
 namespace InformationDialog {
   export type State = {
     open: boolean,
-    dirname: string,
-    stats: Watch.Directory | Watch.File,
+    dirPath: string,
+    stat: Watch.Directory | Watch.File,
   };
 }
 
@@ -143,9 +143,9 @@ function DeleteButton({ onLongPress }: { onLongPress: () => unknown }) {
     tooltip='Long press to delete' />;
 }
 
-function RenameDialog({ state: { file, dirname, open }, close, onRenamed }: { state: RenameDialog.State, close: () => unknown, onRenamed: () => unknown }) {
+function RenameDialog({ state: { file, dirPath, open }, close, onRenamed }: { state: RenameDialog.State, close: () => unknown, onRenamed: () => unknown }) {
   const auth = React.useContext(Server.Authentication.Context);
-  const [value, setValue] = React.useState(file.basename);
+  const [value, setValue] = React.useState(file.basename ?? "");
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
   const id = useUuidV4();
 
@@ -164,7 +164,7 @@ function RenameDialog({ state: { file, dirname, open }, close, onRenamed }: { st
             const newName = value;
             if (currentPath === undefined || currentPath === null) return showMessage({ content: "Error (File name isn't supported)" });
             if (newName.length === 0) return showMessage({ content: "Error (File name can't be empty)" });
-            const target = [dirname, newName];
+            const target = [dirPath, newName];
             const result = await auth.rest('fs.rename', [[currentPath], target]);
             if (Rest.isError(result)) return showMessage({ content: `${result.error}` });
             close();
@@ -181,7 +181,7 @@ function RenameDialog({ state: { file, dirname, open }, close, onRenamed }: { st
           const newName = value;
           if (currentPath === undefined || currentPath === null) return showMessage({ content: "Error (File name isn't supported)" });
           if (newName.length === 0) return showMessage({ content: "Error (File name can't be empty)" });
-          const target = [dirname, newName];
+          const target = [dirPath, newName];
           const exists = await auth.rest('fs.exists', [target]);
           if (Rest.isError(exists)) return showMessage({ content: `${exists.error}` });
           if (exists) return showMessage({ content: `Error (File [${target}] already exists)` });
@@ -199,7 +199,7 @@ function RenameDialog({ state: { file, dirname, open }, close, onRenamed }: { st
 namespace RenameDialog {
   export type State = {
     open: boolean,
-    dirname: string,
+    dirPath: string,
     file: Lstat,
   };
 }

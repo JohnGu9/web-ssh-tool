@@ -2,7 +2,7 @@ import React from "react";
 import { Elevation, LinearProgress, CircularProgress, IconButton, Icon, Tooltip, Dialog, Button, ListItem } from 'rmcw';
 import { v1 as uuid } from 'uuid';
 
-import { FileSize } from "../../common/Tools";
+import { FileSize, delay } from "../../common/Tools";
 import { Server, Settings } from "../../common/Providers";
 import { Rest, Watch } from "../../common/Type";
 import AnimatedList from "../../components/AnimatedList";
@@ -16,10 +16,13 @@ import { SharedAxis, SharedAxisTransform } from "material-design-transform";
 import { AnimatedSize } from "animated-size";
 import { compress } from "../workers/Compress";
 
+// @TODO: real multi explorer support
+
 class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFileExplorer.State>{
   constructor(props: MultiFileExplorer.Props) {
     super(props);
     this._controller = new MultiFileExplorer.Controller({ auth: props.auth });
+    this._controller.addEventListener('close', this._onExplorerControllerClose.bind(this));
     this._uploadItems = [];
     this.state = {
       config: { showAll: false, sort: Common.SortType.alphabetically, uploadCompress: false },
@@ -31,6 +34,16 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
   _uploadItems: Common.UploadController[];
   protected _mounted = true;
 
+  protected async _onExplorerControllerClose() {
+    this._controller.dispose();
+    if (this._mounted) {
+      await delay(1000);
+      this._controller = new MultiFileExplorer.Controller({ auth: this._controller.auth });
+      this._controller.addEventListener('close', this._onExplorerControllerClose.bind(this));
+      this.setState({});
+    }
+  }
+
   protected _readFileAsArrayBuffer(file: File) {
     return new Promise<string | ArrayBuffer | null | undefined>((resolve, reject) => {
       const reader = new FileReader();
@@ -40,8 +53,6 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
       reader.readAsArrayBuffer(file);
     });
   }
-
-
 
   protected _upload(file: File, dest: Rest.PathLike) {
     const { auth } = this.props;
@@ -274,12 +285,9 @@ namespace MultiFileExplorer {
     constructor({ auth }: { auth: Server.Authentication.Type }) {
       super();
       this.auth = auth;
-      this.addEventListener('close', () => {
-        this.auth.watch.removeEventListener(this.id, this._listener);
-        this.closed = true;
-      }, { once: true });
       this.open();
     }
+
     readonly auth: Server.Authentication.Type;
     readonly id = uuid();
 
@@ -315,7 +323,6 @@ namespace MultiFileExplorer {
     }
 
     protected readonly _listener = (event: Event) => {
-
       const { detail } = event as CustomEvent;
       if ('close' in detail) this.dispatchEvent(new Event('close'));
       else {
@@ -332,6 +339,10 @@ namespace MultiFileExplorer {
     }
 
     protected async open() {
+      this.addEventListener('close', () => {
+        this.auth.watch.removeEventListener(this.id, this._listener);
+        this.closed = true;
+      }, { once: true });
       this.auth.watch.addEventListener(this.id, this._listener);
       const result = await this.auth.rest('watch', this.id);
       if (Rest.isError(result)) this.dispatchEvent(new Event('close'));

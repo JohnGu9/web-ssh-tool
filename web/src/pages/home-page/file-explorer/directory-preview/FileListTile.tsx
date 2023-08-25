@@ -4,19 +4,16 @@ import { FileType, Lstat } from "../../../../common/Type";
 import { SharedAxis, SharedAxisTransform } from 'material-design-transform';
 import DropZone from "./DropZone";
 import { Server } from "../../../../common/Providers";
+import DirectoryPreView from "../DirectoryPreview";
 
-function FileListTile({ name, stats, uploading, selected, onSelecting, onClick, onSelected, onDetail, onFileMove, style }: {
+function FileListTile({ name, stats, uploading, onClick, style }: {
   name: string,
   stats: Lstat,
   uploading: boolean,
-  selected: boolean,
-  onSelecting: boolean,
   onClick: (() => unknown) | undefined, // cd
-  onSelected: ((selected: boolean) => unknown) | undefined,
-  onDetail: (stats: Lstat) => unknown,
-  onFileMove: (filename: string, path: string, target: string) => unknown,
   style?: React.CSSProperties,
 }) {
+  const { state, selected, setSelected, onSelecting, setInformation, setFileMove, setPreview } = React.useContext(DirectoryPreView.Context);
   const { hovering, dragging, setDragging } = React.useContext(DropZone.Context);
   const auth = React.useContext(Server.Authentication.Context);
   const [hover, setHover] = React.useState(false);
@@ -43,6 +40,9 @@ function FileListTile({ name, stats, uploading, selected, onSelecting, onClick, 
   const onHovering = isDirectory &&
     hovering instanceof HTMLLIElement &&
     hovering.dataset['dropzone'] === path;
+
+  const extension = fileExtension(name, stats.type);
+
   return <ListItem
     style={{
       ...style,
@@ -69,7 +69,7 @@ function FileListTile({ name, stats, uploading, selected, onSelecting, onClick, 
       if (stats.path === path) return;
       if (stats.path === undefined || stats.path === null) return;
       if (path.length !== 0 && filename.length !== 0) {
-        onFileMove(filename, path, stats.path);
+        setFileMove({ open: true, filename, path, target: stats.path });
       }
     } : undefined}
     graphic={<SharedAxis
@@ -79,15 +79,16 @@ function FileListTile({ name, stats, uploading, selected, onSelecting, onClick, 
       className='column'
       style={{ justifyContent: 'center', alignItems: 'center' }}>
       {onSelecting
-        ? <Checkbox readOnly checked={selected} style={{ height: 24 }}></Checkbox>
-        : <Icon>{uploading ? 'file_upload' : FileIcon(name, stats)}</Icon>}
+        ? <Checkbox readOnly checked={selected.has(stats)} style={{ height: 24 }}></Checkbox>
+        : <Icon>{uploading ? 'file_upload' : FileIcon(stats, extension)}</Icon>}
     </SharedAxis>}
     primaryText={<div style={{ flex: 1, minWidth: 0, overflowX: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>}
     meta={<IconButton
       style={{ opacity: hover ? 1 : 0, transition: 'opacity 300ms' }}
       onClick={event => {
         event.stopPropagation();
-        onDetail(stats);
+        if (typeof state.path === 'string')
+          setInformation({ open: true, stat: stats, dirPath: state.path });
       }} >
       <Icon>more_horiz</Icon>
     </IconButton>}
@@ -95,12 +96,20 @@ function FileListTile({ name, stats, uploading, selected, onSelecting, onClick, 
       ? undefined
       : (onSelecting
         ? () => {
-          onSelected?.(!selected);
+          setSelected(v => {
+            const success = v.delete(stats);
+            if (!success) v.add(stats);
+            return v;
+          });
         }
         : () => {
           if (isFile) {
             if (typeof stats.path === 'string') {
-              auth.preview(stats.path);
+              if (checkTypeSupport(extension)) {
+                auth.preview(stats.path);
+              } else {
+                setPreview({ open: true, path: stats.path })
+              }
               return;
             }
           }
@@ -111,29 +120,85 @@ function FileListTile({ name, stats, uploading, selected, onSelecting, onClick, 
     onMouseLeave={() => setHover(false)} />
 }
 
-function FileIcon(name: string, { type }: { type?: FileType | null, }) {
+function fileExtension(name: string, type?: FileType | null) {
+  if (type !== FileType.file) return;
+  const chips = name.split('.').filter(value => value.length > 0);
+  if (chips.length > 1) return chips[chips.length - 1];
+}
+
+function checkTypeSupport(extension?: string) {
+  if (extension === undefined) return true;
+  switch (extension.toLowerCase()) {
+    // audio
+    case 'mp3':
+    case 'wav':
+    case 'ogg':
+      return true;
+    // video
+    case 'mp4':
+    case 'webm':
+      return true;
+    // text
+    case 'txt':
+    case 'pdf':
+      return true;
+    // image
+    case 'apng':
+    case 'avif':
+    case 'jpg':
+    case 'jpeg':
+    case 'pjpeg':
+    case 'jfif':
+    case 'pjp':
+    case 'png':
+    case 'svg':
+    case 'webp':
+    case 'tif':
+    case 'tiff':
+    case 'ico':
+    case 'cur':
+    case 'bmp':
+    case 'gif':
+      return true;
+
+  }
+  return false;
+}
+
+function FileIcon({ type }: { type?: FileType | null, }, extension?: string) {
   switch (type) {
     case FileType.directory:
       return 'folder';
     case FileType.file: {
-      const chips = name.split('.').filter(value => value.length > 0);
-      if (chips.length > 1) {
-        const last = chips[chips.length - 1];
-        switch (last.toLowerCase()) {
+      if (extension !== undefined) {
+        switch (extension.toLowerCase()) {
+          case 'apng':
+          case 'avif':
           case 'jpg':
           case 'jpeg':
+          case 'pjpeg':
+          case 'jfif':
+          case 'pjp':
           case 'png':
           case 'svg':
+          case 'webp':
           case 'tif':
           case 'tiff':
+          case 'ico':
+          case 'cur':
           case 'bmp':
           case 'gif':
           case 'raw':
             return 'image';
+          case 'mp3':
+          case 'wav':
+          case 'ogg':
+            return 'headphones';
           case 'mp4':
           case 'flv':
           case 'avi':
           case 'mkv':
+          case 'webm':
             return 'videocam';
           case 'zip':
           case '7z':

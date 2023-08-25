@@ -9,17 +9,14 @@ import MoveToDialog from "./MoveToDialog";
 import { NewDirectoryDialog, NewFileDialog } from "./NewDialog";
 import DeleteDialog from "./DeleteDialog";
 import InformationDialog from "./InformationDialog";
-import FileMoveDialog from "./FileMoveDialog";
+import DirectoryPreView from "../DirectoryPreview";
 
-function ToolsBar({ stats, setOnSelect, setInformation, setFileMove }: {
-  stats: Watch.Directory,
-  setOnSelect: (value: boolean) => unknown,
-  setInformation: (value: InformationDialog.State) => unknown,
-  setFileMove: (value: FileMoveDialog.State) => unknown,
-}) {
+function ToolsBar() {
+  const { state, setOnSelecting, setInformation, setFileMove } = React.useContext(DirectoryPreView.Context);
+
   const { cdToParent } = React.useContext(FileExplorer.Context);
   const { themeData: theme } = React.useContext(ThemeContext);
-  const { parent } = stats;
+  const { parent } = state;
   const hasParent = parent !== null && parent !== undefined;
   return (
     <>
@@ -47,9 +44,9 @@ function ToolsBar({ stats, setOnSelect, setInformation, setFileMove }: {
         <Icon>arrow_back</Icon>
       </IconButton>
       <div className='expanded' />
-      <MoreButton stats={stats} setInformation={setInformation} />
+      <MoreButton stats={state} setInformation={setInformation} />
       <UploadManagementButton />
-      <CheckListButton setOnSelect={setOnSelect} />
+      <CheckListButton setOnSelect={setOnSelecting} />
     </>
   );
 }
@@ -105,7 +102,7 @@ function MoreButton({ stats, setInformation }: {
               meta={<Icon>info</Icon>}
               onClick={e => {
                 e.preventDefault();
-                setInformation({ open: true, dirname: parent, stats })
+                setInformation({ open: true, dirPath: parent, stat: stats })
               }} /> :
             <ListItem
               primaryText="About Directory"
@@ -165,7 +162,8 @@ function CheckListButton({ setOnSelect }: { setOnSelect: (value: boolean) => unk
   );
 }
 
-export function SelectingToolsBar({ state: { path: dir, entries }, selected, setSelected, setOnSelect }: { state: Watch.Directory, selected: Set<Lstat>, setSelected: (value: Set<Lstat>) => unknown, setOnSelect: (value: boolean) => unknown }) {
+export function SelectingToolsBar() {
+  const { state: { path: dir, entries }, selected, setSelected, setOnSelecting, } = React.useContext(DirectoryPreView.Context);
   const selectedList = Array.from(selected);
   const entriesList = Object.entries(entries);
   const checked = (() => {
@@ -200,7 +198,7 @@ export function SelectingToolsBar({ state: { path: dir, entries }, selected, set
         objects={selectedList} />
       <DeleteButton objects={selectedList} />
       <div className='expanded' />
-      <IconButton onClick={() => setOnSelect(false)} >
+      <IconButton onClick={() => setOnSelecting(false)} >
         <Icon>close</Icon>
       </IconButton>
     </>

@@ -4,7 +4,7 @@ import { Rest } from "../../../../common/Type";
 import FileExplorer from "../Common";
 import Scaffold from "../../../../components/Scaffold";
 
-function DropZone({ children, style, dirname }: { children: React.ReactNode, dirname: string | null | undefined, style?: React.CSSProperties }) {
+function DropZone({ children, style, dirPath }: { children: React.ReactNode, dirPath: string | null | undefined, style?: React.CSSProperties }) {
   const { upload } = React.useContext(FileExplorer.Context);
   const [drag, setDrag] = React.useState(false);
   const [dragging, setDragging] = React.useState<unknown | null>(null); // when any element is dragging
@@ -56,13 +56,13 @@ function DropZone({ children, style, dirname }: { children: React.ReactNode, dir
       setDrag(false);
       if (dragging !== null) return; // filter internal drag item
       // only handle external drag item for upload
-      if (typeof dirname !== 'string') return; // @TODO: dialog show error message
+      if (typeof dirPath !== 'string') return; // @TODO: dialog show error message
       const { items, files } = event.dataTransfer;
       if (items && items.length > 0 && 'webkitGetAsEntry' in items[0]) {
         try {
           for (let i = 0; i < items.length; i++) {
             const entry = items[i].webkitGetAsEntry();
-            if (entry) uploadItem([dirname], entry, upload, auth, 0);
+            if (entry) uploadItem([dirPath], entry, upload, auth, 0);
           }
           return;
         } catch (error) {
@@ -71,7 +71,7 @@ function DropZone({ children, style, dirname }: { children: React.ReactNode, dir
         }
       }
       for (let i = 0; i < files.length; i++) {
-        upload(files[i], [dirname]);
+        upload(files[i], [dirPath]);
       }
     }}
   >
