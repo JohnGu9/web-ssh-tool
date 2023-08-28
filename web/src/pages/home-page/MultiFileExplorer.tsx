@@ -377,11 +377,20 @@ namespace MultiFileExplorer {
         controller.removeEventListener('change', listener);
       };
     }, [controller]);
+
+    const keyId = (() => {
+      const path = state?.path;
+      if (state === undefined) return `0${path}`;
+      else if ('error' in state) return `1${path}`;
+      else if ('entries' in state) return `2${path}`;
+      return `3${path}`;
+    })();
+
     return (
       <SharedAxis
         className='full-size'
         transform={transitionStyle.t}
-        keyId={state?.path}
+        keyId={keyId}
         style={{
           pointerEvents: loading ? 'none' : 'auto',
           position: 'relative'

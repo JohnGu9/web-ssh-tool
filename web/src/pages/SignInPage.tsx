@@ -69,7 +69,7 @@ class Content extends React.Component<Content.Props, Content.State> {
   }
 
   override render() {
-    const { settings, locale: { locale } } = this.props;
+    const { settings, locale: { meta } } = this.props;
     const { auth, loading, visibility } = this.state;
     return (
       <>
@@ -89,20 +89,20 @@ class Content extends React.Component<Content.Props, Content.State> {
               <Card style={{ width: '360px', minWidth: 0, padding: '24px', paddingTop: '8px' }}
                 actionButtons={<>
                   <Button buttonStyle='raised' type='submit' autoFocus
-                    label={locale.next} disabled={loading} form="sign-in" />
+                    label={meta.next} disabled={loading} form="sign-in" />
                 </>}>
                 <form id="sign-in" onSubmit={event => {
                   event.preventDefault();
                   this._submit();
                 }}>
-                  <Typography.Headline5>{locale.signIn}</Typography.Headline5>
+                  <Typography.Headline5>{meta.signIn}</Typography.Headline5>
                   <div style={{ height: '16px' }} />
                   <TextField ref={this._usernameRef}
                     outlined
                     type='text'
                     name='username'
                     style={{ width: '100%' }}
-                    label={locale.username}
+                    label={meta.username}
                     value={this.state.username}
                     onChange={(e) => this.setState({ username: e.target.value })}
                     onFocus={e => e.target.select()}
@@ -113,7 +113,7 @@ class Content extends React.Component<Content.Props, Content.State> {
                     type={visibility !== null ? 'text' : 'password'}
                     name='password'
                     style={{ width: '100%' }}
-                    label={locale.password}
+                    label={meta.password}
                     value={this.state.password}
                     trailingIcon={<IconButton
                       type='button'
@@ -138,7 +138,7 @@ class Content extends React.Component<Content.Props, Content.State> {
                   <FormField input={<Checkbox
                     checked={settings.keepSignIn}
                     onChange={() => settings.setKeepSignIn(!settings.keepSignIn)} />
-                  }>{locale.keepSignIn}</FormField>
+                  }>{meta.keepSignIn}</FormField>
                   <div style={{ height: '48px' }} />
                 </form>
               </Card>

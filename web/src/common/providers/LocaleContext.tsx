@@ -30,7 +30,7 @@ const english = {
 
 const defaultLocale = {
   name: 'English',
-  locale: english,
+  meta: english,
   toggle: (_: string) => { }
 }
 export type LocaleContextType = typeof defaultLocale;
@@ -57,7 +57,7 @@ export namespace LocaleService {
       default:
         return {
           name: 'English',
-          locale: english,
+          meta: english,
         };
     }
   }

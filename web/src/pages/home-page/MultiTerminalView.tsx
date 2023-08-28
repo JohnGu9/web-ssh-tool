@@ -7,17 +7,20 @@ import { Rest } from '../../common/Type';
 import XTerminal from "../../components/XTerminal";
 import { SharedAxis, SharedAxisTransform, FadeThrough } from 'material-design-transform';
 import { FixedSizeList } from "../../components/AdaptedWindow";
+import iconv from 'iconv-lite';
+import { Buffer } from 'buffer';
 
 class MultiTerminalView extends React.Component<MultiTerminalView.Props, MultiTerminalView.State> {
-  constructor(props: any) {
+  constructor(props: MultiTerminalView.Props) {
     super(props);
-    this._controllers = [new MultiTerminalView.Controller({ auth: props.auth, id: MultiTerminalView.makeId(4) })];
+    this._controllers = [new MultiTerminalView.Controller({ auth: props.auth, id: MultiTerminalView.makeId(4), textDecoder: this._textDecoder })];
     this.state = {
       controller: this._controllers[0],
       controllers: this._controllers
     };
   }
   protected _controllers: Array<MultiTerminalView.Controller>;
+  protected _textDecoder = () => this.props.textDecoder;
 
   static makeId(length: number) {
     let result = '';
@@ -42,7 +45,7 @@ class MultiTerminalView extends React.Component<MultiTerminalView.Props, MultiTe
   add() {
     const id = this.makeUniqueId(4);
     if (id === undefined) return;
-    const newClient = new MultiTerminalView.Controller({ auth: this.props.auth, id });
+    const newClient = new MultiTerminalView.Controller({ auth: this.props.auth, id, textDecoder: this._textDecoder });
     this._controllers.push(newClient);
     this.setState({
       controllers: this._controllers,
@@ -105,21 +108,29 @@ class MultiTerminalView extends React.Component<MultiTerminalView.Props, MultiTe
 }
 
 namespace MultiTerminalView {
-  export type Props = { auth: Server.Authentication.Type };
+  export type Props = {
+    auth: Server.Authentication.Type,
+    textDecoder: string,
+  };
   export type State = {
     controller?: MultiTerminalView.Controller,
     controllers: MultiTerminalView.Controller[],
   }
   export class Controller extends EventTarget {
-    constructor({ auth, id }: { auth: Server.Authentication.Type, id: string }) {
+    constructor({ auth, id, textDecoder }: { auth: Server.Authentication.Type, id: string, textDecoder: () => string }) {
       super();
+      this.textDecoder = textDecoder;
       this.id = id;
       this.auth = auth;
-      this.xterm.onData(data => this.auth.rest('shell', { id: this.id, data }));
+      this.xterm.onData(data => {
+        const encode = iconv.encode(data, this.textDecoder());
+        this.auth.rest('shell', { id: this.id, data: Array.from(encode) });
+      });
       this.auth.shell.addEventListener(this.id, this._listener);
       this.onClose.addEventListener('close', () => {
         this.auth.shell.removeEventListener(this.id, this._listener);
         this.closed = true;
+        textDecoder = function () { } as () => string;
       }, { once: true });
       this.open();
     }
@@ -129,6 +140,7 @@ namespace MultiTerminalView {
     readonly onClose = new (class extends EventTarget {
       invoke() { this.dispatchEvent(new Event('close')) }
     })();
+    textDecoder: () => string;
 
     title = "Terminal";
     protected _titleListener = this.xterm.onTitleChange((title) => {
@@ -161,8 +173,9 @@ namespace MultiTerminalView {
       if ('close' in detail) {
         this.onClose.invoke();
       } else if ('data' in detail) {
-        const data = Uint8Array.from(atob(detail.data), c => c.charCodeAt(0));
-        this.xterm.write(data);
+        const data = Buffer.from(detail.data as number[]);
+        const text = iconv.decode(data, this.textDecoder());
+        this.xterm.write(text);
       }
     }
 
@@ -183,7 +196,9 @@ function MoreButton() {
 
   const [open, setOpen] = React.useState(false);
   const [openDialog, setOpenDialog] = React.useState(false);
+  const [openTextDecode, setOpenTextDecode] = React.useState(false);
   const close = () => setOpenDialog(false);
+  const closeTextDecode = () => setOpenTextDecode(false);
   React.useEffect(() => {
     if (open) {
       const i = () => { setOpen(false) };
@@ -216,6 +231,10 @@ function MoreButton() {
           onClick={() => settings.setDarkMode('dark')}
         />
         <ListDivider />
+        <ListItem
+          graphic={<Icon>tag</Icon>}
+          primaryText="SSH Text Decode"
+          onClick={() => setOpenTextDecode(true)} />
         <ListItem
           graphic={<Icon>terminal</Icon>}
           primaryText="System SSH Tool"
@@ -258,10 +277,58 @@ function MoreButton() {
           <License />
         </div>
       </Dialog>
+      <Dialog open={openTextDecode}
+        onScrimClick={closeTextDecode}
+        onEscapeKey={closeTextDecode}
+        title="Text Decode"
+        fullscreen
+        actions={<Button onClick={closeTextDecode} label='close' />}>
+        <ListItem primaryText='utf-8' meta={<Radio checked={settings.textDecode === 'utf-8' || settings.textDecode === null} />}
+          onClick={() => settings.setTextDecode(null)} />
+        {[ // https://developer.mozilla.org/en-US/docs/Web/API/Encoding_API/Encodings
+          'utf-16be',
+          'utf-16le',
+          'ascii',
+          'macintosh',
+          'iso-8859-2',
+          'iso-8859-3',
+          'iso-8859-4',
+          'iso-8859-5',
+          'iso-8859-6',
+          'iso-8859-7',
+          'iso-8859-8',
+          'iso-8859-10',
+          'iso-8859-13',
+          'iso-8859-14',
+          'iso-8859-15',
+          'iso-8859-16',
+          'koi8-r',
+          'koi8-u',
+          'windows-874',
+          'windows-1250',
+          'windows-1251',
+          'windows-1253',
+          'windows-1254',
+          'windows-1255',
+          'windows-1256',
+          'windows-1257',
+          'windows-1258',
+          'gbk',
+          'gb18030',
+          'big5',
+          'euc-jp',
+          'shift-jis',
+          'euc-kr',
+        ].map((v, index) => {
+          return <ListItem key={index} primaryText={v} meta={<Radio checked={settings.textDecode === v} />}
+            onClick={() => settings.setTextDecode(v)} />;
+        })}
+      </Dialog>
     </Menu>
 
   );
 }
+
 
 function XTerminalView({ controller, remove }: {
   controller: MultiTerminalView.Controller,

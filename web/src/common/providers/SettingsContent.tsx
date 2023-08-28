@@ -19,6 +19,8 @@ export namespace Settings {
     lastPath: string | null,
     setLastPath: (value: string | null) => void,
 
+    textDecode: string | null,
+    setTextDecode: (value: string | null) => void,
 
     darkMode: 'dark' | 'light' | null,
     setDarkMode: (value: 'dark' | 'light' | null) => void,
@@ -65,6 +67,9 @@ export namespace Settings {
 
           get darkMode() { return localStorage.getItem('dark-mode') as null },
           setDarkMode: this._stringKeyCallback('dark-mode'),
+
+          get textDecode() { return localStorage.getItem('text-decode') as null },
+          setTextDecode: this._stringKeyCallback('text-decode'),
         }}>
           {this.props.children}
         </Context.Provider>
@@ -75,6 +80,7 @@ export namespace Settings {
   namespace Service {
     export type Props = {
       storage: StorageContextType,
+      children?: React.ReactNode,
     }
   }
 }

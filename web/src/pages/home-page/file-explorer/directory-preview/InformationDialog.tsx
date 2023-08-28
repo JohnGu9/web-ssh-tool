@@ -190,7 +190,7 @@ function RenameDialog({ state: { file, dirPath, open }, close, onRenamed }: { st
           close();
           onRenamed();
         }}>
-        <TextField ref={ref} required value={value} onChange={e => setValue(e.target.value)} style={{ width: 360 }} />
+        <TextField name="rename" ref={ref} required value={value} onChange={e => setValue(e.target.value)} style={{ width: 360 }} />
       </form>
     </Dialog>
   );

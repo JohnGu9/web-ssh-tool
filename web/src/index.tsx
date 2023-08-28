@@ -3,9 +3,11 @@ import 'core-js/es/set';
 import 'raf/polyfill';
 import './index.css';
 import 'material-icons/iconfont/material-icons.css';
+import 'buffer';
 import App from './App';
-// import reportWebVitals from './reportWebVitals';
 import { createRoot } from 'react-dom/client';
+
+// import reportWebVitals from './reportWebVitals';
 
 const container = document.getElementById('root')!;
 const root = createRoot(container);

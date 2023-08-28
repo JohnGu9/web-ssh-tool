@@ -21,7 +21,7 @@ export function NavigatorBar({ path }: { path: string }) {
         flexDirection: 'row',
         alignItems: 'center',
       }}>
-        <TextField label="Path" outlined readOnly
+        <TextField label="Path" name="navigation" outlined readOnly
           value={path}
           style={{ flex: 1 }}
           onFocus={e => e.target.select()} />

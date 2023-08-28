@@ -43,8 +43,22 @@ pub async fn handle_request(
                                 tx.send(PollChannelData::WindowChange(resize)).await?;
                             }
                         }
-                        if let Some(serde_json::Value::String(data)) = request.remove("data") {
-                            tx.send(PollChannelData::String(data)).await?;
+                        if let Some(data) = request.remove("data") {
+                            match data {
+                                serde_json::Value::String(data) => {
+                                    tx.send(PollChannelData::String(data)).await?;
+                                }
+                                serde_json::Value::Array(data) => {
+                                    let mut v = Vec::with_capacity(data.len());
+                                    for i in data.iter() {
+                                        if let Some(number) = i.as_u64() {
+                                            v.push(number as u8);
+                                        }
+                                    }
+                                    tx.send(PollChannelData::Vec(v)).await?;
+                                }
+                                _ => {}
+                            }
                         }
                     }
                 }
@@ -83,9 +97,9 @@ fn parse_resize(
     };
 }
 
-#[derive(Debug)]
 pub enum PollChannelData {
     String(String),
+    Vec(Vec<u8>),
     WindowChange((u32, u32, u32, u32)),
 }
 
@@ -95,6 +109,9 @@ impl PollChannelData {
             PollChannelData::String(s) => {
                 let reader = std::io::Cursor::new(s);
                 channel.data(reader).await?;
+            }
+            PollChannelData::Vec(data) => {
+                channel.data(&data[..]).await?;
             }
             PollChannelData::WindowChange((col_width, row_height, pix_width, pix_height)) => {
                 channel
@@ -125,9 +142,7 @@ async fn poll_channel(
             msg = channel.wait() => {
                 if let Some(msg) = msg {
                     if let ChannelMsg::Data{data} = msg {
-                        use base64::engine::general_purpose;
-                        use base64::Engine;
-                        let data = general_purpose::STANDARD_NO_PAD.encode(data.to_vec());
+                        let data = data.to_vec();
                         let obj = json!({"shell":{"id": id, "data": data}});
                         let mut conn = client_connection.lock().await;
                         conn.forward_event(obj).await.map_err(|_|russh::Error::SendError)?;

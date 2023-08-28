@@ -43,9 +43,9 @@ export function NewFileDialog({ state, close }: { state: NewFileDialog.State, cl
           await delay(150);
           showMessage({ content: `Created (${target})`, action: <Button label="close" /> });
         }}>
-        <TextField ref={ref} required value={name} onChange={e => setName(e.target.value)} label='name' style={{ width: 480 }} />
+        <TextField name="new-file-path" ref={ref} required value={name} onChange={e => setName(e.target.value)} label='name' style={{ width: 480 }} />
         <div style={{ height: 32 }} />
-        <TextArea value={content} onChange={e => setContent(e.target.value)} outlined rows={8} label='content' style={{ width: 480 }} />
+        <TextArea name="new-file-content" value={content} onChange={e => setContent(e.target.value)} outlined rows={8} label='content' style={{ width: 480 }} />
       </form>
     </Dialog>
   );
@@ -90,7 +90,7 @@ export function NewDirectoryDialog({ state, close }: { state: NewFileDialog.Stat
           await delay(150);
           showMessage({ content: `Created (${target})`, action: <Button label="close" /> });
         }}>
-        <TextField ref={ref} required value={value} label='name' style={{ width: 480 }}
+        <TextField name="new-directory-path" ref={ref} required value={value} label='name' style={{ width: 480 }}
           onChange={e => setValue(e.target.value)} />
       </form>
     </Dialog>

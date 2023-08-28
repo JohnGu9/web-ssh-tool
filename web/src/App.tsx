@@ -110,7 +110,7 @@ class Service extends React.Component<Service.Props, Service.State> {
 
   override render() {
     const { server } = this.state;
-    const { children, locale: { locale } } = this.props;
+    const { children, locale: { meta } } = this.props;
     return (
       <SharedAxis
         className='full-size'
@@ -123,7 +123,7 @@ class Service extends React.Component<Service.Props, Service.State> {
           : <div className='row full-size' style={{ justifyContent: 'center' }}>
             <CircularProgress />
             <div style={{ minWidth: 16 }} />
-            {locale.connecting} .....
+            {meta.connecting} .....
           </div>}
       </SharedAxis>
     );
