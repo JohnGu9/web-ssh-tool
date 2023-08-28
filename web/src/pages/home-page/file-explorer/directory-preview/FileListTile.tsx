@@ -42,6 +42,7 @@ function FileListTile({ name, stats, uploading, onClick, style }: {
     hovering.dataset['dropzone'] === path;
 
   const extension = fileExtension(name, stats.type);
+  const beSelected = selected.has(stats);
 
   return <ListItem
     style={{
@@ -79,7 +80,7 @@ function FileListTile({ name, stats, uploading, onClick, style }: {
       className='column'
       style={{ justifyContent: 'center', alignItems: 'center' }}>
       {onSelecting
-        ? <Checkbox readOnly checked={selected.has(stats)} style={{ height: 24 }}></Checkbox>
+        ? <Checkbox readOnly checked={beSelected} style={{ height: 24 }}></Checkbox>
         : <Icon>{uploading ? 'file_upload' : FileIcon(stats, extension)}</Icon>}
     </SharedAxis>}
     primaryText={<div style={{ flex: 1, minWidth: 0, overflowX: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>}
@@ -99,7 +100,7 @@ function FileListTile({ name, stats, uploading, onClick, style }: {
           setSelected(v => {
             const success = v.delete(stats);
             if (!success) v.add(stats);
-            return v;
+            return new Set(v);
           });
         }
         : () => {
@@ -115,7 +116,7 @@ function FileListTile({ name, stats, uploading, onClick, style }: {
           }
           return onClick?.();
         })}
-    activated={selected && onSelecting}
+    activated={beSelected && onSelecting}
     onMouseEnter={() => setHover(true)}
     onMouseLeave={() => setHover(false)} />
 }

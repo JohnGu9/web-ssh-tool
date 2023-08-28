@@ -7,7 +7,6 @@ function PreviewDialog({ state, close }: {
     state: PreviewDialog.State
 }) {
     const auth = React.useContext(Server.Authentication.Context);
-
     return <Dialog
         open={state.open}
         onScrimClick={close}
