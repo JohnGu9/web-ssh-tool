@@ -1,6 +1,6 @@
 import '../components/Layout.css';
 import React from "react";
-import { Card, TextField, Checkbox, Typography, LinearProgress, Button, FormField, IconButton, Icon } from 'rmcw';
+import { Card, TextField, Checkbox, Typography, LinearProgress, Button, FormField, IconButton, Icon, Tooltip } from 'rmcw';
 import lazy from 'react-lazy-with-preload';
 
 import { SharedAxis, SharedAxisTransform } from 'material-design-transform';
@@ -55,16 +55,24 @@ class Content extends React.Component<Content.Props, Content.State> {
       Content._focusInput(this._passwordRef);
     } else {
       settings.setSshUserName(username);
-      settings.setSshPassword(password);
+      if (settings.rememberPassword) {
+        settings.setSshPassword(password);
+      }
       this.setState({ auth: new Auth({ server }), loading: false });
     }
   }
 
   override componentDidMount() {
     const { settings } = this.props;
-    if (settings.keepSignIn) this._submit();
-    else {
-      Content._focusInput(this._usernameRef);
+    if (settings.rememberPassword && settings.keepSignIn &&
+      settings.sshUserName !== null && settings.sshPassword !== null) {
+      this._submit();
+    } else {
+      if (settings.sshUserName === null || settings.sshUserName.length === 0) {
+        Content._focusInput(this._usernameRef);
+      } else {
+        Content._focusInput(this._passwordRef);
+      }
     }
   }
 
@@ -126,7 +134,7 @@ class Content extends React.Component<Content.Props, Content.State> {
                         } else {
                           const visibility = window.setTimeout(() => {
                             this.setState({ visibility: null });
-                          }, 2000);
+                          }, 3000);
                           this.setState({ visibility });
                         }
                       }}><Icon>{visibility !== null ? "visibility" : "visibility_off"}</Icon>
@@ -134,12 +142,25 @@ class Content extends React.Component<Content.Props, Content.State> {
                     onChange={(e) => this.setState({ password: e.target.value })}
                     onFocus={e => e.target.select()}
                   />
-                  <div style={{ height: '16px' }} />
-                  <FormField input={<Checkbox
-                    checked={settings.keepSignIn}
-                    onChange={() => settings.setKeepSignIn(!settings.keepSignIn)} />
-                  }>{meta.keepSignIn}</FormField>
-                  <div style={{ height: '48px' }} />
+                  <Tooltip
+                    style={{ margin: '16px 0 48px 0' }}
+                    label="Do not remember password on untrust device or browser">
+                    <FormField input={<Checkbox
+                      checked={settings.rememberPassword}
+                      onChange={() => {
+                        const rememberPassword = !settings.rememberPassword;
+                        settings.setRememberPassword(rememberPassword);
+                        if (rememberPassword === false) {
+                          settings.setSshPassword(null);
+                        }
+                      }} />
+                    }>{meta.rememberPassword}</FormField>
+                    <FormField input={<Checkbox
+                      disabled={settings.rememberPassword === false}
+                      checked={settings.rememberPassword && settings.keepSignIn}
+                      onChange={() => settings.setKeepSignIn(!settings.keepSignIn)} />
+                    }>{meta.keepSignIn}</FormField>
+                  </Tooltip>
                 </form>
               </Card>
               <div style={{ flex: 1 }} />

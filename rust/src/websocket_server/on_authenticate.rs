@@ -42,14 +42,9 @@ pub async fn handle_request(
             serde_json::from_str::<serde_json::Value>(text.as_str())
         {
             let tag = m.remove("tag");
-            let response = build_response(
-                token,
-                m.remove(&"request"[..]),
-                &client_connection,
-                &session,
-                &shells,
-            )
-            .await;
+            let request = m.remove("request");
+            let response =
+                build_response(token, request, &client_connection, &session, &shells).await;
 
             let message = match response {
                 Ok(response) => {

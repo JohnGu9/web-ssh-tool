@@ -1,20 +1,13 @@
 import React from "react";
 import { Button, TextField, Dialog } from "rmcw";
-
-import Scaffold, { SnackbarQueueMessage } from "../../../../components/Scaffold";
 import FileExplorer, { useUuidV4 } from "../Common";
 import useInputAutoFocusRef from "../../../../components/InputAutoFocusRef";
 
 function GoToDialog({ state: { open, path }, close }: { state: GoToDialog.State, close: () => unknown }) {
   const [value, setValue] = React.useState(path);
   const { cd } = React.useContext(FileExplorer.Context);
-  const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
-  const onError = (message: SnackbarQueueMessage) =>
-    showMessage({ action: <Button label="close" />, ...message, });
   const id = useUuidV4();
-
   const ref = useInputAutoFocusRef(open);
-
   return (
     <Dialog
       open={open}
@@ -28,10 +21,8 @@ function GoToDialog({ state: { open, path }, close }: { state: GoToDialog.State,
       <form id={id}
         onSubmit={event => {
           event.preventDefault();
-          const newPath = value;
-          if (newPath.length === 0) return onError({ content: "File name can't be empty" });
           close();
-          cd(newPath);
+          cd(value);
         }}>
         <TextField
           ref={ref}

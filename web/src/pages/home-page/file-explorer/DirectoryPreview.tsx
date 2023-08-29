@@ -14,7 +14,7 @@ import PreviewDialog from "./directory-preview/PreviewDialog";
 
 function DirectoryPreView({ state }: { state: Watch.Directory }) {
   const { path, entries } = state;
-  const { cd, config, uploadItems } = React.useContext(FileExplorer.Context);
+  const { config, uploadItems } = React.useContext(FileExplorer.Context);
   const [onSelecting, setOnSelecting] = React.useState(false);
   const [selected, setSelected] = React.useState(new Set<Lstat>());
   const [information, setInformation] = React.useState<InformationDialog.State>({ open: false, stat: {} as Lstat, dirPath: path ?? "" });
@@ -42,6 +42,18 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
       }
       return { ...current, open: false };
     });
+    setFileMove(v => {
+      if (e.has(v.path) && e.has(v.target)) {
+        return v;
+      }
+      return { ...v, open: false };
+    });
+    setPreview(v => {
+      if (e.has(v.path)) {
+        return v;
+      }
+      return { ...v, open: false };
+    });
   }, [entries]);
 
   return (
@@ -64,7 +76,7 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
             <div className='column' style={{ width: '100%', justifyContent: 'center', alignItems: 'center' }}>
               Nothing here...
             </div> :
-            <List fileList={fileList} cd={cd} uploadItems={uploadItems} />}
+            <List fileList={fileList} uploadItems={uploadItems} />}
         </DropZone>
         <div style={{ height: 16 }} />
         {path === undefined || path === null ?
@@ -104,7 +116,6 @@ export default DirectoryPreView;
 
 class List extends React.Component<{
   fileList: [string, Lstat][],
-  cd: (value: string | null) => unknown,
   uploadItems: FileExplorer.UploadController[],
 }> {
 
@@ -120,10 +131,9 @@ class List extends React.Component<{
   builder = ({ index, style }: { index: number, style?: React.CSSProperties }) => {
     return <EventListenerBuilder eventName='change' eventTarget={this.eventTarget}
       builder={() => {
-        const { fileList, cd } = this.props;
+        const { fileList } = this.props;
         if (index >= fileList.length) return <React.Fragment key={index}></React.Fragment>;
         const [key, value] = fileList[index];
-        const { path } = value;
         return <FileListTile
           key={key}
           style={style}
@@ -132,8 +142,7 @@ class List extends React.Component<{
             // return (v.detail.dest === path || v.detail.dest === realPath) && v.detail.basename === basename;
           }) !== undefined}
           name={key}
-          stats={value}
-          onClick={path === undefined ? undefined : () => cd(path)} />;
+          stats={value} />;
       }} />;
   }
 

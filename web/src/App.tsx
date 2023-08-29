@@ -6,6 +6,7 @@ import { LocaleContext, LocaleContextType, LocaleService, Server, SettingsServic
 import { SharedAxis, SharedAxisTransform } from 'material-design-transform';
 import SignInPage, { decodeMessage } from './pages/SignInPage';
 import Scaffold from './components/Scaffold';
+import { stringifyAndCompress } from './pages/workers/Compress';
 
 function App() {
   return (
@@ -49,7 +50,7 @@ class AppServer implements Server.Type {
 
   async signIn(props: { username: string, password: string }): Promise<{ token: string; } | { error: Error; }> {
     const config = { ...props };
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       const ws = this.ws;
       ws.addEventListener('message',
         async ({ data }) => {
@@ -57,7 +58,9 @@ class AppServer implements Server.Type {
           if (obj === undefined) reject(obj);
           resolve(obj)
         }, { once: true });
-      ws.send(JSON.stringify(config));
+
+      const arr = await stringifyAndCompress(config);
+      ws.send(arr);
     });
   };
 }

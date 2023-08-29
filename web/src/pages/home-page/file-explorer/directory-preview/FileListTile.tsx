@@ -5,14 +5,15 @@ import { SharedAxis, SharedAxisTransform } from 'material-design-transform';
 import DropZone from "./DropZone";
 import { Server } from "../../../../common/Providers";
 import DirectoryPreView from "../DirectoryPreview";
+import FileExplorer from "../Common";
 
-function FileListTile({ name, stats, uploading, onClick, style }: {
+function FileListTile({ name, stats, uploading, style }: {
   name: string,
   stats: Lstat,
   uploading: boolean,
-  onClick: (() => unknown) | undefined, // cd
   style?: React.CSSProperties,
 }) {
+  const { cd } = React.useContext(FileExplorer.Context);
   const { state, selected, setSelected, onSelecting, setInformation, setFileMove, setPreview } = React.useContext(DirectoryPreView.Context);
   const { hovering, dragging, setDragging } = React.useContext(DropZone.Context);
   const auth = React.useContext(Server.Authentication.Context);
@@ -114,7 +115,10 @@ function FileListTile({ name, stats, uploading, onClick, style }: {
               return;
             }
           }
-          return onClick?.();
+          if (typeof path === 'string') {
+            cd(path);
+            return;
+          }
         })}
     activated={beSelected && onSelecting}
     onMouseEnter={() => setHover(true)}

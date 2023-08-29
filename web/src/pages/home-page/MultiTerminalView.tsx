@@ -270,7 +270,9 @@ function MoreButton() {
           <Button onClick={close} label='close' />
         </>}>
         <Typography.Subtitle1>Version</Typography.Subtitle1>
-        <Typography.Body1>v0.1.0</Typography.Body1>
+        <Typography.Body1>v 0.1.0</Typography.Body1>
+        <Typography.Subtitle1>Repository</Typography.Subtitle1>
+        <Typography.Body1><a href="https://github.com/JohnGu9/web-ssh-tool">https://github.com/JohnGu9/web-ssh-tool</a></Typography.Body1>
         <div style={{ height: 16 }} />
         <Typography.Subtitle1>License</Typography.Subtitle1>
         <div style={{ width: '100%', height: '400px' }}>

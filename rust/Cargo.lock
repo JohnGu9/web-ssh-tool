@@ -1612,7 +1612,6 @@ dependencies = [
  "async-compat",
  "async-trait",
  "async_zip",
- "base64",
  "bytes",
  "chrono",
  "flate2",

@@ -10,6 +10,7 @@ const english = {
   password: 'Password',
   ok: 'OK',
   cancel: 'Cancel',
+  rememberPassword: 'Remember Password',
   keepSignIn: 'Keep Sign in',
   connecting: 'Connecting'
 };

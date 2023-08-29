@@ -1,8 +1,5 @@
-import 'core-js/es/map';
-import 'core-js/es/set';
-import 'raf/polyfill';
 import './index.css';
-import 'material-icons/iconfont/material-icons.css';
+import 'material-icons/iconfont/filled.css';
 import 'buffer';
 import App from './App';
 import { createRoot } from 'react-dom/client';

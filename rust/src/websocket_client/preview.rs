@@ -57,10 +57,13 @@ pub async fn handle_request(
                 header::CONTENT_LENGTH,
                 HeaderValue::from_str(size.to_string().as_str())?,
             ),
-            None => headers.append(
-                header::TRANSFER_ENCODING,
-                HeaderValue::from_static("chunked"),
-            ),
+            None => {
+                headers.append(
+                    header::TRANSFER_ENCODING,
+                    HeaderValue::from_static("chunked"),
+                );
+                headers.append(header::CONNECTION, HeaderValue::from_static("close"))
+            }
         };
 
         let mut response = sender.send_request(req).await?;

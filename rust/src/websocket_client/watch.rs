@@ -205,10 +205,7 @@ impl MyWatcher {
                 }
                 let path = self.current_path.as_path();
                 let basename = match path.file_name() {
-                    Some(os_str) => match os_str.to_str() {
-                        Some(str) => Some(str),
-                        None => None,
-                    },
+                    Some(os_str) => os_str.to_str(),
                     None => None,
                 };
                 let dir_json = object_to_json(basename, path, Some(m), true).await;
@@ -284,13 +281,13 @@ impl MyWatcher {
 
     async fn close(&mut self) {
         let _ = self.watcher.unwatch(&self.current_path);
+        if let Some(on_close) = self.on_close.take() {
+            let _ = on_close.send(());
+        }
         let _ = self
             .event_channel
             .send(json!({"id":self.id, "data":{"close":{}}}))
             .await;
-        if let Some(on_close) = self.on_close.take() {
-            let _ = on_close.send(());
-        }
     }
 }
 
@@ -365,7 +362,7 @@ async fn object_to_json(
             "basename":file_name,
             "realPath":real_path,
             "type":file_type,
-            "realType": real_type,
+            "realType":real_type,
             "size":size,
             "createdTime":created,
             "accessedTime":accessed,
@@ -378,7 +375,7 @@ async fn object_to_json(
             "basename":file_name,
             "realPath":real_path,
             "type":file_type,
-            "realType": real_type,
+            "realType":real_type,
             "size":size,
             "createdTime":created,
             "accessedTime":accessed,
@@ -407,7 +404,7 @@ fn async_watcher() -> notify::Result<(RecommendedWatcher, mpsc::Receiver<notify:
 
     // Automatically select the best implementation for your platform.
     // You can also access each implementation directly e.g. INotifyWatcher.
-    let config = Config::default();
+    let config = Config::default().with_compare_contents(true);
     let watcher = RecommendedWatcher::new(
         move |res| {
             futures::executor::block_on(async {

@@ -7,6 +7,9 @@ export namespace Settings {
     locale: string | null,
     setLocale: (value: string | null) => void,
 
+    rememberPassword: boolean,
+    setRememberPassword: (value: boolean) => void,
+
     keepSignIn: boolean,
     setKeepSignIn: (value: boolean) => void,
 
@@ -52,6 +55,9 @@ export namespace Settings {
         <Context.Provider value={{
           get locale() { return localStorage.getItem('locale') },
           setLocale: this._stringKeyCallback('locale'),
+
+          get rememberPassword() { return localStorage.getItem('remember-password') !== null },
+          setRememberPassword: this._boolKeyCallback('remember-password'),
 
           get keepSignIn() { return localStorage.getItem('keep-sign-in') !== null },
           setKeepSignIn: this._boolKeyCallback('keep-sign-in'),
