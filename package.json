@@ -13,7 +13,7 @@
     "clean": "npm run clean:web && npm run clean:rust && npm ci",
     "rebuild": "npm run clean && npm run build"
   },
-  "devDependencies": {
+  "dependencies": {
     "@types/license-checker": "^25.0.3",
     "@types/node": "^16.11.17",
     "license-checker": "^25.0.1",

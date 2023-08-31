@@ -1,3 +1,5 @@
+use crate::ResponseUnit;
+use async_trait::async_trait;
 use futures::{lock::Mutex, stream::SplitSink, SinkExt, TryFutureExt};
 use hyper::{body::Incoming, upgrade::Upgraded, Request};
 use russh_keys::key;
@@ -158,10 +160,6 @@ pub enum SendEventError {
 }
 
 pub struct Client {}
-
-use async_trait::async_trait;
-
-use crate::ResponseUnit;
 
 #[async_trait]
 impl russh::client::Handler for Client {

@@ -2,7 +2,7 @@ import React, { ComponentType } from 'react';
 import * as Window from 'react-window';
 import { ListChildComponentProps } from 'react-window';
 import LayoutBuilder from './LayoutBuilder';
-import './AdaptedWindow.css';
+import styles from './AdaptedWindow.module.css';
 
 export namespace FixedSizeList {
   export type ListRefType = Window.FixedSizeList;
@@ -27,6 +27,6 @@ export function FixedSizeList({ itemCount, itemSize, children, listRef, classNam
       itemSize={itemSize}
     >{children}</Window.FixedSizeList>;
   }, [children, itemCount, itemSize, listRef]);
-  return <LayoutBuilder className={`fixed-size-list ${className}`} style={style}
+  return <LayoutBuilder className={`${styles['fixed-size-list']} ${className}`} style={style}
     builder={builder}></LayoutBuilder>;
 }

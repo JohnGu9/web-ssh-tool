@@ -1,6 +1,8 @@
 import React from "react";
 import { Settings } from "./SettingsContent";
 
+// @TODO: use i18n for locale
+
 const english = {
   signIn: 'Sign in',
   signOut: 'Sign out',
@@ -25,8 +27,24 @@ const english = {
 //   password: '密码',
 //   ok: '好的',
 //   cancel: '取消',
+//   close: '关闭',
 //   keepSignIn: '保持登录状态',
 //   connecting: '连接中',
+// };
+
+// const japanese = {
+//   ...english,
+//   signIn: 'ログイン',
+//   signOut: 'ログアウト',
+//   next: '次へ',
+//   help: 'ヘルプ',
+//   username: 'ユーザー',
+//   password: 'パスワード',
+//   ok: 'はい',
+//   cancel: 'いいえ',
+//   close: '閉じる',
+//   keepSignIn: 'ログイン状態を保持する',
+//   connecting: '接続中',
 // };
 
 const defaultLocale = {

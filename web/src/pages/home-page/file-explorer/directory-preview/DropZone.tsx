@@ -18,6 +18,10 @@ function DropZone({ children, style, dirPath }: { children: React.ReactNode, dir
     }
   }, [dragging]);
 
+  const context = React.useMemo(() => {
+    return { hovering, dragging, setDragging };
+  }, [dragging, hovering]);
+
   return <div style={{
     ...style,
     boxSizing: 'border-box',
@@ -75,7 +79,7 @@ function DropZone({ children, style, dirPath }: { children: React.ReactNode, dir
       }
     }}
   >
-    <DropZone.Context.Provider value={{ hovering, dragging, setDragging }}>
+    <DropZone.Context.Provider value={context}>
       {children}
     </DropZone.Context.Provider>
   </div>;

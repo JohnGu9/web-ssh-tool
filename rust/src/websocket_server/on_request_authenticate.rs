@@ -88,6 +88,7 @@ pub async fn handle_request(
                 Ok(false) => {
                     use tokio::time::{sleep, Duration};
                     sleep(Duration::from_secs(5)).await;
+                    tokio::task::yield_now().await;
                     return Err("Username and password authenticate failed");
                 }
                 Err(err) => {

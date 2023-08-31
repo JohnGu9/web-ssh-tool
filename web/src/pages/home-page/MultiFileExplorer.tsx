@@ -200,7 +200,6 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
         upload: (file, dest) => this._upload(file, dest),
         openUploadManagement: () => this.setState({ uploadManagementOpen: true }),
       }}>
-
         <MyResize>
           <Elevation className='full-size column' depth={2}
             style={{ paddingBottom: 16, }}>
@@ -260,7 +259,6 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
             })}
           </AnimatedList>
         </Dialog>
-
       </Common.Context.Provider>
     );
   }

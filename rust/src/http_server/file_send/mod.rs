@@ -14,24 +14,21 @@ pub async fn file_send(
     req: &Request<hyper::body::Incoming>,
     filename: &str,
 ) -> Result<ResponseType, Infallible> {
-    let guess = mime_guess::from_path(filename);
-    let guess = guess.first_or_text_plain();
-    let mime = HeaderValue::from_str(guess.to_string().as_str())
-        .unwrap_or(HeaderValue::from_static("text/plain"));
-    match &app_config.assets_path {
-        Some(assets_path) => match external_file_send(assets_path, filename).await {
-            Ok(mut res) => {
-                res.headers_mut().append(header::CONTENT_TYPE, mime);
-                Ok(res)
-            }
-            Err(_) => Ok(not_found(app_config, format!("No such file: {}", filename)).await),
-        },
-        None => match internal_file_send(filename, &req).await {
-            Ok(mut res) => {
-                res.headers_mut().append(header::CONTENT_TYPE, mime);
-                Ok(res)
-            }
-            Err(_) => Ok(not_found(app_config, format!("No such file: {}", filename)).await),
-        },
+    let res = match &app_config.assets_path {
+        Some(assets_path) => external_file_send(assets_path, filename)
+            .await
+            .map_err(|_| ()),
+        None => internal_file_send(filename, &req).await,
+    };
+    match res {
+        Ok(mut res) => {
+            let guess = mime_guess::from_path(filename);
+            let guess = guess.first_or_text_plain();
+            let mime = HeaderValue::from_str(guess.to_string().as_str())
+                .unwrap_or(HeaderValue::from_static("text/plain"));
+            res.headers_mut().append(header::CONTENT_TYPE, mime);
+            Ok(res)
+        }
+        Err(_) => Ok(not_found(app_config, format!("No such file: {}", filename)).await),
     }
 }

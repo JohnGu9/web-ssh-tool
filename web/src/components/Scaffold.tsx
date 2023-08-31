@@ -21,7 +21,7 @@ function Scaffold({ children }: { children: React.ReactNode }) {
           ]);
           setMessage(v => {
             v.onDismiss?.();
-            return { ...v, onDismiss: () => { } }
+            return v;
           });
           setOpen(false);
           await delay(150);
@@ -37,7 +37,7 @@ function Scaffold({ children }: { children: React.ReactNode }) {
         as.clear();
         setMessage(v => {
           v.onDismiss?.();
-          return { ...v, onDismiss: () => { } };
+          return v;
         });
       },
     };

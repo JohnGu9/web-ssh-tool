@@ -56,13 +56,17 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
     });
   }, [entries]);
 
-  return (
-    <DirectoryPreView.Context.Provider value={{
+  const context = React.useMemo(() => {
+    return {
       state,
       selected, setSelected,
       onSelecting, setOnSelecting,
       setInformation, setFileMove, setPreview,
-    }}>
+    };
+  }, [onSelecting, selected, state]);
+
+  return (
+    <DirectoryPreView.Context.Provider value={context}>
       <div className='full-size column' >
         <SharedAxis className='row' style={{ height: 56, padding: '0 8px 0 0' }}
           transform={SharedAxisTransform.fromTopToBottom} keyId={onSelecting ? 0 : 1}

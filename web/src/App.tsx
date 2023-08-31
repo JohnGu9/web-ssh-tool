@@ -4,9 +4,8 @@ import delay from './common/Delay';
 import { wsSafeClose } from './common/DomTools';
 import { LocaleContext, LocaleContextType, LocaleService, Server, SettingsService, ThemeService } from './common/Providers';
 import { SharedAxis, SharedAxisTransform } from 'material-design-transform';
-import SignInPage, { decodeMessage } from './pages/SignInPage';
+import SignInPage, { decodeMessage, encodeMessage } from './pages/SignInPage';
 import Scaffold from './components/Scaffold';
-import { stringifyAndCompress } from './pages/workers/Compress';
 
 function App() {
   return (
@@ -59,7 +58,7 @@ class AppServer implements Server.Type {
           resolve(obj)
         }, { once: true });
 
-      const arr = await stringifyAndCompress(config);
+      const arr = await encodeMessage(config);
       ws.send(arr);
     });
   };

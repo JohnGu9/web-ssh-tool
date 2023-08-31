@@ -1,12 +1,11 @@
 import React from "react";
 import { Terminal } from "xterm";
-import { Icon, IconButton, Card, Button, Dialog, LinearProgress, Typography, TabBar, Tab, Tooltip, Menu, ListItem, ListDivider, Radio } from 'rmcw';
+import { Icon, IconButton, Card, Button, Dialog, Typography, TabBar, Tab, Tooltip, Menu, ListItem, ListDivider, Radio } from 'rmcw';
 
 import { Server, Settings, ThemeContext } from "../../common/Providers";
 import { Rest } from '../../common/Type';
 import XTerminal from "../../components/XTerminal";
 import { SharedAxis, SharedAxisTransform, FadeThrough } from 'material-design-transform';
-import { FixedSizeList } from "../../components/AdaptedWindow";
 import iconv from 'iconv-lite';
 import { Buffer } from 'buffer';
 
@@ -206,6 +205,8 @@ function MoreButton() {
       return () => window.removeEventListener("click", i);
     }
   }, [open]);
+
+  const license = `${document.location.href}LICENSE`;
   return (
     <Menu open={open}
       surface={<div style={{ padding: "4px 0" }}>
@@ -270,14 +271,12 @@ function MoreButton() {
           <Button onClick={close} label='close' />
         </>}>
         <Typography.Subtitle1>Version</Typography.Subtitle1>
-        <Typography.Body1>v 0.1.0</Typography.Body1>
+        <Typography.Body1>v0.1.0</Typography.Body1>
         <Typography.Subtitle1>Repository</Typography.Subtitle1>
-        <Typography.Body1><a href="https://github.com/JohnGu9/web-ssh-tool">https://github.com/JohnGu9/web-ssh-tool</a></Typography.Body1>
+        <Typography.Body1><a href="https://github.com/JohnGu9/web-ssh-tool" target="_blank" rel="noreferrer">https://github.com/JohnGu9/web-ssh-tool</a></Typography.Body1>
         <div style={{ height: 16 }} />
         <Typography.Subtitle1>License</Typography.Subtitle1>
-        <div style={{ width: '100%', height: '400px' }}>
-          <License />
-        </div>
+        <Typography.Body1><a href={license} target="_blank" rel="noreferrer">{license}</a></Typography.Body1>
       </Dialog>
       <Dialog open={openTextDecode}
         onScrimClick={closeTextDecode}
@@ -411,43 +410,4 @@ function SizeHint({ controller }: {
     return () => controller.removeEventListener("resize", listener);
   }, [controller]);
   return (<>{size.rows} x {size.cols}</>);
-}
-
-class License extends React.Component<{}, { value?: string[] }> {
-  static _cache?: string[];
-  constructor(props: {}) {
-    super(props);
-    this.state = { value: License._cache };
-  }
-
-  _mounted = true;
-
-  override componentDidMount() {
-    if (this.state.value === undefined)
-      fetch('/LICENSE')
-        .then(response => response.text())
-        .then(text => {
-          License._cache = ['', ...text.split('\n'), ''];
-          if (this._mounted) this.setState({ value: License._cache })
-        });
-  }
-
-  override componentWillUnmount() {
-    this._mounted = false;
-  }
-
-  override render() {
-    const { value } = this.state;
-    return <FadeThrough keyId={value === undefined ? 0 : 1} className='full-size'>
-      {value === undefined
-        ? <LinearProgress></LinearProgress>
-        : <FixedSizeList
-          itemCount={value.length}
-          itemSize={16}
-          className='full-size'>
-          {({ index, style }) => {
-            return <code style={{ ...style, padding: '0 1em', opacity: 0.5 }}>{value[index]}</code>;
-          }}</FixedSizeList>}
-    </FadeThrough>;
-  }
 }

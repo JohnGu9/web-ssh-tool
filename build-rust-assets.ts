@@ -21,18 +21,18 @@ async function buildAssetsMap(p: string) {
     const rustSource = path.join(p, "assets_map.rs");
     const assets = path.join(p, "build");
     const assetsMap: (string[])[] = [];
-    async function loopDir(dir: string, internalDir: string[], assetsMap: (string[])[]) {
+    async function walkDir(dir: string, internalDir: string[], assetsMap: (string[])[]) {
         for await (const entry of await fs.opendir(dir)) {
             if (entry.isFile()) {
                 assetsMap.push([...internalDir, entry.name]);
             } else if (entry.isDirectory()) {
                 const subDir = path.join(dir, entry.name);
                 const subInternalDir = [...internalDir, entry.name]
-                await loopDir(subDir, subInternalDir, assetsMap);
+                await walkDir(subDir, subInternalDir, assetsMap);
             }
         }
     }
-    await loopDir(assets, [], assetsMap);
+    await walkDir(assets, [], assetsMap);
     const writeStream = createWriteStream(rustSource);
     writeStream.write(Buffer.from(
         `pub fn assets_map(filename: &str) -> Result<&'static [u8], ()> {
@@ -48,7 +48,10 @@ async function buildAssetsMap(p: string) {
         `        _ => Err(()),
     }
 }`));
-
+    await new Promise<void>(resolve => {
+        writeStream.once('close', resolve);
+        writeStream.end();
+    });
 }
 
 

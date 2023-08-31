@@ -30,7 +30,8 @@ class Content extends React.Component<Content.Props, Content.State> {
   constructor(props: Content.Props) {
     super(props);
     const { settings } = this.props;
-    this.state = { visibility: null, loading: false, username: settings.sshUserName ?? "", password: settings.sshPassword ?? "" };
+    const password = settings.rememberPassword ? (settings.sshPassword ?? "") : "";
+    this.state = { visibility: null, loading: false, username: settings.sshUserName ?? "", password };
   }
 
   protected _usernameRef = React.createRef<HTMLLabelElement>();
@@ -74,6 +75,8 @@ class Content extends React.Component<Content.Props, Content.State> {
         Content._focusInput(this._passwordRef);
       }
     }
+
+    if (!settings.rememberPassword) settings.setSshPassword(null);
   }
 
   override render() {
@@ -86,11 +89,11 @@ class Content extends React.Component<Content.Props, Content.State> {
           className='full-size row'
           keyId={auth === undefined ? 0 : 1}
           transform={SharedAxisTransform.fromRightToLeft}>
-          {auth
-            ? <Server.Authentication.Context.Provider value={auth}>
+          {auth ?
+            <Server.Authentication.Context.Provider value={auth}>
               {this.props.children}
-            </Server.Authentication.Context.Provider>
-            : <>
+            </Server.Authentication.Context.Provider> :
+            <>
               <div style={{ flex: 3 }} >
                 <Title />
               </div>
@@ -144,7 +147,7 @@ class Content extends React.Component<Content.Props, Content.State> {
                   />
                   <Tooltip
                     style={{ margin: '16px 0 48px 0' }}
-                    label="Do not remember password on untrust device or browser">
+                    label="Do not remember password on untrust device or browser.">
                     <FormField input={<Checkbox
                       checked={settings.rememberPassword}
                       onChange={() => {
@@ -313,12 +316,12 @@ class Auth implements Server.Authentication.Type {
 
 /// https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/message_event
 export async function decodeMessage(data: any) {
-  if (typeof data === 'string') {
-    return JSON.parse(data);
-  } else if (data instanceof Blob) {
+  if (data instanceof Blob) {
     return await decompressAndJson(await data.arrayBuffer());
   } else if (data instanceof ArrayBuffer) {
     return await decompressAndJson(data);
+  } else if (typeof data === 'string') {
+    return JSON.parse(data);
   } else {
     return;
   }

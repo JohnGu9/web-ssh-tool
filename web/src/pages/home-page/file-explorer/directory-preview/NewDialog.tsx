@@ -4,7 +4,6 @@ import { Button, TextField, Dialog, TextArea } from "rmcw";
 import { Server } from "../../../../common/Providers";
 import Scaffold, { SnackbarQueueMessage } from "../../../../components/Scaffold";
 import { Rest } from "../../../../common/Type";
-import { delay } from "../../../../common/Tools";
 import { useUuidV4 } from "../Common";
 import useInputAutoFocusRef from "../../../../components/InputAutoFocusRef";
 
@@ -34,13 +33,9 @@ export function NewFileDialog({ state, close }: { state: NewFileDialog.State, cl
           const newName = name;
           if (newName.length === 0) return onError({ content: "Error (File name can't be empty)" });
           const target = [state.path, newName];
-          const exists = await auth.rest('fs.exists', [target]);
-          if (Rest.isError(exists)) return onError({ content: `${exists.error}` });
-          if (exists) return onError({ content: `Error (File [${target}] already exists)` });
           const result = await auth.rest('fs.writeFile', [target, content]);
           if (Rest.isError(result)) return onError({ content: `${result.error}` });
           close();
-          await delay(150);
           showMessage({ content: `Created (${target})`, action: <Button label="close" /> });
         }}>
         <TextField name="new-file-path" ref={ref} required value={name} onChange={e => setName(e.target.value)} label='name' style={{ width: 480 }} />
@@ -87,7 +82,6 @@ export function NewDirectoryDialog({ state, close }: { state: NewFileDialog.Stat
           const result = await auth.rest('fs.mkdir', [target]);
           if (Rest.isError(result)) return onError({ content: `${result.error}` });
           close();
-          await delay(150);
           showMessage({ content: `Created (${target})`, action: <Button label="close" /> });
         }}>
         <TextField name="new-directory-path" ref={ref} required value={value} label='name' style={{ width: 480 }}

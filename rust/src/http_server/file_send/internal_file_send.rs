@@ -25,10 +25,12 @@ pub async fn internal_file_send(
             let accept_encoding = req.headers().get(header::ACCEPT_ENCODING);
             let bytes = convert_data(v, accept_encoding, &mut res);
 
+            let headers = res.headers_mut();
+            headers.append(header::VARY, HeaderValue::from_static("Accept-Encoding"));
             if let Ok(h) = HeaderValue::from_str(bytes.len().to_string().as_str()) {
-                res.headers_mut().append(header::CONTENT_LENGTH, h);
+                headers.append(header::CONTENT_LENGTH, h);
             } else {
-                res.headers_mut().append(
+                headers.append(
                     header::TRANSFER_ENCODING,
                     HeaderValue::from_static("chunked"),
                 );

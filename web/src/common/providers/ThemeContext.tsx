@@ -24,8 +24,9 @@ export function ThemeService({ children }: ThemeService.Props) {
     return () => { mediaQueryList.removeEventListener('change', listener); };
   });
   const themeData = isDark ? defaultDarkTheme : defaultLightTheme;
+  const value = React.useMemo(() => { return { isDark, themeData } }, [isDark, themeData]);
   return (
-    <ThemeContext.Provider value={{ isDark, themeData }}>
+    <ThemeContext.Provider value={value}>
       <Theme {...defaultLightTheme}
         darkTheme={defaultDarkTheme}
         enableDarkTheme={isDark}
