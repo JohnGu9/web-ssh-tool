@@ -33,3 +33,7 @@ pin-project = "1.1.2"
 async-compat = "0.2.1"
 flate2 = { version = "1.0.27", default-features = false }
 mime_guess = "2.0.4"
+
+[package.metadata.cross.target.mips-unknown-linux-musl]
+env.passthrough = ["RUST_BACKTRACE=1"]
+pre-build = ["apt install -y musl musl-tools musl-dev"]

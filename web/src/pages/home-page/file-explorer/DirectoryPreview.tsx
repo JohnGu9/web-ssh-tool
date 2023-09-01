@@ -10,7 +10,7 @@ import FileListTile from "./directory-preview/FileListTile";
 import DropZone from "./directory-preview/DropZone";
 import ToolsBar, { SelectingToolsBar } from "./directory-preview/ToolsBar";
 import FileMoveDialog from "./directory-preview/FileMoveDialog";
-import PreviewDialog from "./directory-preview/PreviewDialog";
+import RequestPreviewDialog from "./directory-preview/RequestPreviewDialog";
 
 function DirectoryPreView({ state }: { state: Watch.Directory }) {
   const { path, entries } = state;
@@ -19,7 +19,7 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
   const [selected, setSelected] = React.useState(new Set<Lstat>());
   const [information, setInformation] = React.useState<InformationDialog.State>({ open: false, stat: {} as Lstat, dirPath: path ?? "" });
   const [fileMove, setFileMove] = React.useState<FileMoveDialog.State>({ open: false, filename: "", path: "", target: "" });
-  const [preview, setPreview] = React.useState<PreviewDialog.State>({ open: false, path: "" });
+  const [preview, setPreview] = React.useState<RequestPreviewDialog.State>({ open: false, path: "" });
   const fileList = FileExplorer.sortArray(Object.entries(entries).filter(config.showAll
     ? () => true
     : ([key]) => !key.startsWith('.')), config.sort);
@@ -92,7 +92,7 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
           close={() => setInformation({ ...information, open: false })} />
         <FileMoveDialog {...fileMove}
           close={() => setFileMove(v => { return { ...v, open: false } })} />
-        <PreviewDialog state={preview}
+        <RequestPreviewDialog state={preview}
           close={() => setPreview(v => { return { ...v, open: false } })} />
       </div>
     </DirectoryPreView.Context.Provider>
@@ -111,7 +111,7 @@ namespace DirectoryPreView {
 
     setInformation: React.Dispatch<React.SetStateAction<InformationDialog.State>>,
     setFileMove: React.Dispatch<React.SetStateAction<FileMoveDialog.State>>,
-    setPreview: React.Dispatch<React.SetStateAction<PreviewDialog.State>>,
+    setPreview: React.Dispatch<React.SetStateAction<RequestPreviewDialog.State>>,
   };
   export const Context = React.createContext<ContextType>(undefined as unknown as ContextType);
 }

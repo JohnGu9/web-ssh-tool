@@ -27,6 +27,7 @@ export namespace Server {
         onDownloadProgress?: (progress: ProgressEvent) => unknown,
       }): Promise<Express.Multer.File>;
       download(filePath: string | string[]): Promise<void>;
+      previewUrl(path: string): Promise<URL>;
       preview(path: string): Promise<void>;
       rest<T extends keyof Rest.Map>(type: T, parameter: Rest.Map.Parameter<T>): Promise<Rest.Map.Return<T> | Rest.Error>;
     };

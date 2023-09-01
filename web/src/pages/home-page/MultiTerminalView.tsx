@@ -3,7 +3,7 @@ import { Terminal } from "xterm";
 import { Icon, IconButton, Card, Button, Dialog, Typography, TabBar, Tab, Tooltip, Menu, ListItem, ListDivider, Radio } from 'rmcw';
 
 import { Server, Settings, ThemeContext } from "../../common/Providers";
-import { Rest } from '../../common/Type';
+import { DECODE_OPTION, Rest } from '../../common/Type';
 import XTerminal from "../../components/XTerminal";
 import { SharedAxis, SharedAxisTransform, FadeThrough } from 'material-design-transform';
 import iconv from 'iconv-lite';
@@ -286,44 +286,11 @@ function MoreButton() {
         actions={<Button onClick={closeTextDecode} label='close' />}>
         <ListItem primaryText='utf-8' meta={<Radio checked={settings.textDecode === 'utf-8' || settings.textDecode === null} />}
           onClick={() => settings.setTextDecode(null)} />
-        {[ // https://developer.mozilla.org/en-US/docs/Web/API/Encoding_API/Encodings
-          'utf-16be',
-          'utf-16le',
-          'ascii',
-          'macintosh',
-          'iso-8859-2',
-          'iso-8859-3',
-          'iso-8859-4',
-          'iso-8859-5',
-          'iso-8859-6',
-          'iso-8859-7',
-          'iso-8859-8',
-          'iso-8859-10',
-          'iso-8859-13',
-          'iso-8859-14',
-          'iso-8859-15',
-          'iso-8859-16',
-          'koi8-r',
-          'koi8-u',
-          'windows-874',
-          'windows-1250',
-          'windows-1251',
-          'windows-1253',
-          'windows-1254',
-          'windows-1255',
-          'windows-1256',
-          'windows-1257',
-          'windows-1258',
-          'gbk',
-          'gb18030',
-          'big5',
-          'euc-jp',
-          'shift-jis',
-          'euc-kr',
-        ].map((v, index) => {
-          return <ListItem key={index} primaryText={v} meta={<Radio checked={settings.textDecode === v} />}
-            onClick={() => settings.setTextDecode(v)} />;
-        })}
+        {DECODE_OPTION.filter(v => v !== 'utf-8')
+          .map((v, index) => {
+            return <ListItem key={index} primaryText={v} meta={<Radio checked={settings.textDecode === v} />}
+              onClick={() => settings.setTextDecode(v)} />;
+          })}
       </Dialog>
     </Menu>
 

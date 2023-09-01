@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import basicSsl from '@vitejs/plugin-basic-ssl';
+import { terser } from 'rollup-plugin-terser';
 
 export default defineConfig(() => {
     return {
@@ -19,7 +20,20 @@ export default defineConfig(() => {
             },
         },
         build: {
-            outDir: 'build',
+            outDir: "build",
+            minify: "terser" as "terser",
+            rollupOptions: {
+                plugins: [
+                    terser({
+                        format: {
+                            comments: false,
+                            preserve_annotations: false,
+                            ecma: 2015,
+                        },
+                        mangle: true,
+                    }),
+                ] as any,
+            },
         },
         plugins: [
             react(),

@@ -8,7 +8,7 @@ use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use serde_json::{json, Map};
 use std::{
     collections::HashMap,
-    fs::FileType,
+    fs::Metadata,
     path::{Path, PathBuf},
     sync::Arc,
     time::SystemTime,
@@ -291,13 +291,13 @@ impl MyWatcher {
     }
 }
 
-fn file_type_to_string(file_type: FileType) -> Option<&'static str> {
-    if file_type.is_dir() {
-        Some("directory")
-    } else if file_type.is_file() {
-        Some("file")
-    } else if file_type.is_symlink() {
+fn file_type_to_string(meta: &Metadata) -> Option<&'static str> {
+    if meta.is_symlink() {
         Some("symbolic link")
+    } else if meta.is_dir() {
+        Some("directory")
+    } else if meta.is_file() {
+        Some("file")
     } else {
         None
     }
@@ -310,6 +310,39 @@ async fn object_to_json(
     include_parent: bool,
 ) -> std::io::Result<serde_json::Value> {
     let meta = tokio::fs::metadata(path).await?;
+    let size = meta.len();
+    let file_type = file_type_to_string(&meta);
+
+    let real_path = if meta.is_symlink() {
+        match tokio::fs::read_link(path.clone()).await {
+            Ok(real_path) => match real_path.to_str() {
+                Some(s) => Some(s.to_string()),
+                None => None,
+            },
+            Err(_) => None,
+        }
+    } else {
+        None
+    };
+    let real_type = match &real_path {
+        Some(real_path) => {
+            let path = Path::new(real_path.as_str());
+            let real_meta = tokio::fs::metadata(path).await;
+            match real_meta {
+                Ok(real_meta) => file_type_to_string(&real_meta),
+                Err(_) => None,
+            }
+        }
+        None => None,
+    };
+    let parent = match include_parent {
+        true => match path.parent() {
+            Some(parent) => parent.to_str(),
+            None => None,
+        },
+        false => None,
+    };
+
     let created = match meta.created() {
         Ok(data) => Some(system_time_to_string(data)),
         Err(_) => None,
@@ -323,66 +356,41 @@ async fn object_to_json(
         Err(_) => None,
     };
 
-    let real_path = if meta.is_symlink() {
-        match tokio::fs::read_link(path.clone()).await {
-            Ok(real_path) => match real_path.to_str() {
-                Some(s) => Some(s.to_string()),
-                None => None,
-            },
-            Err(_) => None,
-        }
-    } else {
-        None
-    };
-
-    let real_type = match &real_path {
-        Some(real_path) => {
-            let path = Path::new(real_path.as_str());
-            let real_meta = tokio::fs::metadata(path).await;
-            match real_meta {
-                Ok(real_meta) => file_type_to_string(real_meta.file_type()),
-                Err(_) => None,
-            }
-        }
-        None => None,
-    };
-    let parent = match include_parent {
-        true => match path.parent() {
-            Some(parent) => parent.to_str(),
-            None => None,
-        },
-        false => None,
-    };
     let path = path.to_str();
-    let file_type = file_type_to_string(meta.file_type());
-    let size = meta.len();
-    match entries {
-        Some(entries) => Ok(json!({
-            "path":path,
-            "basename":file_name,
-            "realPath":real_path,
-            "type":file_type,
-            "realType":real_type,
-            "size":size,
-            "createdTime":created,
-            "accessedTime":accessed,
-            "modifiedTime":modified,
-            "parent":parent,
-            "entries":entries,
-        })),
-        None => Ok(json!({
-            "path":path,
-            "basename":file_name,
-            "realPath":real_path,
-            "type":file_type,
-            "realType":real_type,
-            "size":size,
-            "createdTime":created,
-            "accessedTime":accessed,
-            "modifiedTime":modified,
-            "parent":parent,
-        })),
+    let mut m = Map::new();
+    if let Some(path) = path {
+        m.insert("path".into(), json!(path));
     }
+    if let Some(file_name) = file_name {
+        m.insert("basename".into(), json!(file_name));
+    }
+    if let Some(real_path) = real_path {
+        m.insert("realPath".into(), json!(real_path));
+    }
+    if let Some(file_type) = file_type {
+        m.insert("type".into(), json!(file_type));
+    }
+    if let Some(real_type) = real_type {
+        m.insert("realType".into(), json!(real_type));
+    }
+    if let Some(created) = created {
+        m.insert("createdTime".into(), json!(created));
+    }
+    if let Some(accessed) = accessed {
+        m.insert("accessedTime".into(), json!(accessed));
+    }
+    if let Some(modified) = modified {
+        m.insert("modifiedTime".into(), json!(modified));
+    }
+    if let Some(parent) = parent {
+        m.insert("parent".into(), json!(parent));
+    }
+    if let Some(entries) = entries {
+        m.insert("entries".into(), json!(entries));
+    }
+    m.insert("size".into(), json!(size));
+
+    Ok(json!(m))
 }
 
 #[derive(Debug)]

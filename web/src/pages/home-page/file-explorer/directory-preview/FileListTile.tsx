@@ -89,6 +89,7 @@ function FileListTile({ name, stats, uploading, style }: {
       style={{ opacity: hover ? 1 : 0, transition: 'opacity 300ms' }}
       onClick={event => {
         event.stopPropagation();
+        // console.log(stats);
         if (typeof state.path === 'string')
           setInformation({ open: true, stat: stats, dirPath: state.path });
       }} >
@@ -128,12 +129,17 @@ function FileListTile({ name, stats, uploading, style }: {
 function fileExtension(name: string, type?: FileType | null) {
   if (type !== FileType.file) return;
   const chips = name.split('.').filter(value => value.length > 0);
-  if (chips.length > 1) return chips[chips.length - 1];
+  if (chips.length > 0) return chips[chips.length - 1];
 }
 
 function checkTypeSupport(extension?: string) {
   if (extension === undefined) return true;
   switch (extension.toLowerCase()) {
+    // text
+    case 'txt':
+    case 'pdf':
+    case 'json':
+      return true;
     // audio
     case 'mp3':
     case 'wav':
@@ -143,10 +149,7 @@ function checkTypeSupport(extension?: string) {
     case 'mp4':
     case 'webm':
       return true;
-    // text
-    case 'txt':
-    case 'pdf':
-      return true;
+
     // image
     case 'apng':
     case 'avif':
@@ -176,6 +179,7 @@ function FileIcon({ type }: { type?: FileType | null, }, extension?: string) {
       return 'folder';
     case FileType.file: {
       if (extension !== undefined) {
+        // @TODO: complete the type predict
         switch (extension.toLowerCase()) {
           case 'apng':
           case 'avif':
@@ -194,17 +198,21 @@ function FileIcon({ type }: { type?: FileType | null, }, extension?: string) {
           case 'bmp':
           case 'gif':
           case 'raw':
-            return 'image';
+            return 'image'; // https://en.wikipedia.org/wiki/Image_file_format
           case 'mp3':
-          case 'wav':
           case 'ogg':
-            return 'headphones';
+          case 'flac':
+          case 'acc':
+          case 'alac':
+          case 'wav':
+          case 'aiff':
+            return 'headphones'; // https://en.wikipedia.org/wiki/Audio_file_format
           case 'mp4':
           case 'flv':
           case 'avi':
           case 'mkv':
           case 'webm':
-            return 'videocam';
+            return 'videocam'; // https://en.wikipedia.org/wiki/Video_file_format
           case 'zip':
           case '7z':
           case 'tar':
@@ -216,7 +224,7 @@ function FileIcon({ type }: { type?: FileType | null, }, extension?: string) {
           case 'xz':
           case 'rar':
           case 'z':
-            return 'folder_zip';
+            return 'folder_zip';// https://en.wikipedia.org/wiki/Archive_file
         }
       }
       return 'text_snippet';

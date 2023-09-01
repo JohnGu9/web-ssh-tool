@@ -304,10 +304,14 @@ class Auth implements Server.Authentication.Type {
     element.click();
   }
 
-  async preview(path: string) {
+  async previewUrl(path: string) {
     const token = await this.rest('token', []);
     if (Rest.isError(token)) throw token.error;
-    window.open(`https://${host}/preview?t=${token}&v=${encodeURIComponent(path)}`);
+    return new URL(`https://${host}/preview?t=${token}&v=${encodeURIComponent(path)}`);
+  }
+
+  async preview(path: string) {
+    window.open(await this.previewUrl(path));
   }
 
   signOut() { wsSafeClose(this.ws) }
