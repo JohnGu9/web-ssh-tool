@@ -140,10 +140,13 @@ impl MyWatcher {
                 res = rx.next() => {
                     let mut watcher = watcher.lock().await;
                     if let Some(res) = res {
-                        match res {
-                            Ok(_) => { let _ = watcher.handle_on_change().await; }
-                            Err(e) => { let _ = watcher.send_error(e).await; }
-                        }
+                        let err =  match res {
+                            Ok(_) => watcher.handle_on_change().await,
+                            Err(e) => watcher.send_error(e).await,
+                        };
+                        if let Err(_) = err {
+                            break;
+                        } 
                     } else {
                         break;
                     }
@@ -152,7 +155,7 @@ impl MyWatcher {
         }
     }
 
-    async fn watch(&mut self, path: PathBuf) -> Result<(), futures::channel::mpsc::SendError> {
+    async fn watch(&mut self, path: PathBuf) -> Result<(), mpsc::SendError> {
         let _ = self.watcher.unwatch(&self.current_path);
         self.current_path = path;
         let res = self
@@ -164,14 +167,14 @@ impl MyWatcher {
     async fn handle_watch_result(
         &mut self,
         res: Result<(), notify::Error>,
-    ) -> Result<(), futures::channel::mpsc::SendError> {
+    ) -> Result<(), mpsc::SendError> {
         match res {
             Ok(_) => self.handle_on_change().await,
             Err(err) => self.send_error(err).await,
         }
     }
 
-    async fn handle_on_change(&mut self) -> Result<(), futures::channel::mpsc::SendError> {
+    async fn handle_on_change(&mut self) -> Result<(), mpsc::SendError> {
         match tokio::fs::metadata(self.current_path.as_path()).await {
             Ok(data) => {
                 if data.is_dir() {
@@ -189,7 +192,7 @@ impl MyWatcher {
         }
     }
 
-    async fn handle_dir_on_change(&mut self) -> Result<(), futures::channel::mpsc::SendError> {
+    async fn handle_dir_on_change(&mut self) -> Result<(), mpsc::SendError> {
         match tokio::fs::read_dir(self.current_path.as_path()).await {
             Ok(mut r) => {
                 let mut m = Map::new();
@@ -218,7 +221,7 @@ impl MyWatcher {
         }
     }
 
-    async fn handle_file_on_change(&mut self) -> Result<(), futures::channel::mpsc::SendError> {
+    async fn handle_file_on_change(&mut self) -> Result<(), mpsc::SendError> {
         let path = self.current_path.as_path();
         let basename = match path.file_name() {
             Some(os_str) => match os_str.to_str() {
@@ -233,7 +236,7 @@ impl MyWatcher {
         }
     }
 
-    async fn handle_link_on_change(&mut self) -> Result<(), futures::channel::mpsc::SendError> {
+    async fn handle_link_on_change(&mut self) -> Result<(), mpsc::SendError> {
         match tokio::fs::read_link(self.current_path.as_path()).await {
             Ok(real_path) => match tokio::fs::metadata(real_path.as_path()).await {
                 Ok(data) => {
@@ -251,10 +254,7 @@ impl MyWatcher {
         }
     }
 
-    async fn send_json(
-        &mut self,
-        data: serde_json::Value,
-    ) -> Result<(), futures::channel::mpsc::SendError> {
+    async fn send_json(&mut self, data: serde_json::Value) -> Result<(), mpsc::SendError> {
         self.event_channel
             .send(json!({
                 "id":self.id,
@@ -263,10 +263,7 @@ impl MyWatcher {
             .await
     }
 
-    async fn send_error(
-        &mut self,
-        err: impl std::error::Error,
-    ) -> Result<(), futures::channel::mpsc::SendError> {
+    async fn send_error(&mut self, err: impl std::error::Error) -> Result<(), mpsc::SendError> {
         let error_message = format!("{}", err);
         self.event_channel
             .send(json!({
@@ -358,17 +355,18 @@ async fn object_to_json(
 
     let path = path.to_str();
     let mut m = Map::new();
-    if let Some(path) = path {
-        m.insert("path".into(), json!(path));
-    }
+
     if let Some(file_name) = file_name {
         m.insert("basename".into(), json!(file_name));
     }
-    if let Some(real_path) = real_path {
-        m.insert("realPath".into(), json!(real_path));
+    if let Some(path) = path {
+        m.insert("path".into(), json!(path));
     }
     if let Some(file_type) = file_type {
         m.insert("type".into(), json!(file_type));
+    }
+    if let Some(real_path) = real_path {
+        m.insert("realPath".into(), json!(real_path));
     }
     if let Some(real_type) = real_type {
         m.insert("realType".into(), json!(real_type));

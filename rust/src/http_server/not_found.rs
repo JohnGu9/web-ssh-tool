@@ -4,7 +4,7 @@ use http_body_util::StreamBody;
 use hyper::{body::Frame, Response, StatusCode};
 use std::sync::Arc;
 
-use crate::{app_config::AppConfig, ResponseType};
+use crate::common::{app_config::AppConfig, ResponseType};
 
 pub async fn not_found(app_config: &Arc<AppConfig>, error: impl std::fmt::Debug) -> ResponseType {
     let message = format!("{:?}", error);

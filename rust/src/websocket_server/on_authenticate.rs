@@ -1,11 +1,14 @@
-use crate::connection_peer::Client;
-use crate::connection_peer::ClientConnection;
-
 use super::encode_value;
 use super::internal_decompress;
 use super::shell;
 use super::shell::PollChannelData;
-use futures::{channel::mpsc::Receiver, lock::Mutex, stream::SplitSink, SinkExt, StreamExt};
+use crate::common::connection_peer::{Client, ClientConnection};
+use futures::{
+    channel::{mpsc, oneshot},
+    lock::Mutex,
+    stream::SplitSink,
+    SinkExt, StreamExt,
+};
 use hyper::upgrade::Upgraded;
 use russh::{self, client::Handle};
 use serde_json::json;
@@ -16,7 +19,7 @@ pub async fn handle_request(
     token: &String,
     client_connection: &Arc<Mutex<ClientConnection>>,
     ws_stream: WebSocketStream<Upgraded>,
-    event_channel: Receiver<serde_json::Value>,
+    event_channel: mpsc::Receiver<serde_json::Value>,
     session: Handle<Client>,
 ) -> Result<(), Box<dyn Error>> {
     let (write, read) = ws_stream.split();
@@ -79,7 +82,7 @@ enum RequestError {
 }
 
 async fn poll_event(
-    mut event_channel: Receiver<serde_json::Value>,
+    mut event_channel: mpsc::Receiver<serde_json::Value>,
     tx: Arc<Mutex<SplitSink<WebSocketStream<Upgraded>, Message>>>,
 ) {
     while let Some(event) = event_channel.next().await {
@@ -96,7 +99,7 @@ async fn build_response(
     request: Option<serde_json::Value>,
     client_connection: &Arc<Mutex<ClientConnection>>,
     session: &Mutex<Handle<Client>>,
-    shells: &Mutex<HashMap<String, futures::channel::mpsc::Sender<PollChannelData>>>,
+    shells: &Mutex<HashMap<String, mpsc::Sender<PollChannelData>>>,
 ) -> Result<serde_json::Value, RequestError> {
     if let Some(serde_json::Value::Object(request)) = request {
         for (key, value) in request {
@@ -114,7 +117,7 @@ async fn build_response(
                     return Ok(json!(token));
                 }
                 key => {
-                    let (tx, rx) = futures::channel::oneshot::channel();
+                    let (tx, rx) = oneshot::channel();
                     let mut m = serde_json::Map::new();
                     m.insert(key.to_string(), value);
 

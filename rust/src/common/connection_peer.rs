@@ -1,5 +1,6 @@
 use crate::ResponseUnit;
 use async_trait::async_trait;
+use futures::channel::{mpsc, oneshot};
 use futures::{lock::Mutex, stream::SplitSink, SinkExt, TryFutureExt};
 use hyper::{body::Incoming, upgrade::Upgraded, Request};
 use russh_keys::key;
@@ -14,7 +15,11 @@ pub struct WebSocketPeer {
 }
 
 impl WebSocketPeer {
-    pub fn new(token: String, addr: SocketAddr, event_channel: Sender<serde_json::Value>) -> Self {
+    pub fn new(
+        token: String,
+        addr: SocketAddr,
+        event_channel: mpsc::Sender<serde_json::Value>,
+    ) -> Self {
         Self {
             token: token,
             addr: addr,
@@ -28,10 +33,10 @@ impl WebSocketPeer {
     }
 }
 
-type QueueType = (Request<Incoming>, Sender<ResponseUnit>);
+type QueueType = (Request<Incoming>, mpsc::Sender<ResponseUnit>);
 pub struct ClientResponseQueue {
     request_id: u64,
-    queue: HashMap<u64, futures::channel::oneshot::Sender<QueueType>>,
+    queue: HashMap<u64, oneshot::Sender<QueueType>>,
 }
 
 impl ClientResponseQueue {
@@ -42,7 +47,7 @@ impl ClientResponseQueue {
         }
     }
 
-    pub fn register(&mut self, callback: futures::channel::oneshot::Sender<QueueType>) -> u64 {
+    pub fn register(&mut self, callback: oneshot::Sender<QueueType>) -> u64 {
         let id = self.request_id.clone();
         self.request_id += 1;
         self.queue.insert(id.clone(), callback);
@@ -61,16 +66,15 @@ impl ClientResponseQueue {
     }
 }
 
-use futures::channel::mpsc::Sender;
 pub struct ClientConnection {
     request_id: u64,
     internal_client_stream: Option<SplitSink<WebSocketStream<Upgraded>, Message>>,
-    callbacks: HashMap<u64, futures::channel::oneshot::Sender<serde_json::Value>>,
-    event_channel: Sender<serde_json::Value>,
+    callbacks: HashMap<u64, oneshot::Sender<serde_json::Value>>,
+    event_channel: mpsc::Sender<serde_json::Value>,
 }
 
 impl ClientConnection {
-    pub fn new(event_channel: Sender<serde_json::Value>) -> Self {
+    pub fn new(event_channel: mpsc::Sender<serde_json::Value>) -> Self {
         Self {
             request_id: 0,
             internal_client_stream: None,
@@ -99,7 +103,7 @@ impl ClientConnection {
     pub async fn send_request(
         &mut self,
         request: serde_json::Map<String, serde_json::Value>,
-        callback: futures::channel::oneshot::Sender<serde_json::Value>,
+        callback: oneshot::Sender<serde_json::Value>,
     ) -> Result<(), &'static str> {
         if let Some(ref mut stream) = self.internal_client_stream {
             self.request_id += 1;

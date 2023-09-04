@@ -110,6 +110,8 @@ class Content extends React.Component<Content.Props, Content.State> {
                   <div style={{ height: '16px' }} />
                   <TextField ref={this._usernameRef}
                     outlined
+                    autoComplete='username'
+                    id='username'
                     type='text'
                     name='username'
                     style={{ width: '100%' }}
@@ -121,6 +123,8 @@ class Content extends React.Component<Content.Props, Content.State> {
                   <div style={{ height: '16px' }} />
                   <TextField ref={this._passwordRef}
                     outlined
+                    autoComplete='current-password'
+                    id='password'
                     type={visibility !== null ? 'text' : 'password'}
                     name='password'
                     style={{ width: '100%' }}

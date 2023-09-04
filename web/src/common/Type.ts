@@ -67,7 +67,8 @@ export namespace Watch {
   export type Error = { path?: string | null, error: string }
 }
 
-// https://developer.mozilla.org/en-US/docs/Web/API/Encoding_API/Encodings
+// @TODO: add more encodings
+// https://github.com/ashtuchkin/iconv-lite/wiki/Supported-Encodings
 export const DECODE_OPTION = [
   'utf-8',
   'utf-16be',

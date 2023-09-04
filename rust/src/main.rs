@@ -1,13 +1,11 @@
-mod app_config;
-mod components;
-mod connection_peer;
+mod common;
 mod http_server;
 mod tls;
 mod websocket_client;
 mod websocket_server;
-use app_config::AppConfig;
-use components::{ResponseType, ResponseUnit};
-use connection_peer::WebSocketPeer;
+use common::app_config::AppConfig;
+use common::{ResponseType, ResponseUnit};
+use common::connection_peer::WebSocketPeer;
 use futures::channel::{mpsc, oneshot};
 use futures::lock::Mutex;
 use http_body_util::StreamBody;
@@ -72,9 +70,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         app_config.listen_address.port
     );
 
-    app_config
-        .logger
-        .info(format!("App pid: {}", std::process::id()));
     let peer_map = Arc::new(Mutex::new(HashMap::new()));
     let queues = Arc::new(Mutex::new(HashMap::new()));
     loop {
@@ -156,7 +151,7 @@ async fn http_websocket_classify(
                     .unwrap_or(false)
             {
                 let ver = req.version();
-                let (mut tx, rx) = futures::channel::mpsc::channel(1);
+                let (mut tx, rx) = mpsc::channel(1);
                 tx.close_channel();
                 let mut res = Response::new(StreamBody::new(rx));
                 *res.status_mut() = StatusCode::SWITCHING_PROTOCOLS;

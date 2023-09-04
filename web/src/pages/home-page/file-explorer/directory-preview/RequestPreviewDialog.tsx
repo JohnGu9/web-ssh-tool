@@ -85,11 +85,20 @@ function PreviewWindow({ open, path, close }: { open: boolean, path: string | nu
       setData(arr);
       setLoading(false);
     };
-    auth.previewUrl(path).then(v => {
-      if (abort) return;
-      xhr.open('GET', v, true);
-      xhr.send()
-    });
+    xhr.onerror = () => {
+      // @TODO: error handle
+      setLoading(false);
+    }
+    auth.previewUrl(path)
+      .then(v => {
+        if (abort) return;
+        xhr.open('GET', v, true);
+        xhr.send();
+      })
+      .catch(() => {
+        // @TODO: error handle
+        setLoading(false);
+      });
 
     return () => {
       abort = true;
@@ -103,7 +112,8 @@ function PreviewWindow({ open, path, close }: { open: boolean, path: string | nu
     title="Preview"
     actions={<>
       <div style={{ minWidth: 16 }} />
-      <select value={decode}
+      <select name="text-decode"
+        value={decode}
         onChange={e => {
           if (iconv.encodingExists(e.target.value)) {
             setDecode(e.target.value);

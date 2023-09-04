@@ -2,7 +2,7 @@ mod on_authenticate;
 mod on_client;
 mod on_request_authenticate;
 mod shell;
-use crate::{app_config::AppConfig, connection_peer::WebSocketPeer};
+use crate::common::{app_config::AppConfig, connection_peer::WebSocketPeer};
 use flate2::write::{GzDecoder, GzEncoder};
 use flate2::Compression;
 use futures::channel::{mpsc, oneshot};

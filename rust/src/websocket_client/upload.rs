@@ -1,5 +1,5 @@
 use super::components::{http_to_master, ArgumentsError};
-use crate::app_config::AppConfig;
+use crate::common::app_config::AppConfig;
 use bytes::Bytes;
 use futures::SinkExt;
 use http_body_util::{BodyExt, StreamBody};

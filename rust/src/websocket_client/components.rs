@@ -1,9 +1,9 @@
-use crate::{
+use crate::common::{
     app_config::AppConfig,
-    components::{async_read_to_sender, ResponseUnit},
-    tls::CustomServerCertVerifier,
+    {async_read_to_sender, ResponseUnit},
 };
-use futures::channel::{mpsc::Receiver, oneshot};
+use crate::tls::CustomServerCertVerifier;
+use futures::channel::{mpsc, oneshot};
 use hyper::client::conn::http1::SendRequest;
 use std::{path::PathBuf, sync::Arc};
 use tokio_rustls::rustls::ServerName;
@@ -40,8 +40,8 @@ pub fn path_like_to_path(path_like: &Vec<serde_json::Value>) -> Option<PathBuf> 
 pub fn file_to_stream(
     file: tokio::fs::File,
     on_end_callback: oneshot::Sender<()>,
-) -> Receiver<ResponseUnit> {
-    let (tx, rx) = futures::channel::mpsc::channel(1);
+) -> mpsc::Receiver<ResponseUnit> {
+    let (tx, rx) = mpsc::channel(1);
     tokio::spawn(async move {
         async_read_to_sender(file, tx).await;
         let _ = on_end_callback.send(());
@@ -52,7 +52,7 @@ pub fn file_to_stream(
 use http_body_util::StreamBody;
 pub async fn http_to_master(
     app_config: &Arc<AppConfig>,
-) -> Result<SendRequest<StreamBody<Receiver<ResponseUnit>>>, Box<dyn std::error::Error>> {
+) -> Result<SendRequest<StreamBody<mpsc::Receiver<ResponseUnit>>>, Box<dyn std::error::Error>> {
     use std::net::{IpAddr, Ipv4Addr};
     use tokio::net::TcpStream;
     use tokio_rustls::{rustls::ClientConfig, TlsConnector};

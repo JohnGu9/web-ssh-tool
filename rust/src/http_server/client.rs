@@ -1,5 +1,5 @@
 use super::components::BUF_SIZE;
-use crate::{app_config::AppConfig, connection_peer::WebSocketPeer, ResponseType};
+use crate::{common::app_config::AppConfig, common::connection_peer::WebSocketPeer, ResponseType};
 use futures::channel::mpsc::channel;
 use futures::lock::Mutex;
 use http_body_util::StreamBody;

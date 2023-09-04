@@ -1,9 +1,10 @@
 use super::encode_value;
 use super::internal_decompress;
 use super::on_authenticate;
-use crate::app_config::AppConfig;
-use crate::connection_peer::Client;
-use crate::connection_peer::WebSocketPeer;
+use crate::common::{
+    app_config::AppConfig,
+    connection_peer::{Client, WebSocketPeer},
+};
 use futures::channel::{mpsc, oneshot};
 use futures::lock::Mutex;
 use futures::{SinkExt, StreamExt};
@@ -121,7 +122,7 @@ pub async fn handle_request(
                 "{} --client {} --listen-address localhost:{}",
                 app_config.bin, token, app_config.listen_address.port
             );
-            let (tx, rx) = futures::channel::mpsc::channel(1);
+            let (tx, rx) = mpsc::channel(1);
             tokio::spawn(async move { channel.exec(true, command).await });
             let peer = WebSocketPeer::new(token.clone(), addr.clone(), tx);
             let client_connection = peer.client_connection.clone();

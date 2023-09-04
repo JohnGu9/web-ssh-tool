@@ -1,4 +1,4 @@
-use crate::{app_config::AppConfig, connection_peer::WebSocketPeer, ResponseType};
+use crate::common::{app_config::AppConfig, connection_peer::WebSocketPeer, ResponseType};
 use futures::lock::Mutex;
 use hyper::{Method, Request};
 use std::{collections::HashMap, convert::Infallible, net::SocketAddr, path::PathBuf, sync::Arc};

@@ -287,8 +287,8 @@ function MoreButton() {
         <ListItem primaryText='utf-8' meta={<Radio checked={settings.textDecode === 'utf-8' || settings.textDecode === null} />}
           onClick={() => settings.setTextDecode(null)} />
         {DECODE_OPTION.filter(v => v !== 'utf-8')
-          .map((v, index) => {
-            return <ListItem key={index} primaryText={v} meta={<Radio checked={settings.textDecode === v} />}
+          .map((v) => {
+            return <ListItem key={v} primaryText={v} meta={<Radio checked={settings.textDecode === v} />}
               onClick={() => settings.setTextDecode(v)} />;
           })}
       </Dialog>

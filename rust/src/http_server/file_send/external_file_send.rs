@@ -1,5 +1,5 @@
 use super::super::components::file_to_stream;
-use crate::components::ResponseType;
+use crate::common::ResponseType;
 use http_body_util::StreamBody;
 use hyper::{header, http::HeaderValue, Response};
 use std::{error::Error, path::PathBuf};

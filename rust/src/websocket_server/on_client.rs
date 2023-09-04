@@ -1,4 +1,4 @@
-use crate::{app_config::AppConfig, connection_peer::WebSocketPeer};
+use crate::common::{app_config::AppConfig, connection_peer::WebSocketPeer};
 use futures::{lock::Mutex, StreamExt};
 use hyper::upgrade::Upgraded;
 use std::{collections::HashMap, error::Error, sync::Arc};

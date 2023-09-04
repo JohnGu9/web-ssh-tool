@@ -6,7 +6,7 @@ mod unzip;
 mod upload;
 mod watch;
 
-use crate::app_config::AppConfig;
+use crate::common::app_config::AppConfig;
 use futures::{
     channel::mpsc::{channel, Receiver, Sender},
     lock::Mutex,

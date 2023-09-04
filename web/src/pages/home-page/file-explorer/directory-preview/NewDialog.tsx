@@ -36,11 +36,11 @@ export function NewFileDialog({ state, close }: { state: NewFileDialog.State, cl
           const result = await auth.rest('fs.writeFile', [target, content]);
           if (Rest.isError(result)) return onError({ content: `${result.error}` });
           close();
-          showMessage({ content: `Created (${target})`, action: <Button label="close" /> });
+          showMessage({ content: `Created (${target})` });
         }}>
-        <TextField name="new-file-path" ref={ref} required value={name} onChange={e => setName(e.target.value)} label='name' style={{ width: 480 }} />
+        <TextField id="new-file-path" ref={ref} required value={name} onChange={e => setName(e.target.value)} label='name' style={{ width: 480 }} />
         <div style={{ height: 32 }} />
-        <TextArea name="new-file-content" value={content} onChange={e => setContent(e.target.value)} outlined rows={8} label='content' style={{ width: 480 }} />
+        <TextArea id="new-file-content" value={content} onChange={e => setContent(e.target.value)} outlined rows={8} label='content' style={{ width: 480 }} />
       </form>
     </Dialog>
   );
@@ -58,9 +58,6 @@ export function NewDirectoryDialog({ state, close }: { state: NewFileDialog.Stat
   const [value, setValue] = React.useState("");
   const id = useUuidV4();
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
-  const onError = (message: SnackbarQueueMessage) =>
-    showMessage({ action: <Button label="close" />, ...message, });
-
   const ref = useInputAutoFocusRef(state.open);
 
   return (
@@ -74,17 +71,17 @@ export function NewDirectoryDialog({ state, close }: { state: NewFileDialog.Stat
         onSubmit={async event => {
           event.preventDefault();
           const newName = value;
-          if (newName.length === 0) return onError({ content: "Error (File name can't be empty)" });
+          if (newName.length === 0) return showMessage({ content: "Error (File name can't be empty)" });
           const target = [state.path, newName];
           const exists = await auth.rest('fs.exists', [target]);
-          if (Rest.isError(exists)) return onError({ content: `${exists.error}` });
-          if (exists) return onError({ content: `Error (File [${target}] already exists)` });
+          if (Rest.isError(exists)) return showMessage({ content: `${exists.error}` });
+          if (exists) return showMessage({ content: `Error (File [${target}] already exists)` });
           const result = await auth.rest('fs.mkdir', [target]);
-          if (Rest.isError(result)) return onError({ content: `${result.error}` });
+          if (Rest.isError(result)) return showMessage({ content: `${result.error}` });
           close();
           showMessage({ content: `Created (${target})`, action: <Button label="close" /> });
         }}>
-        <TextField name="new-directory-path" ref={ref} required value={value} label='name' style={{ width: 480 }}
+        <TextField id="new-directory-path" ref={ref} required value={value} label='name' style={{ width: 480 }}
           onChange={e => setValue(e.target.value)} />
       </form>
     </Dialog>

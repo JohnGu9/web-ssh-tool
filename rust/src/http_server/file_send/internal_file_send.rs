@@ -10,7 +10,7 @@ use http_body_util::StreamBody;
 use hyper::{body::Frame, header, http::HeaderValue, Request, Response};
 
 use super::assets_map::assets_map;
-use crate::components::ResponseType;
+use crate::common::ResponseType;
 
 pub async fn internal_file_send(
     filename: &str,

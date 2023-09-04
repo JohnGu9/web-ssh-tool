@@ -22,7 +22,7 @@ function TextFieldConfirmDialog({ initialText, title, textField, submitButton, o
           if (await onSubmit(value)) close();
         }}>
         <TextField {...textField}
-          name="confirm"
+          id="confirm"
           ref={ref}
           required
           value={value}

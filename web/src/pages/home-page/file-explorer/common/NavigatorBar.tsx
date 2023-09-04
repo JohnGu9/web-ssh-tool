@@ -14,7 +14,12 @@ export function NavigatorBar({ path }: { path: string }) {
         flexDirection: 'row',
         alignItems: 'center',
       }}>
-        <TextField label="Path" name="navigation" outlined readOnly
+        <TextField
+          outlined
+          readOnly
+          label="Path"
+          id="navigation"
+          autoComplete='off'
           value={path}
           style={{ flex: 1 }}
           onFocus={e => e.target.select()} />

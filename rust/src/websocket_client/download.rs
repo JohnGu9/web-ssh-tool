@@ -1,13 +1,10 @@
 use super::components::{file_to_stream, http_to_master, ArgumentsError, BUF_SIZE};
-use crate::{app_config::AppConfig, components::ResponseUnit};
+use crate::common::{app_config::AppConfig, ResponseUnit};
 use async_compat::CompatExt;
 use async_zip::{base::write::ZipFileWriter, error::ZipError, Compression, ZipEntryBuilder};
 use bytes::Bytes;
 use futures::{
-    channel::{
-        mpsc::{Receiver, Sender},
-        oneshot,
-    },
+    channel::{mpsc, oneshot},
     join,
     lock::Mutex,
     AsyncWrite, Sink, SinkExt,
@@ -26,7 +23,7 @@ use walkdir::WalkDir;
 pub async fn handle_request(
     app_config: &Arc<AppConfig>,
     token: &String,
-    event_channel: &Mutex<Sender<serde_json::Value>>,
+    event_channel: &Mutex<mpsc::Sender<serde_json::Value>>,
     id: u64,
     argument: &serde_json::Value,
 ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
@@ -80,8 +77,8 @@ pub async fn handle_request(
 
 pub async fn download_single(
     path: String,
-    event_channel: &Mutex<Sender<serde_json::Value>>,
-) -> Result<(Receiver<ResponseUnit>, oneshot::Receiver<()>, String), ArgumentsError> {
+    event_channel: &Mutex<mpsc::Sender<serde_json::Value>>,
+) -> Result<(mpsc::Receiver<ResponseUnit>, oneshot::Receiver<()>, String), ArgumentsError> {
     let p = Path::new(path.as_str());
     let file_name = match p.file_name() {
         Some(file_name) => match file_name.to_str() {
@@ -101,7 +98,7 @@ pub async fn download_single(
                 ));
             }
         } else if p.is_dir() {
-            let (tx, rx) = futures::channel::mpsc::channel(BUF_SIZE);
+            let (tx, rx) = mpsc::channel(BUF_SIZE);
             let p = p.to_path_buf();
             let mut event_channel = event_channel.lock().await.clone();
             tokio::spawn(async move {
@@ -123,7 +120,7 @@ pub async fn download_single(
 
 async fn zip_dir(
     dir_path: PathBuf,
-    writer: Sender<ResponseUnit>,
+    writer: mpsc::Sender<ResponseUnit>,
     method: async_zip::Compression,
 ) -> Result<(), ZipError> {
     let wrapper = SenderStream {
@@ -139,10 +136,10 @@ async fn zip_dir(
 
 async fn download_multi(
     paths: Vec<String>,
-    event_channel: &Mutex<Sender<serde_json::Value>>,
-) -> Result<(Receiver<ResponseUnit>, oneshot::Receiver<()>, String), Infallible> {
+    event_channel: &Mutex<mpsc::Sender<serde_json::Value>>,
+) -> Result<(mpsc::Receiver<ResponseUnit>, oneshot::Receiver<()>, String), Infallible> {
     let (on_end_callback, on_end) = oneshot::channel();
-    let (tx, rx) = futures::channel::mpsc::channel(BUF_SIZE);
+    let (tx, rx) = mpsc::channel(BUF_SIZE);
     let mut event_channel = event_channel.lock().await.clone();
     tokio::spawn(async move {
         if let Err(e) = zip_multi(paths, tx, Compression::Deflate).await {
@@ -156,7 +153,7 @@ async fn download_multi(
 
 async fn zip_multi(
     list: Vec<String>,
-    writer: Sender<ResponseUnit>,
+    writer: mpsc::Sender<ResponseUnit>,
     method: async_zip::Compression,
 ) -> Result<(), ZipError> {
     let wrapper = SenderStream {
@@ -237,7 +234,7 @@ where
     F: Fn(&[u8]) -> T,
 {
     transform: F,
-    sender: Sender<T>,
+    sender: mpsc::Sender<T>,
 }
 
 impl<T, F> SenderStream<T, F> where F: Fn(&[u8]) -> T {}

@@ -27,7 +27,8 @@ function GoToDialog({ state: { open, path }, close }: { state: GoToDialog.State,
         <TextField
           ref={ref}
           label='path'
-          name="go-to-path"
+          id="go-to"
+          autoComplete='off'
           value={value}
           required
           onChange={(e) => setValue(e.target.value)}

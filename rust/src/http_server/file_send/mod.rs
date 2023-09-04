@@ -6,7 +6,7 @@ use hyper::{header, http::HeaderValue, Request};
 use internal_file_send::internal_file_send;
 
 use super::not_found::not_found;
-use crate::{app_config::AppConfig, ResponseType};
+use crate::{common::app_config::AppConfig, ResponseType};
 use std::{convert::Infallible, sync::Arc};
 
 pub async fn file_send(
