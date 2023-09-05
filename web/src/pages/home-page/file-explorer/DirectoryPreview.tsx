@@ -8,18 +8,25 @@ import FileExplorer, { NavigatorBar } from "./Common";
 import InformationDialog from "./directory-preview/InformationDialog";
 import FileListTile from "./directory-preview/FileListTile";
 import DropZone from "./directory-preview/DropZone";
-import ToolsBar, { SelectingToolsBar } from "./directory-preview/ToolsBar";
+import ToolsBar, { DraggingToolbar, SelectingToolsBar } from "./directory-preview/ToolsBar";
 import FileMoveDialog from "./directory-preview/FileMoveDialog";
 import RequestPreviewDialog from "./directory-preview/RequestPreviewDialog";
+import DeleteDialog from "./directory-preview/DeleteDialog";
+import CopyToDialog from "./directory-preview/CopyToDialog";
+import MoveToDialog from "./directory-preview/MoveToDialog";
 
 function DirectoryPreView({ state }: { state: Watch.Directory }) {
   const { path, entries } = state;
   const { config, uploadItems } = React.useContext(FileExplorer.Context);
+  const [dragging, setDragging] = React.useState<unknown | null>(null); // when any element is dragging
   const [onSelecting, setOnSelecting] = React.useState(false);
   const [selected, setSelected] = React.useState(new Set<Lstat>());
   const [information, setInformation] = React.useState<InformationDialog.State>({ open: false, stat: {} as Lstat, dirPath: path ?? "" });
   const [fileMove, setFileMove] = React.useState<FileMoveDialog.State>({ open: false, filename: "", path: "", target: "" });
   const [preview, setPreview] = React.useState<RequestPreviewDialog.State>({ open: false, lstat: null });
+  const [deleteDialog, setDeleteDialog] = React.useState<DeleteDialog.State>({ objects: [], open: false });
+  const [copyDialog, setCopyDialog] = React.useState<CopyToDialog.State>({ objects: [], open: false, });
+  const [moveDialog, setMoveDialog] = React.useState<MoveToDialog.State>({ objects: [], initialPath: state.path ?? "", open: false, });
   const fileList = FileExplorer.sortArray(Object.entries(entries).filter(config.showAll
     ? () => true
     : ([key]) => !key.startsWith('.')), config.sort);
@@ -62,6 +69,7 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
       selected, setSelected,
       onSelecting, setOnSelecting,
       setInformation, setFileMove, setPreview,
+      setDeleteDialog, setCopyDialog, setMoveDialog,
     };
   }, [onSelecting, selected, state]);
 
@@ -69,13 +77,19 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
     <DirectoryPreView.Context.Provider value={context}>
       <div className='full-size column' >
         <SharedAxis className='row' style={{ height: 56, padding: '0 8px 0 0' }}
-          transform={SharedAxisTransform.fromTopToBottom} keyId={onSelecting ? 0 : 1}
+          transform={SharedAxisTransform.fromTopToBottom}
+          keyId={onSelecting ? 0 : dragging === null ? 1 : 2}
           forceRebuildAfterSwitched={false}>
           {onSelecting
             ? <SelectingToolsBar />
-            : <ToolsBar />}
+            : dragging === null ?
+              <ToolsBar /> :
+              <DraggingToolbar />}
         </SharedAxis>
-        <DropZone style={{ flex: 1, width: '100%', minHeight: 0 }} dirPath={path}>
+        <DropZone style={{ flex: 1, width: '100%', minHeight: 0 }}
+          dirPath={path}
+          dragging={dragging}
+          setDragging={setDragging}>
           {fileList.length === 0 ?
             <div className='column flex-center' style={{ width: '100%' }}>
               Nothing here...
@@ -86,14 +100,18 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
         {path === undefined || path === null ?
           <></> : // @TODO: new navigator bar
           <NavigatorBar path={path} />}
-        <InformationDialog
-          key={information.stat.path}
-          state={information}
+        <InformationDialog state={information}
           close={() => setInformation({ ...information, open: false })} />
         <FileMoveDialog {...fileMove}
           close={() => setFileMove(v => { return { ...v, open: false } })} />
         <RequestPreviewDialog state={preview}
           close={() => setPreview(v => { return { ...v, open: false } })} />
+        <DeleteDialog state={deleteDialog}
+          close={() => setDeleteDialog(v => { return { ...v, open: false } })} />
+        <CopyToDialog state={copyDialog}
+          close={() => setCopyDialog(v => { return { ...v, open: false } })} />
+        <MoveToDialog state={moveDialog}
+          close={() => setMoveDialog(v => { return { ...v, open: false } })} />
       </div>
     </DirectoryPreView.Context.Provider>
   );
@@ -112,6 +130,10 @@ namespace DirectoryPreView {
     setInformation: React.Dispatch<React.SetStateAction<InformationDialog.State>>,
     setFileMove: React.Dispatch<React.SetStateAction<FileMoveDialog.State>>,
     setPreview: React.Dispatch<React.SetStateAction<RequestPreviewDialog.State>>,
+    setDeleteDialog: React.Dispatch<React.SetStateAction<DeleteDialog.State>>,
+    setCopyDialog: React.Dispatch<React.SetStateAction<CopyToDialog.State>>,
+    setMoveDialog: React.Dispatch<React.SetStateAction<MoveToDialog.State>>,
+
   };
   export const Context = React.createContext<ContextType>(undefined as unknown as ContextType);
 }

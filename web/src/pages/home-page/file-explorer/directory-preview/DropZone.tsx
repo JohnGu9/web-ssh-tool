@@ -4,10 +4,15 @@ import { Rest } from "../../../../common/Type";
 import FileExplorer from "../Common";
 import Scaffold from "../../../../components/Scaffold";
 
-function DropZone({ children, style, dirPath }: { children: React.ReactNode, dirPath: string | null | undefined, style?: React.CSSProperties }) {
+function DropZone({ children, style, dirPath, dragging, setDragging }: {
+  children: React.ReactNode,
+  dirPath: string | null | undefined,
+  dragging: unknown,
+  setDragging: React.Dispatch<unknown>,
+  style?: React.CSSProperties
+}) {
   const { upload } = React.useContext(FileExplorer.Context);
   const [drag, setDrag] = React.useState(false);
-  const [dragging, setDragging] = React.useState<unknown | null>(null); // when any element is dragging
   const [hovering, setHovering] = React.useState<HTMLElement | null>(null);
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
   const auth = React.useContext(Server.Authentication.Context);
@@ -20,7 +25,7 @@ function DropZone({ children, style, dirPath }: { children: React.ReactNode, dir
 
   const context = React.useMemo(() => {
     return { hovering, dragging, setDragging };
-  }, [dragging, hovering]);
+  }, [dragging, hovering, setDragging]);
 
   return <div style={{
     ...style,

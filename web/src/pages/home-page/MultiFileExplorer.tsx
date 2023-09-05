@@ -162,16 +162,15 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
         cancel,
       });
     const listener = () => {
-      const { detail: { state } } = controller;
-      switch (state) {
-        case Common.UploadController.State.close:
-          controller.removeEventListener('change', listener);
-          if (this._mounted) {
-            this._uploadItems = this._uploadItems.filter(value => {
-              return value.detail.state !== Common.UploadController.State.close;
-            });
-            this.setState({ uploadItems: this._uploadItems });
-          }
+      const { detail: { isClosed } } = controller;
+      if (isClosed) {
+        controller.removeEventListener('change', listener);
+        if (this._mounted) {
+          this._uploadItems = this._uploadItems.filter(value => {
+            return !value.detail.isClosed;
+          });
+          this.setState({ uploadItems: this._uploadItems });
+        }
       }
     }
     controller.addEventListener('change', listener);

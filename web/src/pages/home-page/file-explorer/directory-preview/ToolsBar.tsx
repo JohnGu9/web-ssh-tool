@@ -4,16 +4,12 @@ import { Server, ThemeContext } from "../../../../common/Providers";
 import { Lstat, Watch } from "../../../../common/Type";
 import Scaffold from "../../../../components/Scaffold";
 import FileExplorer from "../Common";
-import CopyToDialog from "./CopyToDialog";
-import MoveToDialog from "./MoveToDialog";
 import { NewDirectoryDialog, NewFileDialog } from "./NewDialog";
-import DeleteDialog from "./DeleteDialog";
 import InformationDialog from "./InformationDialog";
 import DirectoryPreView from "../DirectoryPreview";
 
 function ToolsBar() {
-  const { state, setOnSelecting, setInformation, setFileMove } = React.useContext(DirectoryPreView.Context);
-
+  const { state, setOnSelecting, setInformation } = React.useContext(DirectoryPreView.Context);
   const { cdToParent } = React.useContext(FileExplorer.Context);
   const { themeData: theme } = React.useContext(ThemeContext);
   const { parent } = state;
@@ -30,16 +26,6 @@ function ToolsBar() {
           event.dataTransfer.setData('text', parent);
           event.dataTransfer.effectAllowed = 'all';
           event.dataTransfer.dropEffect = 'move';
-        } : undefined}
-        onDragOver={hasParent ? e => e.preventDefault() : undefined}
-        onDrop={hasParent ? event => {
-          event.preventDefault();
-          const filename = event.dataTransfer.getData('filename');
-          const path = event.dataTransfer.getData('text');
-          if (parent === path) return;
-          if (path.length !== 0 && filename.length !== 0) {
-            setFileMove({ open: true, filename, path, target: parent });
-          }
         } : undefined}>
         <Icon>arrow_back</Icon>
       </IconButton>
@@ -52,6 +38,60 @@ function ToolsBar() {
 }
 
 export default ToolsBar;
+
+export function DraggingToolbar() {
+  const { state, setMoveDialog, setCopyDialog, setDeleteDialog, setFileMove } = React.useContext(DirectoryPreView.Context);
+  const { parent } = state;
+  const hasParent = parent !== null && parent !== undefined;
+  return (
+    <>
+      <div style={{ minWidth: 8 }} />
+      <IconButton
+        disabled={!hasParent}
+        onDragOver={e => e.preventDefault()}
+        onDrop={hasParent ?
+          event => {
+            event.preventDefault();
+            const filename = event.dataTransfer.getData('filename');
+            const path = event.dataTransfer.getData('text');
+            if (parent === path) return;
+            if (path.length !== 0 && filename.length !== 0) {
+              setFileMove({ open: true, filename, path, target: parent });
+            }
+          } :
+          e => e.preventDefault()}
+      ><Icon>arrow_back</Icon></IconButton>
+      <div className="expanded" />
+      <IconButton onDragOver={e => e.preventDefault()}
+        onDrop={event => {
+          event.preventDefault();
+          const path = event.dataTransfer.getData('text');
+          const lstat = Object.values(state.entries).find(v => v.path === path);
+          if (lstat === undefined) return;// @TODO: error handle
+          setCopyDialog({ open: true, objects: [lstat] });
+        }}
+      ><Icon>file_copy</Icon></IconButton>
+      <IconButton onDragOver={e => e.preventDefault()}
+        onDrop={event => {
+          event.preventDefault();
+          const path = event.dataTransfer.getData('text');
+          const lstat = Object.values(state.entries).find(v => v.path === path);
+          if (lstat === undefined) return;// @TODO: error handle
+          setMoveDialog(v => { return { ...v, open: true, objects: [lstat] } });
+        }}
+      ><Icon>drag_handle</Icon></IconButton>
+      <IconButton onDragOver={e => e.preventDefault()}
+        onDrop={event => {
+          event.preventDefault();
+          const path = event.dataTransfer.getData('text');
+          const lstat = Object.values(state.entries).find(v => v.path === path);
+          if (lstat === undefined) return;// @TODO: error handle
+          setDeleteDialog({ open: true, objects: [lstat] });
+        }}
+      ><Icon>delete</Icon></IconButton>
+    </>
+  );
+}
 
 function UploadManagementButton() {
   const { openUploadManagement } = React.useContext(FileExplorer.Context);
@@ -163,7 +203,7 @@ function CheckListButton({ setOnSelect }: { setOnSelect: (value: boolean) => unk
 }
 
 export function SelectingToolsBar() {
-  const { state: { path: dir, entries }, selected, setSelected, setOnSelecting, } = React.useContext(DirectoryPreView.Context);
+  const { state: { entries }, selected, setSelected, setOnSelecting, } = React.useContext(DirectoryPreView.Context);
   const selectedList = Array.from(selected);
   const entriesList = Object.entries(entries);
   const checked = (() => {
@@ -192,7 +232,6 @@ export function SelectingToolsBar() {
       <div style={{ width: 16 }} />
       <DownloadButton objects={selectedList} />
       <MoveButton
-        initialPath={dir ?? ""}
         objects={selectedList} />
       <CopyButton
         objects={selectedList} />
@@ -222,61 +261,40 @@ function DownloadButton({ objects }: { objects: Lstat[], }) {
   );
 }
 
-function MoveButton({ objects, initialPath }: { objects: Lstat[], initialPath: string }) {
-  const [state, setState] = React.useState<MoveToDialog.State>({
-    objects,
-    initialPath,
-    open: false,
-  });
-  const close = () => setState({ ...state, open: false });
+function MoveButton({ objects }: { objects: Lstat[] }) {
+  const { setMoveDialog } = React.useContext(DirectoryPreView.Context);
   return (
-    <>
-      <Tooltip label='move'>
-        <IconButton
-          disabled={objects.length === 0}
-          onClick={() => setState({ ...state, objects, open: true })} >
-          <Icon>drag_handle</Icon>
-        </IconButton>
-      </Tooltip>
-      <MoveToDialog state={state} close={close} />
-    </>
+    <Tooltip label='move'>
+      <IconButton
+        disabled={objects.length === 0}
+        onClick={() => setMoveDialog(v => { return { ...v, objects, open: true } })} >
+        <Icon>drag_handle</Icon>
+      </IconButton>
+    </Tooltip>
   );
 }
 
 function CopyButton({ objects }: { objects: Lstat[] }) {
-  const [state, setState] = React.useState<CopyToDialog.State>({
-    objects,
-    open: false,
-  });
-  const close = () => setState({ ...state, open: false });
+  const { setCopyDialog } = React.useContext(DirectoryPreView.Context);
   return (
-    <>
-      <Tooltip label='copy'>
-        <IconButton
-          disabled={objects.length === 0}
-          onClick={() => setState({ objects, open: true })} >
-          <Icon>file_copy</Icon>
-        </IconButton>
-      </Tooltip>
-      <CopyToDialog state={state} close={close} />
-    </>
+    <Tooltip label='copy'>
+      <IconButton
+        disabled={objects.length === 0}
+        onClick={() => setCopyDialog({ objects, open: true })} >
+        <Icon>file_copy</Icon>
+      </IconButton>
+    </Tooltip>
   );
 }
 
 function DeleteButton({ objects }: { objects: Lstat[] }) {
-  const [state, setState] = React.useState<DeleteDialog.State>({
-    objects,
-    open: false,
-  });
-  const close = () => setState({ ...state, open: false });
-  return (<>
+  const { setDeleteDialog } = React.useContext(DirectoryPreView.Context);
+  return (
     <Tooltip label='delete'>
       <IconButton
         disabled={objects.length === 0}
-        onClick={() => setState({ objects, open: true })} >
+        onClick={() => setDeleteDialog({ objects, open: true })} >
         <Icon>delete</Icon>
       </IconButton>
-    </Tooltip>
-    <DeleteDialog state={state} close={close} />
-  </>);
+    </Tooltip>);
 }

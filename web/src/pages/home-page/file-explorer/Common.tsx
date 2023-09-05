@@ -68,6 +68,7 @@ namespace FileExplorer {
         dest: props.dest,
         basename: props.basename,
         state: UploadController.State.running,
+        isClosed: false,
       };
       this.cancel = () => {
         this.detail.state = UploadController.State.cancel;
@@ -83,7 +84,6 @@ namespace FileExplorer {
             case UploadController.State.completed:
             case UploadController.State.error:
             case UploadController.State.cancel:
-            case UploadController.State.close:
               return true;
           }
           return false;
@@ -125,7 +125,8 @@ namespace FileExplorer {
       dest: Rest.PathLike,
       basename: string,
       state: UploadController.State,
-      error?: any
+      error?: any,
+      isClosed: boolean,
     };
 
     readonly cancel: () => void;
@@ -134,14 +135,14 @@ namespace FileExplorer {
       if (this.detail.state !== UploadController.State.completed) {
         this.cancel();
       }
-      this.detail.state = UploadController.State.close;
+      this.detail.isClosed = true;
       this.dispatchEvent(new Event('change'));
     }
   }
 
   export namespace UploadController {
     export const enum State {
-      running, error, completed, cancel, close,
+      running, error, completed, cancel
     }
   }
 
