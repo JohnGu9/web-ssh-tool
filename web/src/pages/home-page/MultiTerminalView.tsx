@@ -75,14 +75,14 @@ class MultiTerminalView extends React.Component<MultiTerminalView.Props, MultiTe
   override render() {
     const { controllers, controller } = this.state;
     return (
-      <div className="column" style={{ flex: 1, minWidth: 0 }}>
+      <div className="column expanded">
         <div className="row" style={{ padding: '0 24px' }}>
           <MoreButton />
           <Tooltip label="new terminal">
             <IconButton onClick={() => this.add()}><Icon>add</Icon></IconButton>
           </Tooltip>
           <TabBar
-            style={{ flex: 1, minWidth: 0 }}
+            className='expanded'
             selected={controller === undefined ? undefined : controllers.indexOf(controller)}
             onSelected={i => this.setState({ controller: controllers[i] })}>
             {controllers.map((value, index) => {
@@ -92,12 +92,13 @@ class MultiTerminalView extends React.Component<MultiTerminalView.Props, MultiTe
         </div>
         <SharedAxis
           keyId={controller?.id} transform={SharedAxisTransform.fromRightToLeft}
-          style={{ flex: 1, padding: '0 24px', overflow: 'hidden' }}>
+          className='expanded'
+          style={{ padding: '0 24px', overflow: 'hidden' }}>
           {controller
             ? <XTerminalView
               controller={controller}
               remove={value => this.removeOf(value)} />
-            : <div className='full-size row' style={{ justifyContent: 'center' }}>
+            : <div className='full-size row flex-center'>
               No shell yet
             </div>}
         </SharedAxis>
@@ -323,9 +324,11 @@ function XTerminalView({ controller, remove }: {
       <div className='full-size column'>
         <div style={{ height: 8 }} />
         <Card
+          className="column flex-center expanded"
           style={{
-            flex: 1, width: '100%', overflow: 'auto', padding: 8,
-            justifyContent: 'center', alignItems: 'center'
+            width: '100%',
+            overflow: 'auto',
+            padding: 8
           }}>
           Shell already closed
         </Card>
@@ -339,7 +342,7 @@ function XTerminalView({ controller, remove }: {
       </div> :
       <div className='full-size column'>
         <div style={{ height: 8 }} />
-        <Card style={{ flex: 1, width: '100%', overflow: 'auto', padding: 8 }}
+        <Card className="expanded" style={{ width: '100%', overflow: 'auto', padding: 8 }}
           onDragOver={event => event.preventDefault()}
           onDrop={event => {
             event.preventDefault();

@@ -13,7 +13,7 @@ function FilePreview({ state }: { state: Watch.File }) {
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
   const { path: filePath } = state;
   return (
-    <div className='full-size column' style={{ alignItems: 'center', justifyContent: 'center' }}>
+    <div className='full-size column flex-center'>
       <div className='row' style={{ height: 56, padding: '0 8px 0 0' }}>
         <IconButton style={{ color: theme.primary }} onClick={cdToParent} >
           <Icon>arrow_back</Icon>
@@ -68,8 +68,8 @@ function PreviewWindow({ name, content }: { name: string, content: string }) {
 export default FilePreview;
 
 function Center({ children }: { children: React.ReactNode }) {
-  return <div className='column'
-    style={{ flex: 1, width: '100%', overflow: 'auto', justifyContent: 'center', padding: '0 8px' }}>
+  return <div className='column flex-center expanded'
+    style={{ width: '100%', overflow: 'auto', padding: '0 8px' }}>
     {children}
   </div>;
 }

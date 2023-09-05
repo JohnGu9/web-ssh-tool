@@ -122,7 +122,7 @@ class Service extends React.Component<Service.Props, Service.State> {
           ? <Server.Context.Provider value={server}>
             {children}
           </Server.Context.Provider>
-          : <div className='row full-size' style={{ justifyContent: 'center' }}>
+          : <div className='full-size row flex-center'>
             <CircularProgress />
             <div style={{ minWidth: 16 }} />
             {meta.connecting} .....

@@ -7,13 +7,8 @@ export function NavigatorBar({ path }: { path: string }) {
   const close = () => setDialog({ ...dialog, open: false });
   return (
     <>
-      <div style={{
-        padding: '8px 8px 0px 8px',
-        display: 'flex',
-        width: '100%',
-        flexDirection: 'row',
-        alignItems: 'center',
-      }}>
+      <div className="row"
+        style={{ padding: '8px 8px 0px 8px', width: '100%' }}>
         <TextField
           outlined
           readOnly
@@ -27,7 +22,7 @@ export function NavigatorBar({ path }: { path: string }) {
         <Tooltip label="Go To">
           <IconButton
             onClick={() => {
-              setDialog({ open: true, path: path })
+              setDialog({ open: true, path: path });
             }}>
             <Icon>navigate_next</Icon>
           </IconButton>

@@ -29,7 +29,7 @@ function ToolsBar() {
         onDragStart={hasParent ? event => {
           event.dataTransfer.setData('text', parent);
           event.dataTransfer.effectAllowed = 'all';
-          event.dataTransfer.dropEffect = 'copy';
+          event.dataTransfer.dropEffect = 'move';
         } : undefined}
         onDragOver={hasParent ? e => e.preventDefault() : undefined}
         onDrop={hasParent ? event => {
@@ -44,8 +44,8 @@ function ToolsBar() {
         <Icon>arrow_back</Icon>
       </IconButton>
       <div className='expanded' />
-      <MoreButton stats={state} setInformation={setInformation} />
       <UploadManagementButton />
+      <MoreButton stats={state} setInformation={setInformation} />
       <CheckListButton setOnSelect={setOnSelecting} />
     </>
   );
@@ -175,7 +175,7 @@ export function SelectingToolsBar() {
   return (
     <>
       <div style={{ width: 16 + 3 }} />
-      <div className='column' style={{ width: 24, justifyContent: 'center', alignItems: 'center' }}>
+      <div className='column flex-center' style={{ width: 24 }}>
         <Checkbox checked={checked}
           onChange={() => {
             switch (checked) {

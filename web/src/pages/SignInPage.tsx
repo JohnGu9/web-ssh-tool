@@ -170,7 +170,7 @@ class Content extends React.Component<Content.Props, Content.State> {
                   </Tooltip>
                 </form>
               </Card>
-              <div style={{ flex: 1 }} />
+              <div className='expanded' />
             </>}
         </SharedAxis>
       </>
@@ -198,9 +198,9 @@ namespace Content {
 function Title() {
   return (
     <LayoutBuilder
-      className='full-size column' style={{ justifyContent: 'center', alignItems: 'center' }}
+      className='full-size column flex-center'
       builder={(size, children) => {
-        if (size && size.width < 500) return;
+        if (size === undefined || size.width < 500) return;
         return children;
       }}>
       <Typography.Headline3 style={{ margin: '32px 0' }}>SSH TOOL FOR WEB</Typography.Headline3>

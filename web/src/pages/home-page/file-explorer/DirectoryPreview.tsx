@@ -19,7 +19,7 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
   const [selected, setSelected] = React.useState(new Set<Lstat>());
   const [information, setInformation] = React.useState<InformationDialog.State>({ open: false, stat: {} as Lstat, dirPath: path ?? "" });
   const [fileMove, setFileMove] = React.useState<FileMoveDialog.State>({ open: false, filename: "", path: "", target: "" });
-  const [preview, setPreview] = React.useState<RequestPreviewDialog.State>({ open: false, path: "" });
+  const [preview, setPreview] = React.useState<RequestPreviewDialog.State>({ open: false, lstat: null });
   const fileList = FileExplorer.sortArray(Object.entries(entries).filter(config.showAll
     ? () => true
     : ([key]) => !key.startsWith('.')), config.sort);
@@ -49,7 +49,7 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
       return { ...v, open: false };
     });
     setPreview(v => {
-      if (e.has(v.path)) {
+      if (e.has(v.lstat?.path)) {
         return v;
       }
       return { ...v, open: false };
@@ -77,7 +77,7 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
         </SharedAxis>
         <DropZone style={{ flex: 1, width: '100%', minHeight: 0 }} dirPath={path}>
           {fileList.length === 0 ?
-            <div className='column' style={{ width: '100%', justifyContent: 'center', alignItems: 'center' }}>
+            <div className='column flex-center' style={{ width: '100%' }}>
               Nothing here...
             </div> :
             <List fileList={fileList} uploadItems={uploadItems} />}

@@ -2,7 +2,7 @@ import React from "react";
 import { Button, IconButton, Tooltip, Typography, Dialog, ListDivider, Icon, TextField } from "rmcw";
 
 import { Server, ThemeContext } from "../../../../common/Providers";
-import { FileSize } from "../../../../common/Tools";
+import { fileSize } from "../../../../common/Tools";
 import { FileType, Lstat, Rest, Watch } from "../../../../common/Type";
 import LongPressButton from "../../../../components/LongPressButton";
 import Scaffold from "../../../../components/Scaffold";
@@ -57,7 +57,7 @@ function InformationDialog({ state, close }: {
                 }} />;
             }
           })()}
-          <div style={{ minWidth: 32, flex: 1 }} />
+          <div className='expanded' />
           {(() => {
             const { type, path } = state.stat;
             if (path !== undefined && path !== null)
@@ -92,7 +92,7 @@ function InformationDialog({ state, close }: {
           if (entries !== undefined) {
             return <div><Typography.Button className={styles.title}>file amount</Typography.Button>: {Object.entries(entries).length}</div>
           } else {
-            return <div ><Typography.Button className={styles.title}>size</Typography.Button>: {size === undefined ? "undefined" : FileSize(size)}</div>
+            return <div ><Typography.Button className={styles.title}>size</Typography.Button>: {size === undefined ? "undefined" : fileSize(size)}</div>
           }
         })()}
         <div style={{ height: 8 }} />
@@ -190,7 +190,11 @@ function RenameDialog({ state: { file, dirPath, open }, close, onRenamed }: { st
           close();
           onRenamed();
         }}>
-        <TextField id="rename" ref={ref} required value={value} onChange={e => setValue(e.target.value)} style={{ width: 360 }} />
+        <TextField required
+          id='rename'
+          ref={ref}
+          value={value}
+          onChange={e => setValue(e.target.value)} style={{ width: 360 }} />
       </form>
     </Dialog>
   );

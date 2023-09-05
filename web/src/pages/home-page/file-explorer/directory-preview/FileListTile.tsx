@@ -60,7 +60,7 @@ function FileListTile({ name, stats, uploading, style }: {
       event.dataTransfer.setData('filename', name);
       event.dataTransfer.setData('text', path);
       event.dataTransfer.effectAllowed = 'all';
-      event.dataTransfer.dropEffect = 'copy';
+      event.dataTransfer.dropEffect = 'move';
     }}
     onDragEnd={() => setDragging(null)}
     onDragOver={isDirectory ? e => e.preventDefault() : undefined}
@@ -78,13 +78,12 @@ function FileListTile({ name, stats, uploading, style }: {
       keyId={onSelecting ? 0 : 1}
       transform={SharedAxisTransform.fromLeftToRight}
       forceRebuildAfterSwitched={false}
-      className='column'
-      style={{ justifyContent: 'center', alignItems: 'center' }}>
+      className='column flex-center'>
       {onSelecting
         ? <Checkbox readOnly checked={beSelected} style={{ height: 24 }}></Checkbox>
         : <Icon>{uploading ? 'file_upload' : FileIcon(stats, extension)}</Icon>}
     </SharedAxis>}
-    primaryText={<div style={{ flex: 1, minWidth: 0, overflowX: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>}
+    primaryText={<div className='expanded' style={{ overflowX: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>}
     meta={<IconButton
       style={{ opacity: hover ? 1 : 0, transition: 'opacity 300ms' }}
       onClick={event => {
@@ -111,7 +110,7 @@ function FileListTile({ name, stats, uploading, style }: {
               if (checkTypeSupport(extension)) {
                 auth.preview(stats.path);
               } else {
-                setPreview({ open: true, path: stats.path })
+                setPreview({ open: true, lstat: stats })
               }
               return;
             }

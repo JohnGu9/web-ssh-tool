@@ -25,12 +25,11 @@ function GoToDialog({ state: { open, path }, close }: { state: GoToDialog.State,
           cd(value);
         }}>
         <TextField
+          required
           ref={ref}
           label='path'
-          id="go-to"
-          autoComplete='off'
+          id='go-to'
           value={value}
-          required
           onChange={(e) => setValue(e.target.value)}
           style={{ width: 480 }} />
       </form>

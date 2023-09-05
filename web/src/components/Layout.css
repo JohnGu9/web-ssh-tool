@@ -11,13 +11,18 @@
     height: 100%;
 }
 
+.flex-center {
+    align-items: center;
+    justify-content: center;
+}
+
 .expanded {
     flex: 1;
     min-width: 0;
     min-height: 0;
 }
 
-.full-size{
+.full-size {
     height: 100%;
     width: 100%;
 }

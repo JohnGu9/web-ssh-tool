@@ -1,59 +1,66 @@
-import { Button, Dialog, LinearProgress } from "rmcw";
+import { Button, Dialog, Icon, IconButton, LinearProgress } from "rmcw";
 import { Server } from "../../../../common/Providers";
 import React from "react";
 import iconv from 'iconv-lite';
 import { Buffer } from 'buffer';
 import Scaffold from "../../../../components/Scaffold";
-import { DECODE_OPTION } from "../../../../common/Type";
+import { DECODE_OPTION, Lstat } from "../../../../common/Type";
+import { fileSize } from "../../../../common/Tools";
 
 function RequestPreviewDialog({ state, close }: {
   close: () => unknown,
   state: RequestPreviewDialog.State
 }) {
   const auth = React.useContext(Server.Authentication.Context);
-  const [previewState, setPreviewState] = React.useState<{ open: boolean, path: string | null }>({ open: false, path: null });
-  return (
-    <>
-      <Dialog
-        open={state.open}
-        onScrimClick={close}
-        onEscapeKey={close}
-        title="Attention"
-        actions={<>
-          <div style={{ minWidth: 8 }} />
-          <Button onClick={async (e) => {
-            e.preventDefault();
-            close();
-            setPreviewState({ open: true, path: state.path });
-          }}>force view in text</Button>
-          <div className="expanded" />
-          <Button onClick={(e) => {
-            e.preventDefault();
-            close();
-            auth.preview(state.path);
-          }}>preview</Button>
-          <Button onClick={close}>close</Button>
-        </>}>
-        This file maybe an unsupported file for preview.
+  const [previewState, setPreviewState] = React.useState<{ open: boolean, lstat: Lstat | null }>({ open: false, lstat: null });
+  return (<>
+    <Dialog
+      open={state.open}
+      onScrimClick={close}
+      onEscapeKey={close}
+      title="Attention"
+      actions={<>
+        <div style={{ minWidth: 8 }} />
+        <Button onClick={async (e) => {
+          e.preventDefault();
+          close();
+          setPreviewState({ open: true, lstat: state.lstat });
+        }}>force view in text</Button>
+        <div className="expanded" />
+        <Button onClick={(e) => {
+          e.preventDefault();
+          close();
+          if (typeof state.lstat?.path === 'string') {
+            auth.preview(state.lstat.path);
+          }
+        }}>preview</Button>
+        <Button onClick={close}>close</Button>
+      </>}>
+      This file maybe an unsupported file for preview.
+      <div style={{ opacity: 0.7, marginTop: 16 }}>
+        Try to preview unsupported files that may just trigger download action (action depending on browser).
+      </div>
+      {typeof state.lstat?.size === 'number' ?
         <div style={{ opacity: 0.7 }}>
-          Try to preview unsupported files that may just trigger download action (action depending on browser).
-        </div>
-      </Dialog>
-      <PreviewWindow {...previewState}
-        close={() => setPreviewState(v => { return { ...v, open: false } })} />
-    </>);
+          File size: {fileSize(state.lstat.size)}
+        </div> :
+        undefined}
+    </Dialog>
+    <PreviewWindow {...previewState}
+      close={() => setPreviewState(v => { return { ...v, open: false } })} />
+  </>);
 }
 
 namespace RequestPreviewDialog {
   export type State = {
     open: boolean,
-    path: string,
+    lstat: Lstat | null,
   };
 }
 
 export default RequestPreviewDialog;
 
-function PreviewWindow({ open, path, close }: { open: boolean, path: string | null, close: () => unknown }) {
+function PreviewWindow({ open, lstat, close }: { open: boolean, lstat: Lstat | null, close: () => unknown }) {
   const auth = React.useContext(Server.Authentication.Context);
   const [refresh, setRefresh] = React.useState(0);
   const [decode, setDecode] = React.useState('utf-8');
@@ -66,7 +73,8 @@ function PreviewWindow({ open, path, close }: { open: boolean, path: string | nu
     return iconv.decode(buffer, decode);
   }, [data, decode]);
   React.useEffect(() => {
-    if (path === null) {
+    if (typeof lstat?.path !== 'string') {
+      setData(null);
       setLoading(false);
       return;
     }
@@ -87,9 +95,10 @@ function PreviewWindow({ open, path, close }: { open: boolean, path: string | nu
     };
     xhr.onerror = () => {
       // @TODO: error handle
+      setData(null);
       setLoading(false);
     }
-    auth.previewUrl(path)
+    auth.previewUrl(lstat.path)
       .then(v => {
         if (abort) return;
         xhr.open('GET', v, true);
@@ -97,6 +106,7 @@ function PreviewWindow({ open, path, close }: { open: boolean, path: string | nu
       })
       .catch(() => {
         // @TODO: error handle
+        setData(null);
         setLoading(false);
       });
 
@@ -104,7 +114,7 @@ function PreviewWindow({ open, path, close }: { open: boolean, path: string | nu
       abort = true;
       xhr.abort();
     };
-  }, [auth, path, refresh]);
+  }, [auth, lstat, refresh]);
   return <Dialog open={open}
     onScrimClick={close}
     onEscapeKey={close}
@@ -127,8 +137,19 @@ function PreviewWindow({ open, path, close }: { open: boolean, path: string | nu
         })}
       </select>
       <div className="expanded" />
-      <Button disabled={loading !== false}
-        onClick={() => setRefresh(v => v + 1)}>refresh</Button>
+      <IconButton disabled={loading !== false}
+        onClick={() => setRefresh(v => v + 1)}><Icon>refresh</Icon></IconButton>
+      <IconButton disabled={loading !== false || data === null}
+        onClick={() => {
+          if (data !== null) {
+            const blob = new Blob([data]);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "";
+            a.click();
+          }
+        }}><Icon>save</Icon></IconButton>
       <Button onClick={close}>close</Button>
     </>}>
     <LinearProgress closed={loading === false} progress={typeof loading === 'number' ? loading : undefined}

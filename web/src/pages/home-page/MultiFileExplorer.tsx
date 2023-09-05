@@ -2,7 +2,7 @@ import React from "react";
 import { Elevation, LinearProgress, CircularProgress, IconButton, Icon, Tooltip, Dialog, Button, ListItem } from 'rmcw';
 import { v1 as uuid } from 'uuid';
 
-import { FileSize, delay } from "../../common/Tools";
+import { fileSize, delay } from "../../common/Tools";
 import { Server, Settings } from "../../common/Providers";
 import { Rest, Watch } from "../../common/Type";
 import AnimatedList from "../../components/AnimatedList";
@@ -235,7 +235,7 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
                 };
                 input.click();
               }}>Upload local files</Button>
-            <div style={{ flex: 1 }} />
+            <div className='expanded' />
             <Button
               disabled={uploadItems.length === 0}
               onClick={() => {
@@ -472,13 +472,13 @@ function UploadItem(props: { controller: Common.UploadController }) {
                   if (upload.lengthComputable) {
                     const progress = upload.loaded / upload.total;
                     return (
-                      <Tooltip label={`${(progress * 100).toFixed(1)} %; ${FileSize(upload.loaded)}; ${FileSize(upload.total)}`}>
+                      <Tooltip label={`${(progress * 100).toFixed(1)} %; ${fileSize(upload.loaded)}; ${fileSize(upload.total)}`}>
                         <CircularProgress progress={progress} sizing='Small' />
                       </Tooltip>
                     );
                   } else {
                     return (
-                      <Tooltip label={FileSize(upload.loaded)}>
+                      <Tooltip label={fileSize(upload.loaded)}>
                         <CircularProgress sizing='Small' />
                       </Tooltip>
                     );

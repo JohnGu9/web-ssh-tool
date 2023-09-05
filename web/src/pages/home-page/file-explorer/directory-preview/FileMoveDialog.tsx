@@ -31,7 +31,7 @@ function FileMoveDialog({ open, close, filename, path, target }: FileMoveDialog.
           if (Rest.isError(res)) showMessage({ content: `Move file [${path}] failed` });
           else showMessage({ content: "Move succeed" });
         }} />
-      <div style={{ flex: 1 }} />
+      <div className='expanded' />
       <Button label="close" onClick={close} />
     </>}>
     [{filename}]{" -> "}[{target}]

@@ -16,26 +16,33 @@ namespace FileExplorer {
 
   export const enum SortType { alphabetically = 'alphabetically', date = 'date', type = 'type' };
   export type Config = { showAll: boolean, sort: SortType, uploadCompress: boolean };
-  export function switchSortType(current: SortType) {
-    switch (current) {
-      case SortType.alphabetically:
-        return SortType.date;
-      case SortType.date:
-        return SortType.type;
-      case SortType.type:
-        return SortType.alphabetically;
-    }
-  }
 
   function compare<T>(a: T, b: T) {
     if (a < b) return -1;
     if (a > b) return 1;
     return 0;
   }
+  function stringReserveCompare(a: string, b: string) {
+    const aLen = a.length;
+    const bLen = b.length;
+    for (let i = 0; i < aLen && i < bLen; i++) {
+      const aCode = a.charCodeAt(aLen - i - 1);
+      const bCode = b.charCodeAt(bLen - i - 1);
+      if (aCode === bCode) { continue; }
+      return aCode - bCode;
+    }
+    return aLen - bLen;
+  }
   export function sortArray(array: Array<[string, Lstat]>, type: SortType) {
     switch (type) {
       case SortType.type:
-        return array.sort(([_, stats0], [__, stats1]) => compare(stats0.type, stats1.type));
+        return array.sort(([key0, stats0], [key1, stats1]) => {
+          const res = compare(stats0.type, stats1.type);
+          if (res === 0) {
+            return stringReserveCompare(key0, key1);
+          }
+          return res;
+        });
       case SortType.date:
         return array.sort(([_, stats0], [__, stats1]) => compare(stats0.modifiedTime, stats1.modifiedTime));
       case SortType.alphabetically:

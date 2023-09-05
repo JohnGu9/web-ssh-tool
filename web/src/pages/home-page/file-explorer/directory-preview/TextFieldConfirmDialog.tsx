@@ -22,9 +22,9 @@ function TextFieldConfirmDialog({ initialText, title, textField, submitButton, o
           if (await onSubmit(value)) close();
         }}>
         <TextField {...textField}
+          required
           id="confirm"
           ref={ref}
-          required
           value={value}
           onChange={e => setValue(e.target.value)}
           style={{ width: 480 }} />
