@@ -17,16 +17,17 @@ function InformationDialog({ state, close }: {
   const auth = React.useContext(Server.Authentication.Context);
   const { themeData: theme } = React.useContext(ThemeContext);
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
-  const onError = (error: any) => showMessage({ content: `Delete failed (${error})`, action: <Button label="close" /> });
-  const onDeleted = (path: string) => showMessage({ content: `Deleted (${path})`, action: <Button label="close" /> });
+  const onError = (error: any) => showMessage({ content: `Delete failed (${error})` });
+  const onDeleted = (path: string) => showMessage({ content: `Deleted (${path})`, });
   const { type, size, path, basename, entries, ...stats } = state.stat as Watch.Directory;
 
   const [rename, setRename] = React.useState<RenameDialog.State>({ open: false, dirPath: state.dirPath, file: state.stat });
+  const [deleteDialog, setDeleteDialog] = React.useState<DeleteDialog.State>({ open: false, onDelete: function () { }, path: "" });
   const closeRename = () => setRename(v => { return { ...v, open: false } });
-
+  const closeDeleteDialog = () => setDeleteDialog(v => { return { ...v, open: false } });
   return (
     <>
-      <Dialog open={state.open && !rename.open}
+      <Dialog open={state.open && !rename.open && !deleteDialog.open}
         onScrimClick={close}
         onEscapeKey={close}
         title="Information"
@@ -42,19 +43,33 @@ function InformationDialog({ state, close }: {
             }
             switch (type) {
               case FileType.file:
-                return <DeleteButton onLongPress={async () => {
-                  close();
-                  const result = await auth.rest('fs.unlink', [[path]]);
-                  if (Rest.isError(result)) return onError(result.error);
-                  onDeleted(path);
-                }} />;
+                return (<Button
+                  leading={<Icon>delete</Icon>}
+                  label='delete'
+                  onClick={() => {
+                    setDeleteDialog({
+                      open: true, path, onDelete: async () => {
+                        close();
+                        const result = await auth.rest('fs.unlink', [[path]]);
+                        if (Rest.isError(result)) return onError(result.error);
+                        onDeleted(path);
+                      }
+                    })
+                  }} />);
               case FileType.directory:
-                return <DeleteButton onLongPress={async () => {
-                  close();
-                  const result = await auth.rest('fs.rm', [[path]]);
-                  if (Rest.isError(result)) return onError(result.error);
-                  onDeleted(path);
-                }} />;
+                return (<Button
+                  leading={<Icon>delete</Icon>}
+                  label='delete'
+                  onClick={() => {
+                    setDeleteDialog({
+                      open: true, path, onDelete: async () => {
+                        close();
+                        const result = await auth.rest('fs.rm', [[path]]);
+                        if (Rest.isError(result)) return onError(result.error);
+                        onDeleted(path);
+                      }
+                    })
+                  }} />);
             }
           })()}
           <div className='expanded' />
@@ -112,6 +127,9 @@ function InformationDialog({ state, close }: {
           close();
           showMessage({ content: "Rename succeed" });
         }} />
+      <DeleteDialog
+        state={deleteDialog}
+        close={closeDeleteDialog} />
     </>
   );
 }
@@ -125,23 +143,6 @@ namespace InformationDialog {
 }
 
 export default InformationDialog;
-
-function DeleteButton({ onLongPress }: { onLongPress: () => unknown }) {
-  const { themeData: theme } = React.useContext(ThemeContext);
-  const [down, setDown] = React.useState<boolean>(false);
-  return <LongPressButton
-    onLongPress={onLongPress}
-    onLongPressStart={() => setDown(true)}
-    onLongPressEnd={() => setDown(false)}
-    icon='delete'
-    label='delete'
-    style={{
-      color: theme.primary,
-      backgroundColor: down ? theme.primary : undefined,
-      transition: 'background-color 1s'
-    }}
-    tooltip='Long press to delete' />;
-}
 
 function RenameDialog({ state: { file, dirPath, open }, close, onRenamed }: { state: RenameDialog.State, close: () => unknown, onRenamed: () => unknown }) {
   const auth = React.useContext(Server.Authentication.Context);
@@ -203,5 +204,38 @@ namespace RenameDialog {
     open: boolean,
     dirPath: string,
     file: Lstat,
+  };
+}
+
+
+function DeleteDialog({ state, close }: {
+  state: DeleteDialog.State,
+  close: () => unknown,
+}) {
+  return (
+    <Dialog open={state.open}
+      onScrimClick={close}
+      onEscapeKey={close}
+      title="Delete"
+      actions={<>
+        <Button leading={<Icon>delete</Icon>}
+          onClick={() => {
+            close();
+            state.onDelete();
+          }}>delete</Button>
+        <Button onClick={close}>close</Button>
+      </>}>
+      Are you sure delete this object?
+      <ul>
+        <li>{state.path}</li>
+      </ul>
+    </Dialog>
+  );
+}
+namespace DeleteDialog {
+  export type State = {
+    open: boolean,
+    onDelete: () => unknown,
+    path: string,
   };
 }

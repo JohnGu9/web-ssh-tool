@@ -2,7 +2,7 @@ import React from "react";
 import { Button, TextField, Dialog, TextArea } from "rmcw";
 
 import { Server } from "../../../../common/Providers";
-import Scaffold, { SnackbarQueueMessage } from "../../../../components/Scaffold";
+import Scaffold from "../../../../components/Scaffold";
 import { Rest } from "../../../../common/Type";
 import { useUuidV4 } from "../Common";
 import useInputAutoFocusRef from "../../../../components/InputAutoFocusRef";
@@ -12,8 +12,7 @@ export function NewFileDialog({ state, close }: { state: NewFileDialog.State, cl
   const [name, setName] = React.useState("");
   const [content, setContent] = React.useState("");
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
-  const onError = (message: SnackbarQueueMessage) =>
-    showMessage({ action: <Button label="close" />, ...message, });
+  const onError = showMessage;
   const id = useUuidV4();
 
   const ref = useInputAutoFocusRef(state.open);
@@ -78,7 +77,7 @@ export function NewDirectoryDialog({ state, close }: { state: NewFileDialog.Stat
           const result = await auth.rest('fs.mkdir', [target]);
           if (Rest.isError(result)) return showMessage({ content: `${result.error}` });
           close();
-          showMessage({ content: `Created (${target})`, action: <Button label="close" /> });
+          showMessage({ content: `Created (${target})` });
         }}>
         <TextField id="new-directory-path" ref={ref} required value={value} label='name' style={{ width: 480 }}
           onChange={e => setValue(e.target.value)} />
