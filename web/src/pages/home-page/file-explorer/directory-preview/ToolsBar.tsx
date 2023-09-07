@@ -40,18 +40,29 @@ function ToolsBar() {
 export default ToolsBar;
 
 export function DraggingToolbar() {
-  const { state, setMoveDialog, setCopyDialog, setDeleteDialog, setFileMove } = React.useContext(DirectoryPreView.Context);
+  const { state, setFileMove } = React.useContext(DirectoryPreView.Context);
   const { parent } = state;
   const hasParent = parent !== null && parent !== undefined;
+  const [hovering, setHovering] = React.useState(false);
   return (
     <>
       <div style={{ minWidth: 8 }} />
       <IconButton
         disabled={!hasParent}
+        style={{ opacity: hovering ? 0.5 : 1, transition: 'opacity 200ms' }}
         onDragOver={e => e.preventDefault()}
+        onDragEnter={e => {
+          e.preventDefault();
+          setHovering(true);
+        }}
+        onDragLeave={e => {
+          e.preventDefault();
+          setHovering(false);
+        }}
         onDrop={hasParent ?
           event => {
             event.preventDefault();
+            setHovering(false);
             const filename = event.dataTransfer.getData('filename');
             const path = event.dataTransfer.getData('text');
             if (parent === path) return;
@@ -62,35 +73,77 @@ export function DraggingToolbar() {
           e => e.preventDefault()}
       ><Icon>arrow_back</Icon></IconButton>
       <div className="expanded" />
-      <IconButton onDragOver={e => e.preventDefault()}
-        onDrop={event => {
-          event.preventDefault();
-          const path = event.dataTransfer.getData('text');
-          const lstat = Object.values(state.entries).find(v => v.path === path);
-          if (lstat === undefined) return;// @TODO: error handle
-          setCopyDialog({ open: true, objects: [lstat] });
-        }}
-      ><Icon>file_copy</Icon></IconButton>
-      <IconButton onDragOver={e => e.preventDefault()}
-        onDrop={event => {
-          event.preventDefault();
-          const path = event.dataTransfer.getData('text');
-          const lstat = Object.values(state.entries).find(v => v.path === path);
-          if (lstat === undefined) return;// @TODO: error handle
-          setMoveDialog(v => { return { ...v, open: true, objects: [lstat] } });
-        }}
-      ><Icon>drag_handle</Icon></IconButton>
-      <IconButton onDragOver={e => e.preventDefault()}
-        onDrop={event => {
-          event.preventDefault();
-          const path = event.dataTransfer.getData('text');
-          const lstat = Object.values(state.entries).find(v => v.path === path);
-          if (lstat === undefined) return;// @TODO: error handle
-          setDeleteDialog({ open: true, objects: [lstat] });
-        }}
-      ><Icon>delete</Icon></IconButton>
+      <DraggingToolbar.DownloadButton />
+      <DraggingToolbar.CopyButton />
+      <DraggingToolbar.MoveButton />
+      <DraggingToolbar.DeleteButton />
     </>
   );
+}
+
+export namespace DraggingToolbar {
+  function DropTargetButton({ icon, onDrop }: { icon: React.ReactNode, onDrop: (event: React.DragEvent<HTMLButtonElement>) => unknown }) {
+    const [hovering, setHovering] = React.useState(false);
+    return <IconButton
+      style={{ opacity: hovering ? 0.5 : 1, transition: 'opacity 200ms' }}
+      onDragOver={e => e.preventDefault()}
+      onDragEnter={e => {
+        e.preventDefault();
+        setHovering(true);
+      }}
+      onDragLeave={e => {
+        e.preventDefault();
+        setHovering(false);
+      }}
+      onDrop={event => {
+        event.preventDefault();
+        setHovering(false);
+        onDrop(event);
+      }}
+    ><Icon>{icon}</Icon></IconButton>;
+  }
+
+  export function DownloadButton() {
+    const auth = React.useContext(Server.Authentication.Context);
+    return <DropTargetButton icon="download"
+      onDrop={(event) => {
+        const path = event.dataTransfer.getData('text');
+        auth.download(path);
+      }} />
+  }
+
+  export function CopyButton() {
+    const { state, setCopyDialog } = React.useContext(DirectoryPreView.Context);
+    return <DropTargetButton icon="file_copy"
+      onDrop={(event) => {
+        const path = event.dataTransfer.getData('text');
+        const lstat = Object.values(state.entries).find(v => v.path === path);
+        if (lstat === undefined) return;// @TODO: error handle
+        setCopyDialog({ open: true, objects: [lstat] });
+      }} />
+  }
+
+  export function MoveButton() {
+    const { state, setMoveDialog } = React.useContext(DirectoryPreView.Context);
+    return <DropTargetButton icon="drag_handle"
+      onDrop={(event) => {
+        const path = event.dataTransfer.getData('text');
+        const lstat = Object.values(state.entries).find(v => v.path === path);
+        if (lstat === undefined) return;// @TODO: error handle
+        setMoveDialog(v => { return { ...v, open: true, objects: [lstat] } });
+      }} />
+  }
+
+  export function DeleteButton() {
+    const { state, setDeleteDialog } = React.useContext(DirectoryPreView.Context);
+    return <DropTargetButton icon="delete"
+      onDrop={(event) => {
+        const path = event.dataTransfer.getData('text');
+        const lstat = Object.values(state.entries).find(v => v.path === path);
+        if (lstat === undefined) return;// @TODO: error handle
+        setDeleteDialog({ open: true, objects: [lstat] });
+      }} />
+  }
 }
 
 function UploadManagementButton() {
@@ -174,8 +227,7 @@ function MoreButton({ stats, setInformation }: {
           <ListItem primaryText="Upload Compress"
             meta={<Switch selected={config.uploadCompress} />}
             onClick={() => setConfig({ ...config, uploadCompress: !config.uploadCompress })} />
-        </div>}
-      >
+        </div>}>
         <IconButton
           onClick={() => {
             requestAnimationFrame(() => {

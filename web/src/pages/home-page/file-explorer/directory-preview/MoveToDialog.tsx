@@ -8,7 +8,6 @@ import Scaffold from "../../../../components/Scaffold";
 function MoveToDialog({ state, close }: { state: MoveToDialog.State, close: () => unknown }) {
   const auth = React.useContext(Server.Authentication.Context);
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
-
   return (<TextFieldConfirmDialog
     open={state.open}
     close={close}
@@ -50,6 +49,8 @@ function MoveToDialog({ state, close }: { state: MoveToDialog.State, close: () =
     }}
     textField={{
       label: 'path',
+      helper: state.objects.length === 1 ? `${state.objects[0].path}` : `${state.objects.length} items`,
+      helperPersistent: true,
     }} />);
 }
 

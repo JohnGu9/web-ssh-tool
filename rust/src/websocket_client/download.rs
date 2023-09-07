@@ -10,7 +10,7 @@ use futures::{
     AsyncWrite, Sink, SinkExt,
 };
 use http_body_util::{BodyExt, StreamBody};
-use hyper::{body::Frame, header, http::HeaderValue, Method, Request};
+use hyper::{body::Frame, header, http::HeaderValue, HeaderMap, Method, Request};
 use serde_json::json;
 use std::{
     convert::Infallible,
@@ -38,31 +38,25 @@ pub async fn handle_request(
     if paths.len() == 0 {
         return Err(Box::new(ArgumentsError(Some(format!("no paths")))));
     }
-    let (rx, on_end, disposition) = match paths.len() {
-        1 => download_single(paths[0].to_owned(), event_channel).await?,
-        _ => download_multi(paths, event_channel).await?,
-    };
-    let mut sender = http_to_master(app_config).await?;
-    let body = StreamBody::new(rx);
-    let mut req = Request::new(body);
-    *req.uri_mut() = "/client".parse()?;
-    *req.method_mut() = Method::PUT;
-    let headers = req.headers_mut();
+    let (mut parts, _) = Request::new("").into_parts();
+    let headers = &mut parts.headers;
     headers.append("id", HeaderValue::from_str(id.to_string().as_str())?);
     headers.append("peer", HeaderValue::from_str(token.as_str())?);
-    headers.append(
-        header::CONTENT_DISPOSITION,
-        HeaderValue::from_str(disposition.as_str())?,
-    );
     headers.append(
         header::CONTENT_TYPE,
         HeaderValue::from_static("application/octet-stream"),
     );
-    headers.append(
-        header::TRANSFER_ENCODING,
-        HeaderValue::from_static("chunked"),
-    );
     headers.append(header::CONNECTION, HeaderValue::from_static("close"));
+    let (rx, on_end) = match paths.len() {
+        1 => download_single(paths[0].to_owned(), event_channel, headers).await?,
+        _ => download_multi(paths, event_channel, headers).await?,
+    };
+
+    let mut sender = http_to_master(app_config).await?;
+    let body = StreamBody::new(rx);
+    let mut req = Request::from_parts(parts, body);
+    *req.uri_mut() = "/client".parse()?;
+    *req.method_mut() = Method::PUT;
     let mut response = sender.send_request(req).await?;
     tokio::spawn(async move {
         let body = response.body_mut();
@@ -78,8 +72,18 @@ pub async fn handle_request(
 pub async fn download_single(
     path: String,
     event_channel: &Mutex<mpsc::Sender<serde_json::Value>>,
-) -> Result<(mpsc::Receiver<ResponseUnit>, oneshot::Receiver<()>, String), ArgumentsError> {
-    let p = Path::new(path.as_str());
+    headers: &mut HeaderMap,
+) -> Result<(mpsc::Receiver<ResponseUnit>, oneshot::Receiver<()>), ArgumentsError> {
+    let p = Path::new(path.as_str()).to_path_buf();
+    let p = if p.is_symlink() {
+        if let Ok(buf) = tokio::fs::read_link(p).await {
+            buf
+        } else {
+            Path::new(path.as_str()).to_path_buf()
+        }
+    } else {
+        p
+    };
     let file_name = match p.file_name() {
         Some(file_name) => match file_name.to_str() {
             Some(file_name) => Some(file_name),
@@ -90,12 +94,30 @@ pub async fn download_single(
     let (on_end_callback, on_end) = oneshot::channel();
     if let Some(file_name) = file_name {
         if p.is_file() {
-            if let Ok(file) = tokio::fs::File::open(p).await {
-                return Ok((
-                    file_to_stream(file, on_end_callback),
-                    on_end,
-                    format!("attachment; filename=\"{}\";", file_name),
-                ));
+            if let Ok(file) = tokio::fs::File::open(p.as_path()).await {
+                if let Ok(disposition) = HeaderValue::from_str(
+                    format!("attachment; filename=\"{}\";", file_name).as_str(),
+                ) {
+                    headers.append(header::CONTENT_DISPOSITION, disposition);
+                }
+                let meta = file.metadata().await;
+                let (key, value) = if let Ok(meta) = meta {
+                    if let Ok(size) = HeaderValue::from_str(meta.len().to_string().as_str()) {
+                        (header::CONTENT_LENGTH, size)
+                    } else {
+                        (
+                            header::TRANSFER_ENCODING,
+                            HeaderValue::from_static("chunked"),
+                        )
+                    }
+                } else {
+                    (
+                        header::TRANSFER_ENCODING,
+                        HeaderValue::from_static("chunked"),
+                    )
+                };
+                headers.append(key, value);
+                return Ok((file_to_stream(file, on_end_callback), on_end));
             }
         } else if p.is_dir() {
             let (tx, rx) = mpsc::channel(BUF_SIZE);
@@ -108,11 +130,16 @@ pub async fn download_single(
                 }
                 let _ = on_end_callback.send(());
             });
-            return Ok((
-                rx,
-                on_end,
-                format!("attachment; filename=\"{}.zip\";", file_name),
-            ));
+            if let Ok(disposition) = HeaderValue::from_str(
+                format!("attachment; filename=\"{}.zip\";", file_name).as_str(),
+            ) {
+                headers.append(header::CONTENT_DISPOSITION, disposition);
+            }
+            headers.append(
+                header::TRANSFER_ENCODING,
+                HeaderValue::from_static("chunked"),
+            );
+            return Ok((rx, on_end));
         }
     }
     return Err(ArgumentsError(None));
@@ -137,7 +164,8 @@ async fn zip_dir(
 async fn download_multi(
     paths: Vec<String>,
     event_channel: &Mutex<mpsc::Sender<serde_json::Value>>,
-) -> Result<(mpsc::Receiver<ResponseUnit>, oneshot::Receiver<()>, String), Infallible> {
+    headers: &mut HeaderMap,
+) -> Result<(mpsc::Receiver<ResponseUnit>, oneshot::Receiver<()>), Infallible> {
     let (on_end_callback, on_end) = oneshot::channel();
     let (tx, rx) = mpsc::channel(BUF_SIZE);
     let mut event_channel = event_channel.lock().await.clone();
@@ -148,7 +176,16 @@ async fn download_multi(
         }
         let _ = on_end_callback.send(());
     });
-    return Ok((rx, on_end, format!("attachment; filename=\"bundle.zip\";")));
+    if let Ok(disposition) =
+        HeaderValue::from_str(format!("attachment; filename=\"bundle.zip\";").as_str())
+    {
+        headers.append(header::CONTENT_DISPOSITION, disposition);
+    }
+    headers.append(
+        header::TRANSFER_ENCODING,
+        HeaderValue::from_static("chunked"),
+    );
+    return Ok((rx, on_end));
 }
 
 async fn zip_multi(

@@ -49,6 +49,8 @@ function CopyToDialog({ state, close }: { state: CopyToDialog.State, close: () =
     }}
     textField={{
       label: 'path',
+      helper: state.objects.length === 1 ? `${state.objects[0].path}` : `${state.objects.length} items`,
+      helperPersistent: true,
     }} />);
 }
 

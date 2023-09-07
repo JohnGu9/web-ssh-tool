@@ -8,6 +8,11 @@ function GoToDialog({ state: { open, path }, close }: { state: GoToDialog.State,
   const { cd } = React.useContext(FileExplorer.Context);
   const id = useUuidV4();
   const ref = useInputAutoFocusRef(open);
+  React.useEffect(() => {
+    if (open) {
+      setValue(path);
+    }
+  }, [open, path]);
   return (
     <Dialog
       open={open}

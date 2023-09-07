@@ -37,10 +37,6 @@ function DropZone({ children, style, dirPath, dragging, setDragging }: {
   }}
     onDragEnter={event => {
       event.preventDefault();
-      const { items, files } = event.dataTransfer;
-      if ((items && items.length > 0 && 'webkitGetAsEntry' in items[0]) || files.length > 0)
-        setDrag(true);
-
       if (dragging !== null) {
         const { target } = event;
         if (target instanceof HTMLElement) {
@@ -63,8 +59,6 @@ function DropZone({ children, style, dirPath, dragging, setDragging }: {
     onDrop={event => {
       event.preventDefault();
       setDrag(false);
-      if (dragging !== null) return; // filter internal drag item
-      // only handle external drag item for upload
       if (typeof dirPath !== 'string') return; // @TODO: dialog show error message
       const { items, files } = event.dataTransfer;
       if (items && items.length > 0 && 'webkitGetAsEntry' in items[0]) {

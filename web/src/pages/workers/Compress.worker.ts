@@ -33,6 +33,5 @@ self.onmessage = msg => {
     return;
   }
   self.postMessage({ tag, error: new Error("Unknown request") });
-
 }
 

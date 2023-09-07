@@ -42,6 +42,8 @@ function FilePreview({ state }: { state: Watch.File }) {
   );
 }
 
+export default FilePreview;
+
 function PreviewWindow({ name, content }: { name: string, content: string }) {
   const chips = name.split('.').filter(value => value.length > 0);
   if (chips.length > 1) {
@@ -64,8 +66,6 @@ function PreviewWindow({ name, content }: { name: string, content: string }) {
   }
   return <PlainTextPreview base64Content={content} style={{ flex: 1, width: '100%' }} />
 }
-
-export default FilePreview;
 
 function Center({ children }: { children: React.ReactNode }) {
   return <div className='column flex-center expanded'

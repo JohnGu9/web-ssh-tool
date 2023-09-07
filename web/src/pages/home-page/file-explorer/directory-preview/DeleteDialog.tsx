@@ -49,9 +49,19 @@ function DeleteDialog({ state, close }: { state: DeleteDialog.State, close: () =
           }
 
         }}>
-        {state.objects.length === 1 ?
-          `Do you sure to delete [${state.objects[0].path}]?` :
-          `Do you sure to delete [${state.objects.length}] objects?`}
+        Do you sure to delete
+        {state.objects.length < 4 ?
+          <ul>
+            {state.objects.map((v, index) => {
+              return <li key={index}>{v.path}</li>
+            })}
+          </ul> :
+          <ul>
+            {state.objects.slice(0, 3).map((v, index) => {
+              return <li key={index}>{v.path}</li>
+            })}
+            <li >And {state.objects.length - 3} items more...</li>
+          </ul>}
       </form>
     </Dialog>
   );

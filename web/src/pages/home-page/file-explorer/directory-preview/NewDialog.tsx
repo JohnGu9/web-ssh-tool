@@ -30,9 +30,8 @@ export function NewFileDialog({ state, close }: { state: NewFileDialog.State, cl
       <form id={id}
         onSubmit={async event => {
           event.preventDefault();
-          const newName = name;
-          if (newName.length === 0) return onError({ content: "Error (File name can't be empty)" });
-          const target = [state.path, newName];
+          if (name.length === 0) return onError({ content: "Error (File name can't be empty)" });
+          const target = [state.path, name];
           const result = await auth.rest('fs.writeFile', [target, content]);
           if (Rest.isError(result)) return onError({ content: `${result.error}` });
           close();

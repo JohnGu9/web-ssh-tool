@@ -148,9 +148,7 @@ function RenameDialog({ state: { file, dirPath, open }, close, onRenamed }: { st
   const [value, setValue] = React.useState(file.basename ?? "");
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
   const id = useUuidV4();
-
   const ref = useInputAutoFocusRef(open);
-
   return (
     <Dialog open={open}
       onScrimClick={close}

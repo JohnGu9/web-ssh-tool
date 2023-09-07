@@ -1,8 +1,176 @@
 import React from "react";
-import { Lstat, Rest } from "../../../common/Type";
+import { Lstat, Rest, Watch } from "../../../common/Type";
+import { Server } from "../../../common/Providers";
 import { v4 } from "uuid";
+import { SharedAxis, SharedAxisTransform } from "material-design-transform";
+import { LinearProgress } from "rmcw";
+import DirectoryPreView from "./DirectoryPreview";
+import ErrorPreview from "./ErrorPreview";
+import FilePreview from "./FilePreview";
+import Loading from "./Loading";
+import { v1 as uuid } from 'uuid';
+import GoToDialog from "./common/GoToDialog";
+import LostConnection from "./LostConnection";
+
+function FileExplorer({ controller, config, setConfig, upload, uploadItems, openUploadManagement, reconnect }: {
+  controller: FileExplorer.Controller,
+  config: FileExplorer.Config,
+  setConfig: (config: FileExplorer.Config) => unknown,
+  upload: (file: File, dest: Rest.PathLike) => void,
+  uploadItems: FileExplorer.UploadController[],
+  openUploadManagement: () => unknown,
+  reconnect: () => Promise<unknown>,
+}) {
+  const [closed, setClosed] = React.useState(controller.isClosed);
+  const [{ updating: loading, state }, setState] = React.useState(controller.state);
+  const [transitionStyle, setTransitionStyle] = React.useState({ t: SharedAxisTransform.fromRightToLeft, p: state?.path });
+  React.useEffect(() => {
+    const listener = () => {
+      setTransitionStyle(current => {
+        const path = controller.state.state?.path;
+        const currentPath = current.p;
+        if (path === undefined || path === null) {
+          return { t: SharedAxisTransform.fromRightToLeft, p: path };
+        } else if (currentPath === undefined || currentPath === null) {
+          return { t: SharedAxisTransform.fromLeftToRight, p: path };
+        } else {
+          return {
+            t: path.length > currentPath.length ?
+              SharedAxisTransform.fromRightToLeft :
+              SharedAxisTransform.fromLeftToRight,
+            p: path
+          };
+        }
+      });
+      setState(controller.state);
+    };
+    controller.addEventListener('change', listener);
+    return () => {
+      controller.removeEventListener('change', listener);
+    };
+  }, [controller]);
+
+  React.useEffect(() => {
+    const listener = () => {
+      setClosed(controller.isClosed);
+    };
+    controller.addEventListener('close', listener);
+    return () => controller.removeEventListener('close', listener);
+  }, [controller]);
+
+  const keyId = (() => {
+    const path = state?.path;
+    if (closed) return 0;
+    if (state === undefined) return `0${path}`;
+    else if ('error' in state) return `1${path}`;
+    else if ('entries' in state) return `2${path}`;
+    return `3${path}`;
+  })();
+
+  const [goToDialog, setGoToDialog] = React.useState<GoToDialog.State>({ open: false, path: '' });
+
+  return (
+    <FileExplorer.Context.Provider value={{
+      cd: (p) => controller.cd(p),
+      cdToParent: () => controller.cdToParent(),
+      config,
+      uploadItems,
+      setConfig,
+      upload,
+      openUploadManagement,
+      setGoToDialog,
+    }}>
+      <SharedAxis
+        className='full-size'
+        transform={transitionStyle.t}
+        keyId={keyId}
+        style={{
+          pointerEvents: loading ? 'none' : 'auto',
+          position: 'relative'
+        }}>
+        <LinearProgress style={{ position: 'absolute', top: 0 }} closed={!loading} />
+        <Content state={state} closed={closed} reconnect={reconnect} />
+      </SharedAxis>
+      <GoToDialog
+        state={goToDialog}
+        close={() => setGoToDialog(v => { return { ...v, open: false } })} />
+    </FileExplorer.Context.Provider>
+  );
+}
 
 namespace FileExplorer {
+  export type ControllerState = Watch.Error | Watch.File | Watch.Directory;
+
+  export class Controller extends EventTarget {
+    constructor({ auth }: { auth: Server.Authentication.Type }) {
+      super();
+      this.auth = auth;
+      this.open();
+    }
+
+    readonly auth: Server.Authentication.Type;
+    readonly id = uuid();
+
+    cd(path: string | null) {
+      this._updating = true;
+      this.dispatchEvent(new Event('change'));
+      return this.auth.rest('watch', { id: this.id, cd: path });
+    }
+
+    cdToParent() {
+      this._updating = true;
+      this.dispatchEvent(new Event('change'));
+      return this.auth.rest('watch', { id: this.id, cdToParent: null });
+
+    }
+
+    close() {
+      return this.auth.rest('watch', { id: this.id, close: {} });
+    }
+    protected closed = false;
+    get isClosed() { return this.closed }
+
+    dispose() {
+      if (!this.closed) this.close();
+    }
+
+    protected _updating = true;
+    protected _state: ControllerState | undefined;
+    get state() {
+      return {
+        updating: this._updating,
+        state: this._state
+      };
+    }
+
+    protected readonly _listener = (event: Event) => {
+      const { detail } = event as CustomEvent;
+      if ('close' in detail) {
+        this.dispatchEvent(new Event('close'));
+      } else {
+        const path = detail.path as string | null | undefined;
+        const error = detail.error as string | null | undefined;
+        if (typeof error === 'string') {
+          this._state = { path, error };
+        } else {
+          this._state = detail;
+        }
+        this._updating = false;
+        this.dispatchEvent(new Event('change'));
+      }
+    }
+
+    protected async open() {
+      this.addEventListener('close', () => {
+        this.auth.watch.removeEventListener(this.id, this._listener);
+        this.closed = true;
+      }, { once: true });
+      this.auth.watch.addEventListener(this.id, this._listener);
+      const result = await this.auth.rest('watch', this.id);
+      if (Rest.isError(result)) this.dispatchEvent(new Event('close'));
+    }
+  };
+
   export type Type = {
     cd: (path: string | null) => unknown,
     cdToParent: () => unknown,
@@ -11,6 +179,7 @@ namespace FileExplorer {
     upload: (file: File, dest: Rest.PathLike) => void,
     uploadItems: UploadController[],
     openUploadManagement: () => unknown,
+    setGoToDialog: React.Dispatch<React.SetStateAction<GoToDialog.State>>,
   }
   export const Context = React.createContext<Type>(undefined as unknown as Type);
 
@@ -96,7 +265,7 @@ namespace FileExplorer {
       }).catch((error) => {
         if (this.detail.state === UploadController.State.running) {
           this.detail.error = error;
-          console.log(error);
+          // console.log(error);
           this.detail.state = UploadController.State.error;
           this.dispatchEvent(new Event('change'))
         }
@@ -146,6 +315,18 @@ namespace FileExplorer {
     }
   }
 
+}
+
+function Content({ state, closed, reconnect }: {
+  state?: FileExplorer.ControllerState,
+  closed: boolean,
+  reconnect: () => Promise<unknown>,
+}) {
+  if (closed) return <LostConnection reconnect={reconnect} />;
+  if (state === undefined) return <Loading />;
+  else if ('error' in state) return <ErrorPreview state={state} />;
+  else if ('entries' in state) return <DirectoryPreView state={state} />;
+  return <FilePreview state={state} />;
 }
 
 export function useUuidV4() {

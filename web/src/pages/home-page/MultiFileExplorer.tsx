@@ -1,17 +1,13 @@
 import React from "react";
-import { Elevation, LinearProgress, CircularProgress, IconButton, Icon, Tooltip, Dialog, Button, ListItem } from 'rmcw';
+import { Elevation, CircularProgress, IconButton, Icon, Tooltip, Dialog, Button, ListItem } from 'rmcw';
 import { v1 as uuid } from 'uuid';
 
 import { fileSize, delay } from "../../common/Tools";
 import { Server, Settings } from "../../common/Providers";
-import { Rest, Watch } from "../../common/Type";
+import { Rest } from "../../common/Type";
 import AnimatedList from "../../components/AnimatedList";
 
-import FilePreview from "./file-explorer/FilePreview";
-import DirectoryPreView from "./file-explorer/DirectoryPreview";
-import Loading from "./file-explorer/Loading";
-import ErrorPreview from "./file-explorer/ErrorPreview";
-import Common from './file-explorer/Common';
+import FileExplorer from './file-explorer/Common';
 import { SharedAxis, SharedAxisTransform } from "material-design-transform";
 import { AnimatedSize } from "animated-size";
 import { compress } from "../workers/Compress";
@@ -21,27 +17,28 @@ import { compress } from "../workers/Compress";
 class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFileExplorer.State>{
   constructor(props: MultiFileExplorer.Props) {
     super(props);
-    this._controller = new MultiFileExplorer.Controller({ auth: props.auth });
-    this._controller.addEventListener('close', this._onExplorerControllerClose.bind(this));
+    this._controller = new FileExplorer.Controller({ auth: props.auth });
+    this._controller.addEventListener('close', async () => {
+      this._controller.dispose();
+      await delay(1000);
+      this._controller = new FileExplorer.Controller({ auth: this._controller.auth });
+      this.setState({});
+    });
     this._uploadItems = [];
     this.state = {
-      config: { showAll: false, sort: Common.SortType.alphabetically, uploadCompress: false },
+      config: { showAll: false, sort: FileExplorer.SortType.alphabetically, uploadCompress: false },
       uploadItems: this._uploadItems,
       uploadManagementOpen: false,
     };
   }
-  _controller: MultiFileExplorer.Controller;
-  _uploadItems: Common.UploadController[];
+  _controller: FileExplorer.Controller;
+  _uploadItems: FileExplorer.UploadController[];
   protected _mounted = true;
 
-  protected async _onExplorerControllerClose() {
+  async _reconnect() {
     this._controller.dispose();
-    if (this._mounted) {
-      await delay(1000);
-      this._controller = new MultiFileExplorer.Controller({ auth: this._controller.auth });
-      this._controller.addEventListener('close', this._onExplorerControllerClose.bind(this));
-      this.setState({});
-    }
+    this._controller = new FileExplorer.Controller({ auth: this._controller.auth });
+    this.setState({});
   }
 
   protected _readFileAsArrayBuffer(file: File) {
@@ -82,7 +79,7 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
     };
 
     const controller = !this.state.config.uploadCompress ?
-      new Common.UploadController({
+      new FileExplorer.UploadController({
         id: uuid(), file, dest, basename: file.name,
         upload: async (onUploadProgress, onDownloadProgress, isClosed) => {
           const result = await createPlaceholderFile();
@@ -103,7 +100,7 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
         },
         cancel,
       }) :
-      new Common.UploadController({
+      new FileExplorer.UploadController({
         id: uuid(), file, dest, basename: file.name,
         upload: async (onUploadProgress, onDownloadProgress, isClosed) => {
           const [compressed, result] = await Promise.all([
@@ -191,21 +188,20 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
     const { config, uploadItems, uploadManagementOpen } = this.state;
     const closeUploadManagement = () => this.setState({ uploadManagementOpen: false });
     return (
-      <Common.Context.Provider value={{
-        config, uploadItems,
-        setConfig: config => this.setState({ config }),
-        cd: (p) => this._controller.cd(p),
-        cdToParent: () => this._controller.cdToParent(),
-        upload: (file, dest) => this._upload(file, dest),
-        openUploadManagement: () => this.setState({ uploadManagementOpen: true }),
-      }}>
+      <>
         <MyResize>
           <Elevation className='full-size column' depth={2}
             style={{ paddingBottom: 16, }}>
-            <MultiFileExplorer.FileExplorer controller={this._controller} />
+            <FileExplorer
+              controller={this._controller}
+              uploadItems={uploadItems}
+              config={config}
+              setConfig={config => this.setState({ config })}
+              upload={(file, dest) => this._upload(file, dest)}
+              openUploadManagement={() => this.setState({ uploadManagementOpen: true })}
+              reconnect={() => this._reconnect()} />
           </Elevation>
         </MyResize>
-
         <Dialog open={uploadManagementOpen}
           fullscreen
           onScrimClick={closeUploadManagement}
@@ -258,7 +254,7 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
             })}
           </AnimatedList>
         </Dialog>
-      </Common.Context.Provider>
+      </>
     );
   }
 }
@@ -271,132 +267,10 @@ namespace MultiFileExplorer {
   };
 
   export type State = {
-    config: Common.Config,
-    uploadItems: Common.UploadController[],
+    config: FileExplorer.Config,
+    uploadItems: FileExplorer.UploadController[],
     uploadManagementOpen: boolean,
   };
-
-  export type ControllerState = Watch.Error | Watch.File | Watch.Directory;
-
-  export class Controller extends EventTarget {
-    constructor({ auth }: { auth: Server.Authentication.Type }) {
-      super();
-      this.auth = auth;
-      this.open();
-    }
-
-    readonly auth: Server.Authentication.Type;
-    readonly id = uuid();
-
-    cd(path: string | null) {
-      this._updating = true;
-      this.dispatchEvent(new Event('change'));
-      return this.auth.rest('watch', { id: this.id, cd: path });
-    }
-
-    cdToParent() {
-      this._updating = true;
-      this.dispatchEvent(new Event('change'));
-      return this.auth.rest('watch', { id: this.id, cdToParent: null });
-
-    }
-
-    close() {
-      return this.auth.rest('watch', { id: this.id, close: {} });
-    }
-    protected closed = false;
-
-    dispose() {
-      if (!this.closed) this.close();
-    }
-
-    protected _updating = true;
-    protected _state: ControllerState | undefined;
-    get state() {
-      return {
-        updating: this._updating,
-        state: this._state
-      };
-    }
-
-    protected readonly _listener = (event: Event) => {
-      const { detail } = event as CustomEvent;
-      if ('close' in detail) this.dispatchEvent(new Event('close'));
-      else {
-        const path = detail.path as string | null | undefined;
-        const error = detail.error as string | null | undefined;
-        if (typeof error === 'string') {
-          this._state = { path, error };
-        } else {
-          this._state = detail;
-        }
-        this._updating = false;
-        this.dispatchEvent(new Event('change'));
-      }
-    }
-
-    protected async open() {
-      this.addEventListener('close', () => {
-        this.auth.watch.removeEventListener(this.id, this._listener);
-        this.closed = true;
-      }, { once: true });
-      this.auth.watch.addEventListener(this.id, this._listener);
-      const result = await this.auth.rest('watch', this.id);
-      if (Rest.isError(result)) this.dispatchEvent(new Event('close'));
-    }
-  };
-
-  export function FileExplorer({ controller }: { controller: Controller }) {
-    const [{ updating: loading, state }, setState] = React.useState(controller.state);
-    const [transitionStyle, setTransitionStyle] = React.useState({ t: SharedAxisTransform.fromRightToLeft, p: state?.path });
-    React.useEffect(() => {
-      const listener = () => {
-        setTransitionStyle(current => {
-          const path = controller.state.state?.path;
-          const currentPath = current.p;
-          if (path === undefined || path === null) {
-            return { t: SharedAxisTransform.fromRightToLeft, p: path };
-          } else if (currentPath === undefined || currentPath === null) {
-            return { t: SharedAxisTransform.fromLeftToRight, p: path };
-          } else {
-            return {
-              t: path.length > currentPath.length ?
-                SharedAxisTransform.fromRightToLeft :
-                SharedAxisTransform.fromLeftToRight,
-              p: path
-            };
-          }
-        });
-        setState(controller.state);
-      };
-      controller.addEventListener('change', listener);
-      return () => {
-        controller.removeEventListener('change', listener);
-      };
-    }, [controller]);
-
-    const keyId = (() => {
-      const path = state?.path;
-      if (state === undefined) return `0${path}`;
-      else if ('error' in state) return `1${path}`;
-      else if ('entries' in state) return `2${path}`;
-      return `3${path}`;
-    })();
-
-    return (
-      <SharedAxis
-        className='full-size'
-        transform={transitionStyle.t}
-        keyId={keyId}
-        style={{
-          pointerEvents: loading ? 'none' : 'auto',
-          position: 'relative'
-        }}>
-        <LinearProgress style={{ position: 'absolute', top: 0 }} closed={!loading} />
-        <Content state={state} />
-      </SharedAxis>
-    );
-  }
 }
 
 function MyResize({ children }: { children: React.ReactNode }) {
@@ -434,15 +308,8 @@ function MyResize({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Content({ state }: { state?: MultiFileExplorer.ControllerState }) {
-  if (state === undefined) return <Loading />;
-  else if ('error' in state) return <ErrorPreview state={state} />;
-  else if ('entries' in state) return <DirectoryPreView state={state} />;
-  return <FilePreview state={state} />;
-}
-
-function UploadItem(props: { controller: Common.UploadController }) {
-  const [state, setState] = React.useState<Common.UploadController.State>(props.controller.detail.state);
+function UploadItem(props: { controller: FileExplorer.UploadController }) {
+  const [state, setState] = React.useState<FileExplorer.UploadController.State>(props.controller.detail.state);
   const [upload, setUpload] = React.useState(props.controller.upload);
   React.useEffect(() => {
     const { controller } = props;
@@ -466,7 +333,7 @@ function UploadItem(props: { controller: Common.UploadController }) {
           style={{ width: 24 }}>
           {(() => {
             switch (state) {
-              case Common.UploadController.State.running: {
+              case FileExplorer.UploadController.State.running: {
                 if (upload && upload.lengthComputable) {
                   if (upload.lengthComputable) {
                     const progress = upload.loaded / upload.total;
@@ -489,10 +356,10 @@ function UploadItem(props: { controller: Common.UploadController }) {
                 }
 
               }
-              case Common.UploadController.State.error: {
+              case FileExplorer.UploadController.State.error: {
                 return <Icon>error</Icon>;
               }
-              case Common.UploadController.State.cancel:
+              case FileExplorer.UploadController.State.cancel:
                 return <Icon >cancel</Icon>;
               default:
                 return <Icon>checked</Icon>;
@@ -504,7 +371,7 @@ function UploadItem(props: { controller: Common.UploadController }) {
       primaryText={file.name}
       secondaryText={(() => {
         switch (state) {
-          case Common.UploadController.State.error: {
+          case FileExplorer.UploadController.State.error: {
             return <>{`${error}`}</>;
           }
         }
@@ -517,7 +384,7 @@ function UploadItem(props: { controller: Common.UploadController }) {
           forceRebuildAfterSwitched={false}>
           {(() => {
             switch (state) {
-              case Common.UploadController.State.running:
+              case FileExplorer.UploadController.State.running:
                 return <IconButton onClick={() => props.controller.cancel()}>
                   <Icon>close</Icon>
                 </IconButton>;
@@ -532,6 +399,5 @@ function UploadItem(props: { controller: Common.UploadController }) {
     />
   );
 }
-
 
 export default MultiFileExplorer;

@@ -14,7 +14,7 @@ function TextFieldConfirmDialog({ initialText, title, textField, submitButton, o
       title={title}
       actions={<>
         <Button {...submitButton} type='submit' form={id} />
-        <Button type='button' onClick={close} label='close' />
+        <Button type='button' label='close' onClick={close} />
       </>}>
       <form id={id}
         onSubmit={async event => {

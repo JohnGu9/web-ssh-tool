@@ -4,7 +4,7 @@ import Scaffold from "../../../../components/Scaffold";
 import { Button, Dialog, Icon } from "rmcw";
 import { Rest } from "../../../../common/Type";
 
-function FileMoveDialog({ open, close, filename, path, target }: FileMoveDialog.State & { close: () => unknown }) {
+function FileMoveDialog({ state: { filename, path, target, open }, close, }: { state: FileMoveDialog.State, close: () => unknown }) {
   const auth = React.useContext(Server.Authentication.Context);
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
 

@@ -93,22 +93,19 @@ function PreviewWindow({ open, lstat, close }: { open: boolean, lstat: Lstat | n
       setData(arr);
       setLoading(false);
     };
-    xhr.onerror = () => {
+    const onError = () => {
       // @TODO: error handle
       setData(null);
       setLoading(false);
-    }
+    };
+    xhr.onerror = onError
     auth.previewUrl(lstat.path)
       .then(v => {
         if (abort) return;
         xhr.open('GET', v, true);
         xhr.send();
       })
-      .catch(() => {
-        // @TODO: error handle
-        setData(null);
-        setLoading(false);
-      });
+      .catch(onError);
 
     return () => {
       abort = true;

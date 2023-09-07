@@ -27,9 +27,12 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
   const [deleteDialog, setDeleteDialog] = React.useState<DeleteDialog.State>({ objects: [], open: false });
   const [copyDialog, setCopyDialog] = React.useState<CopyToDialog.State>({ objects: [], open: false, });
   const [moveDialog, setMoveDialog] = React.useState<MoveToDialog.State>({ objects: [], initialPath: state.path ?? "", open: false, });
-  const fileList = FileExplorer.sortArray(Object.entries(entries).filter(config.showAll
-    ? () => true
-    : ([key]) => !key.startsWith('.')), config.sort);
+  const { showAll, sort } = config;
+  const fileList = React.useMemo(() => {
+    return FileExplorer.sortArray(Object.entries(entries).filter(showAll
+      ? () => true
+      : ([key]) => !key.startsWith('.')), sort)
+  }, [entries, showAll, sort]);
 
   React.useEffect(() => {
     const l = Object.values(entries);
@@ -102,7 +105,7 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
           <NavigatorBar path={path} />}
         <InformationDialog state={information}
           close={() => setInformation({ ...information, open: false })} />
-        <FileMoveDialog {...fileMove}
+        <FileMoveDialog state={fileMove}
           close={() => setFileMove(v => { return { ...v, open: false } })} />
         <RequestPreviewDialog state={preview}
           close={() => setPreview(v => { return { ...v, open: false } })} />
