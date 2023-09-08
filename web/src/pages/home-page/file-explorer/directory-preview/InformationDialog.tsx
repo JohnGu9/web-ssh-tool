@@ -21,13 +21,13 @@ function InformationDialog({ state, close }: {
   const onDeleted = (path: string) => showMessage({ content: `Deleted (${path})`, });
   const { type, size, path, basename, entries, ...stats } = state.stat as Watch.Directory;
 
-  const [rename, setRename] = React.useState<RenameDialog.State>({ open: false, dirPath: state.dirPath, file: state.stat });
+  const [renameDialog, setRenameDialog] = React.useState<RenameDialog.State>({ open: false, dirPath: state.dirPath, file: state.stat });
   const [deleteDialog, setDeleteDialog] = React.useState<DeleteDialog.State>({ open: false, onDelete: function () { }, path: "" });
-  const closeRename = () => setRename(v => { return { ...v, open: false } });
+  const closeRenameDialog = () => setRenameDialog(v => { return { ...v, open: false } });
   const closeDeleteDialog = () => setDeleteDialog(v => { return { ...v, open: false } });
   return (
     <>
-      <Dialog open={state.open && !rename.open && !deleteDialog.open}
+      <Dialog open={state.open && !renameDialog.open && !deleteDialog.open}
         onScrimClick={close}
         onEscapeKey={close}
         title="Information"
@@ -83,7 +83,7 @@ function InformationDialog({ state, close }: {
                     <>
                       <Tooltip label='rename'>
                         <IconButton style={{ color: theme.primary }} onClick={() => {
-                          setRename(v => { return { ...v, open: true } })
+                          setRenameDialog(v => { return { ...v, open: true } })
                         }} ><Icon>drive_file_rename_outline</Icon></IconButton>
                       </Tooltip>
                       <Tooltip label='download'>
@@ -121,8 +121,8 @@ function InformationDialog({ state, close }: {
         <div style={{ height: 32 }} />
       </Dialog>
       <RenameDialog
-        state={rename}
-        close={closeRename}
+        state={renameDialog}
+        close={closeRenameDialog}
         onRenamed={() => {
           close();
           showMessage({ content: "Rename succeed" });

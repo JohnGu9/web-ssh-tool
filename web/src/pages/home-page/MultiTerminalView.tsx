@@ -253,7 +253,7 @@ function MoreButton() {
           graphic={<Icon>logout</Icon>}
           primaryText="Logout"
           onClick={() => {
-            settings.setKeepSignIn(false);
+            settings.setRememberPassword(false);
             auth.signOut();
           }} />
       </div>}>

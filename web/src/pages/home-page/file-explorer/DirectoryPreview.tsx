@@ -104,7 +104,7 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
           <></> : // @TODO: new navigator bar
           <NavigatorBar path={path} />}
         <InformationDialog state={information}
-          close={() => setInformation({ ...information, open: false })} />
+          close={() => setInformation(v => { return { ...v, open: false } })} />
         <FileMoveDialog state={fileMove}
           close={() => setFileMove(v => { return { ...v, open: false } })} />
         <RequestPreviewDialog state={preview}

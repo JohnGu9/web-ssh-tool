@@ -65,7 +65,7 @@ class Content extends React.Component<Content.Props, Content.State> {
 
   override componentDidMount() {
     const { settings } = this.props;
-    if (settings.rememberPassword && settings.keepSignIn &&
+    if (settings.rememberPassword &&
       settings.sshUserName !== null && settings.sshPassword !== null) {
       this._submit();
     } else {
@@ -162,11 +162,6 @@ class Content extends React.Component<Content.Props, Content.State> {
                         }
                       }} />
                     }>{meta.rememberPassword}</FormField>
-                    <FormField input={<Checkbox
-                      disabled={settings.rememberPassword === false}
-                      checked={settings.rememberPassword && settings.keepSignIn}
-                      onChange={() => settings.setKeepSignIn(!settings.keepSignIn)} />
-                    }>{meta.keepSignIn}</FormField>
                   </Tooltip>
                 </form>
               </Card>

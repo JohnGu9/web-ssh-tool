@@ -10,9 +10,6 @@ export namespace Settings {
     rememberPassword: boolean,
     setRememberPassword: (value: boolean) => void,
 
-    keepSignIn: boolean,
-    setKeepSignIn: (value: boolean) => void,
-
     sshUserName: string | null,
     setSshUserName: (value: string | null) => void,
 
@@ -58,9 +55,6 @@ export namespace Settings {
 
           get rememberPassword() { return localStorage.getItem('remember-password') !== null },
           setRememberPassword: this._boolKeyCallback('remember-password'),
-
-          get keepSignIn() { return localStorage.getItem('keep-sign-in') !== null },
-          setKeepSignIn: this._boolKeyCallback('keep-sign-in'),
 
           get sshUserName() { return localStorage.getItem('ssh-user-name') },
           setSshUserName: this._stringKeyCallback('ssh-user-name'),
