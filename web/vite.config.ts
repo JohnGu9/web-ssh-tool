@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import { terser } from 'rollup-plugin-terser';
+import preload from "vite-plugin-preload";
 
 export default defineConfig(() => {
     return {
@@ -38,6 +39,7 @@ export default defineConfig(() => {
         plugins: [
             react(),
             basicSsl(),
+            preload(),
         ],
     };
 });

@@ -16,7 +16,6 @@ async function main() {
 }
 main();
 
-
 async function buildAssetsMap(p: string) {
     const rustSource = path.join(p, "assets_map.rs");
     const assets = path.join(p, "build");
