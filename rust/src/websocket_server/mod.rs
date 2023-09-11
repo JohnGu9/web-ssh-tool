@@ -2,10 +2,11 @@ mod on_authenticate;
 mod on_client;
 mod on_request_authenticate;
 mod shell;
-use crate::common::{app_config::AppConfig, connection_peer::WebSocketPeer};
+use crate::common::{
+    app_config::AppConfig, authenticate_queue::AuthenticateQueues, connection_peer::WebSocketPeer,
+};
 use flate2::write::{GzDecoder, GzEncoder};
 use flate2::Compression;
-use futures::channel::{mpsc, oneshot};
 use futures::lock::Mutex;
 use hyper::{upgrade::Upgraded, Request};
 use std::io::Write;
@@ -16,7 +17,7 @@ use tokio_tungstenite::WebSocketStream;
 pub async fn handle_request(
     app_config: &Arc<AppConfig>,
     peer_map: &Arc<Mutex<HashMap<String, WebSocketPeer>>>,
-    authenticate_queues: &Arc<Mutex<HashMap<String, mpsc::Sender<oneshot::Receiver<()>>>>>,
+    authenticate_queues: &Arc<Mutex<HashMap<String, AuthenticateQueues>>>,
     addr: &SocketAddr,
     req: Request<hyper::body::Incoming>,
     ws_stream: WebSocketStream<Upgraded>,

@@ -331,5 +331,9 @@ export async function decodeMessage(data: any) {
 }
 
 export async function encodeMessage(obj: any) {
-  return await stringifyAndCompress(obj);
+  try {
+    return await stringifyAndCompress(obj);
+  } catch (error) {
+    return JSON.stringify(obj);
+  }
 }

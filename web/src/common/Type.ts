@@ -17,7 +17,7 @@ export const enum FileType {
 export namespace Rest {
   export type PathLike = string[];
   export type Map = {
-    'token': { parameter: any, return: string | Uint8Array },
+    'token': { parameter: any, return: string },
     'unzip': { parameter: [string /** src */, PathLike /** dest */], return: void },
     'fs.rename': { parameter: [oldPath: PathLike, newPath: PathLike], return: Awaited<ReturnType<typeof fs.rename>> },
     'fs.unlink': { parameter: [path: PathLike], return: Awaited<ReturnType<typeof fs.unlink>> }, // delete file

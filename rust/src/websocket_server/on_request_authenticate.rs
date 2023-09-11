@@ -3,6 +3,7 @@ use super::internal_decompress;
 use super::on_authenticate;
 use crate::common::{
     app_config::AppConfig,
+    authenticate_queue::AuthenticateQueues,
     connection_peer::{Client, WebSocketPeer},
 };
 use futures::channel::{mpsc, oneshot};
@@ -16,7 +17,7 @@ use tokio_tungstenite::{tungstenite::Message, WebSocketStream};
 pub async fn handle_request(
     app_config: &Arc<AppConfig>,
     peer_map: &Arc<Mutex<HashMap<String, WebSocketPeer>>>,
-    authenticate_queues: &Arc<Mutex<HashMap<String, mpsc::Sender<oneshot::Receiver<()>>>>>,
+    authenticate_queues: &Arc<Mutex<HashMap<String, AuthenticateQueues>>>,
     addr: &SocketAddr,
     _: Request<hyper::body::Incoming>,
     mut ws_stream: WebSocketStream<Upgraded>,
@@ -47,7 +48,7 @@ pub async fn handle_request(
         let mut cause_cache = String::new();
         let result = async {
             let (username, password) = match parse_username_and_password(text) {
-                Some((username, password)) => (username, password),
+                Some(v) => v,
                 None => return Err("Sign in message format error"),
             };
 
@@ -68,23 +69,30 @@ pub async fn handle_request(
 
             // limit one user authentication at the same time
             let (complete_authenticate, rx) = oneshot::channel();
-            let mut authenticate_queue = {
+            let authenticate_queue = {
                 let mut lock = authenticate_queues.lock().await;
-                match lock.get(&username) {
-                    Some(sender) => sender.clone(),
+                let authenticate_queue = {
+                    match lock.get(&username) {
+                        Some(sender) => sender.upgrade(),
+                        None => None,
+                    }
+                };
+                match authenticate_queue {
+                    Some(authenticate_queue) => authenticate_queue,
                     None => {
                         let (t, mut r) = mpsc::channel(0);
+                        let t = Arc::new(Mutex::new(t));
                         tokio::spawn(async move {
                             while let Some(rx) = r.next().await {
                                 let _ = rx.await;
                             }
                         });
-                        lock.insert(username.clone(), t.clone());
+                        lock.insert(username.clone(), Arc::downgrade(&t));
                         t
                     }
                 }
             };
-            let _ = authenticate_queue.send(rx).await;
+            let _ = authenticate_queue.lock().await.send(rx).await;
             match session.authenticate_password(username, password).await {
                 Ok(false) => {
                     use tokio::time::{sleep, Duration};
@@ -101,13 +109,9 @@ pub async fn handle_request(
             let _ = complete_authenticate.send(());
 
             let mut map = peer_map.lock().await;
-            let token_uuid = uuid::Uuid::new_v4();
-            let token = token_uuid.to_string();
+            let token = uuid::Uuid::new_v4().to_string();
             if let Some(_) = map.get(&token) {
                 return Err("Internal error: id generation failed");
-            }
-            if let Some(_) = map.iter().find(|(_, value)| value.addr == *addr) {
-                return Err("User already sign in");
             }
 
             let mut channel = match session.channel_open_session().await {

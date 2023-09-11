@@ -1,5 +1,6 @@
 pub mod app_config;
 pub mod connection_peer;
+pub mod authenticate_queue;
 
 use bytes::Bytes;
 use futures::{channel::mpsc, SinkExt};

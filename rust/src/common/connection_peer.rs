@@ -27,9 +27,17 @@ impl WebSocketPeer {
             client_response_queue: Arc::new(Mutex::new(ClientResponseQueue::new())),
         }
     }
+
     pub async fn disconnect(&self) {
-        let mut conn = self.client_connection.lock().await;
-        conn.disconnect().await;
+        let f1 = async {
+            let mut conn = self.client_connection.lock().await;
+            conn.disconnect().await
+        };
+        let f2 = async {
+            let mut queue = self.client_response_queue.lock().await;
+            queue.disconnect()
+        };
+        tokio::join!(f1, f2);
     }
 }
 
@@ -64,6 +72,10 @@ impl ClientResponseQueue {
             let _ = sender.send(response);
         }
     }
+
+    pub fn disconnect(&mut self) {
+        self.queue.clear();
+    }
 }
 
 pub struct ClientConnection {
@@ -87,6 +99,8 @@ impl ClientConnection {
         if let Some(ref mut stream) = self.internal_client_stream {
             let _ = stream.close().await;
         }
+        self.callbacks.clear();
+        let _ = self.event_channel.close().await;
     }
 
     pub fn set_internal_client_stream(

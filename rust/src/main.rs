@@ -4,9 +4,10 @@ mod tls;
 mod websocket_client;
 mod websocket_server;
 use common::app_config::AppConfig;
-use common::{ResponseType, ResponseUnit};
+use common::authenticate_queue::AuthenticateQueues;
 use common::connection_peer::WebSocketPeer;
-use futures::channel::{mpsc, oneshot};
+use common::{ResponseType, ResponseUnit};
+use futures::channel::mpsc;
 use futures::lock::Mutex;
 use http_body_util::StreamBody;
 use http_server::on_http;
@@ -98,7 +99,7 @@ async fn handle_connection(
     acceptor: TlsAcceptor,
     app_config: Arc<AppConfig>,
     peer_map: Arc<Mutex<HashMap<String, WebSocketPeer>>>,
-    authenticate_queues: Arc<Mutex<HashMap<String, mpsc::Sender<oneshot::Receiver<()>>>>>,
+    authenticate_queues: Arc<Mutex<HashMap<String, AuthenticateQueues>>>,
 ) -> Result<(), std::io::Error> {
     let stream = acceptor.accept(stream).await?;
     let service = |req: Request<hyper::body::Incoming>| {
@@ -119,7 +120,7 @@ async fn handle_connection(
 async fn http_websocket_classify(
     app_config: &Arc<AppConfig>,
     peer_map: &Arc<Mutex<HashMap<String, WebSocketPeer>>>,
-    authenticate_queues: &Arc<Mutex<HashMap<String, mpsc::Sender<oneshot::Receiver<()>>>>>,
+    authenticate_queues: &Arc<Mutex<HashMap<String, AuthenticateQueues>>>,
     addr: SocketAddr,
     req: Request<hyper::body::Incoming>,
 ) -> Result<ResponseType, Infallible> {
@@ -177,7 +178,7 @@ async fn http_websocket_classify(
 async fn upgrade_web_socket(
     app_config: Arc<AppConfig>,
     peer_map: Arc<Mutex<HashMap<String, WebSocketPeer>>>,
-    authenticate_queues: Arc<Mutex<HashMap<String, mpsc::Sender<oneshot::Receiver<()>>>>>,
+    authenticate_queues: Arc<Mutex<HashMap<String, AuthenticateQueues>>>,
     addr: SocketAddr,
     mut req: Request<hyper::body::Incoming>,
 ) {

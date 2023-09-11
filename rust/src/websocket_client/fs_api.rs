@@ -1,4 +1,5 @@
 use serde_json::json;
+use serde_json::Value::Null;
 use std::path::Path;
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
 
@@ -38,7 +39,7 @@ pub async fn fs_unlink(
                 match path_like_to_path(path_like) {
                     Some(path) => {
                         tokio::fs::remove_file(path).await?;
-                        return Ok(serde_json::Value::Null);
+                        return Ok(Null);
                     }
                     None => {}
                 }
@@ -57,7 +58,7 @@ pub async fn fs_rm(
                 match path_like_to_path(path_like) {
                     Some(path) => {
                         tokio::fs::remove_dir_all(path).await?;
-                        return Ok(serde_json::Value::Null);
+                        return Ok(Null);
                     }
                     None => {}
                 }
@@ -99,7 +100,7 @@ pub async fn fs_rename(
                 ) {
                     (Some(src), Some(dest)) => {
                         tokio::fs::rename(src, dest).await?;
-                        return Ok(serde_json::Value::Null);
+                        return Ok(Null);
                     }
                     _ => {}
                 }
@@ -118,7 +119,7 @@ pub async fn fs_mkdir(
                 match path_like_to_path(path_like) {
                     Some(path) => {
                         tokio::fs::create_dir_all(path).await?;
-                        return Ok(serde_json::Value::Null);
+                        return Ok(Null);
                     }
                     None => {}
                 }
@@ -160,7 +161,7 @@ pub async fn fs_cp(
                                 )))));
                             }
                         }
-                        return Ok(serde_json::Value::Null);
+                        return Ok(Null);
                     }
                     _ => {}
                 }
@@ -201,7 +202,7 @@ pub async fn fs_write_file(
                             .await?;
                         file.write_all(content.as_bytes()).await?;
                         file.sync_all().await?;
-                        return Ok(serde_json::Value::Null);
+                        return Ok(Null);
                     }
                     None => {}
                 }

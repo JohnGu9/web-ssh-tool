@@ -126,7 +126,6 @@ namespace DirectoryPreView {
 
     selected: Set<Lstat>,
     setSelected: React.Dispatch<React.SetStateAction<Set<Lstat>>>,
-
     onSelecting: boolean,
     setOnSelecting: React.Dispatch<React.SetStateAction<boolean>>,
 
