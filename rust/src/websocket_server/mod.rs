@@ -2,37 +2,25 @@ mod on_authenticate;
 mod on_client;
 mod on_request_authenticate;
 mod shell;
-use crate::common::{
-    app_config::AppConfig, authenticate_queue::AuthenticateQueues, connection_peer::WebSocketPeer,
-};
+use crate::common::AppContext;
 use flate2::write::{GzDecoder, GzEncoder};
 use flate2::Compression;
-use futures::lock::Mutex;
 use hyper::{upgrade::Upgraded, Request};
 use std::io::Write;
-use std::{collections::HashMap, error::Error, net::SocketAddr, sync::Arc};
+use std::{error::Error, net::SocketAddr};
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
 
 pub async fn handle_request(
-    app_config: &Arc<AppConfig>,
-    peer_map: &Arc<Mutex<HashMap<String, WebSocketPeer>>>,
-    authenticate_queues: &Arc<Mutex<HashMap<String, AuthenticateQueues>>>,
+    context: AppContext,
     addr: &SocketAddr,
     req: Request<hyper::body::Incoming>,
     ws_stream: WebSocketStream<Upgraded>,
 ) -> Result<(), Box<dyn Error>> {
+    let app_config = context.app_config.clone();
     match req.uri().path() {
         "/" | "/rest" | "/rest/" => {
-            on_request_authenticate::handle_request(
-                app_config,
-                peer_map,
-                authenticate_queues,
-                addr,
-                req,
-                ws_stream,
-            )
-            .await
+            on_request_authenticate::handle_request(context, addr, req, ws_stream).await
         }
         "/client" => {
             let is_loopback = match addr {
@@ -43,8 +31,7 @@ pub async fn handle_request(
                 use url::form_urlencoded::parse;
                 let mut peers = parse(query.as_bytes()).into_owned();
                 if let Some((_, token)) = peers.find(|(key, _)| key.as_str() == "t") {
-                    on_client::handle_request(app_config, peer_map, ws_stream, token.as_str())
-                        .await?;
+                    on_client::handle_request(context, ws_stream, token.as_str()).await?;
                     return Ok(());
                 }
             }

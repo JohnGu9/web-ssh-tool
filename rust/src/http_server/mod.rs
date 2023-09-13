@@ -1,7 +1,8 @@
-use crate::common::{app_config::AppConfig, connection_peer::WebSocketPeer, ResponseType};
-use futures::lock::Mutex;
+use crate::common::{
+    AppContext, ResponseType,
+};
 use hyper::{Method, Request};
-use std::{collections::HashMap, convert::Infallible, net::SocketAddr, path::PathBuf, sync::Arc};
+use std::{convert::Infallible, net::SocketAddr, path::PathBuf};
 
 mod components;
 
@@ -24,11 +25,13 @@ mod preview;
 use preview::on_preview;
 
 pub async fn on_http(
-    app_config: &Arc<AppConfig>,
-    peer_map: &Arc<Mutex<HashMap<String, WebSocketPeer>>>,
-    addr: SocketAddr,
+    context: &AppContext,
+    addr: &SocketAddr,
     req: Request<hyper::body::Incoming>,
 ) -> Result<ResponseType, Infallible> {
+    let app_config = &context.app_config;
+    let peer_map = &context.websocket_peers;
+
     app_config.logger.info(format!(
         "New http ({}) connection: {}",
         req.uri().path(),
@@ -87,7 +90,7 @@ pub async fn on_http(
     }
 
     match (req.method(), req.uri().path()) {
-        (_, "/client") => on_client(app_config, peer_map, req, addr).await,
+        (_, "/client") => on_client(app_config, peer_map, addr, req).await,
         (&Method::GET | &Method::HEAD, "" | "/") => file_send(app_config, &req, "index.html").await,
         (&Method::GET | &Method::HEAD, path) => file_send(app_config, &req, &path[1..]).await,
         (m, path) => Ok(not_found(app_config, format!("Unknown request {:?} {:?}", m, path)).await),

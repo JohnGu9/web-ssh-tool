@@ -1,15 +1,17 @@
-use crate::common::{app_config::AppConfig, connection_peer::WebSocketPeer};
-use futures::{lock::Mutex, StreamExt};
+use crate::common::AppContext;
+use futures::StreamExt;
 use hyper::upgrade::Upgraded;
-use std::{collections::HashMap, error::Error, sync::Arc};
+use std::error::Error;
 use tokio_tungstenite::{tungstenite::Message, WebSocketStream};
 
 pub async fn handle_request(
-    app_config: &Arc<AppConfig>,
-    peer_map: &Arc<Mutex<HashMap<String, WebSocketPeer>>>,
+    context: AppContext,
     ws_stream: WebSocketStream<Upgraded>,
     token: &str,
 ) -> Result<(), Box<dyn Error>> {
+    let app_config = &context.app_config;
+    let peer_map = &context.websocket_peers;
+
     let map = peer_map.lock().await;
     if let Some(peer) = map.get(token) {
         app_config

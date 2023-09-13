@@ -2,7 +2,7 @@ use super::encode_value;
 use super::internal_decompress;
 use super::shell;
 use super::shell::PollChannelData;
-use crate::common::connection_peer::{Client, ClientConnection};
+use crate::common::websocket_peer::{Client, ClientConnection};
 use futures::{
     channel::{mpsc, oneshot},
     lock::Mutex,

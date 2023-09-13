@@ -1,6 +1,6 @@
 use crate::common::{
     app_config::AppConfig,
-    {async_read_to_sender, ResponseUnit},
+    {forward_async_read_to_sender, ResponseUnit},
 };
 use crate::tls::CustomServerCertVerifier;
 use futures::channel::{mpsc, oneshot};
@@ -43,7 +43,7 @@ pub fn file_to_stream(
 ) -> mpsc::Receiver<ResponseUnit> {
     let (tx, rx) = mpsc::channel(1);
     tokio::spawn(async move {
-        async_read_to_sender(file, tx).await;
+        forward_async_read_to_sender(file, tx).await;
         let _ = on_end_callback.send(());
     });
     return rx;

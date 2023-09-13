@@ -1,27 +1,25 @@
 use super::encode_value;
 use super::internal_decompress;
 use super::on_authenticate;
-use crate::common::{
-    app_config::AppConfig,
-    authenticate_queue::AuthenticateQueues,
-    connection_peer::{Client, WebSocketPeer},
-};
+use crate::common::AppContext;
+use crate::common::websocket_peer::{Client, WebSocketPeer};
 use futures::channel::{mpsc, oneshot};
 use futures::lock::Mutex;
 use futures::{SinkExt, StreamExt};
 use hyper::{upgrade::Upgraded, Request};
 use serde_json::json;
-use std::{collections::HashMap, error::Error, net::SocketAddr, sync::Arc};
+use std::{error::Error, net::SocketAddr, sync::Arc};
 use tokio_tungstenite::{tungstenite::Message, WebSocketStream};
 
 pub async fn handle_request(
-    app_config: &Arc<AppConfig>,
-    peer_map: &Arc<Mutex<HashMap<String, WebSocketPeer>>>,
-    authenticate_queues: &Arc<Mutex<HashMap<String, AuthenticateQueues>>>,
+    context: AppContext,
     addr: &SocketAddr,
     _: Request<hyper::body::Incoming>,
     mut ws_stream: WebSocketStream<Upgraded>,
 ) -> Result<(), Box<dyn Error>> {
+    let app_config = &context.app_config;
+    let peer_map = &context.websocket_peers;
+    let authenticate_queues = &context.authenticate_queues;
     app_config
         .logger
         .info(format!("New websocket connection({}) connected", addr));
@@ -82,9 +80,17 @@ pub async fn handle_request(
                     None => {
                         let (t, mut r) = mpsc::channel(0);
                         let t = Arc::new(Mutex::new(t));
+                        let authenticate_queues = authenticate_queues.clone();
+                        let name = username.clone();
                         tokio::spawn(async move {
                             while let Some(rx) = r.next().await {
                                 let _ = rx.await;
+                            }
+                            let mut lock = authenticate_queues.lock().await;
+                            if let Some(sender) = lock.get(&name) {
+                                if let None = sender.upgrade() {
+                                    lock.remove(&name);
+                                }
                             }
                         });
                         lock.insert(username.clone(), Arc::downgrade(&t));

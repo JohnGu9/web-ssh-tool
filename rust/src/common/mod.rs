@@ -1,17 +1,23 @@
 pub mod app_config;
-pub mod connection_peer;
 pub mod authenticate_queue;
+pub mod websocket_peer;
+
+use std::{collections::HashMap, sync::Arc};
 
 use bytes::Bytes;
-use futures::{channel::mpsc, SinkExt};
+use futures::{channel::mpsc, lock::Mutex, SinkExt};
 use http_body_util::StreamBody;
 use hyper::{body::Frame, Response};
 use tokio::io::{AsyncRead, AsyncReadExt};
 
+use self::{
+    app_config::AppConfig, authenticate_queue::AuthenticateQueues, websocket_peer::WebSocketPeer,
+};
+
 pub type ResponseUnit = Result<Frame<Bytes>, Box<dyn std::error::Error + Send + Sync>>;
 pub type ResponseType = Response<StreamBody<mpsc::Receiver<ResponseUnit>>>;
 
-pub async fn async_read_to_sender(
+pub async fn forward_async_read_to_sender(
     mut file: impl AsyncRead + Unpin,
     mut tx: mpsc::Sender<ResponseUnit>,
 ) {
@@ -35,4 +41,11 @@ pub async fn async_read_to_sender(
             }
         }
     }
+}
+
+#[derive(Clone)]
+pub struct AppContext {
+    pub app_config: Arc<AppConfig>,
+    pub websocket_peers: Arc<Mutex<HashMap<String, WebSocketPeer>>>,
+    pub authenticate_queues: Arc<Mutex<HashMap<String, AuthenticateQueues>>>,
 }

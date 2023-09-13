@@ -1,5 +1,5 @@
 import path from 'path';
-import { createReadStream, createWriteStream, promises as fs } from 'fs';
+import { createReadStream, createWriteStream } from 'fs';
 import licenseChecker, { ModuleInfos } from 'license-checker';
 import { exec } from 'child_process';
 
@@ -55,6 +55,7 @@ function rustLicense() {
                 return;
             }
             if (stderr) {
+                console.log(`error: ${stderr}`);
                 resolve(null);
                 return;
             }
@@ -62,6 +63,7 @@ function rustLicense() {
                 const obj = JSON.parse(stdout);
                 resolve(obj);
             } catch (error) {
+                console.log(`error: ${error}`);
                 resolve(null);
                 return;
             }

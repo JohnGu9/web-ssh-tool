@@ -2,7 +2,7 @@ use super::components::request_internal_client_http_connection;
 use super::not_found::not_found;
 use crate::common::{
     app_config::AppConfig,
-    connection_peer::{ClientConnection, ClientResponseQueue},
+    websocket_peer::{ClientConnection, ClientResponseQueue},
     ResponseType,
 };
 use futures::lock::Mutex;

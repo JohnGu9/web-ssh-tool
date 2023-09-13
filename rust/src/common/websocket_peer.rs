@@ -10,8 +10,8 @@ use tokio_tungstenite::{tungstenite::Message, WebSocketStream};
 pub struct WebSocketPeer {
     pub token: String,
     pub addr: SocketAddr,
-    pub client_connection: Arc<Mutex<ClientConnection>>,
-    pub client_response_queue: Arc<Mutex<ClientResponseQueue>>,
+    pub client_connection: Arc<Mutex<ClientConnection>>, // websocket from client
+    pub client_response_queue: Arc<Mutex<ClientResponseQueue>>, // http from client
 }
 
 impl WebSocketPeer {

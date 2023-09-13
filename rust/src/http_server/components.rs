@@ -1,8 +1,7 @@
 use crate::common::{
     app_config::AppConfig,
-    async_read_to_sender,
-    connection_peer::{ClientConnection, ClientResponseQueue},
-    ResponseType,
+    websocket_peer::{ClientConnection, ClientResponseQueue},
+    forward_async_read_to_sender, ResponseType,
 };
 use crate::ResponseUnit;
 use futures::channel::{mpsc, oneshot};
@@ -16,7 +15,7 @@ use std::sync::Arc;
 
 pub fn file_to_stream(file: tokio::fs::File) -> mpsc::Receiver<ResponseUnit> {
     let (tx, rx) = mpsc::channel(1);
-    tokio::spawn(async_read_to_sender(file, tx));
+    tokio::spawn(forward_async_read_to_sender(file, tx));
     return rx;
 }
 
@@ -52,10 +51,13 @@ pub async fn request_internal_client_http_connection(
     {
         let (tx, rx) = oneshot::channel();
         {
-            let mut conn = conn.lock().await;
             let mut m = serde_json::Map::new();
             m.insert("internal".to_string(), json!([id, api_call]));
-            if let Err(_) = conn.send_request(m, tx).await {
+            let result = {
+                let mut conn = conn.lock().await;
+                conn.send_request(m, tx).await
+            };
+            if let Err(_) = result {
                 {
                     let mut queue = queue.lock().await;
                     queue.cancel_register(&id);

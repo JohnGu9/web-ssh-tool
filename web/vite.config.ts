@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import { terser } from 'rollup-plugin-terser';
 import preload from "vite-plugin-preload";
+import { InputPluginOption } from 'vite/node_modules/rollup';
 
 export default defineConfig(() => {
     return {
@@ -33,7 +34,7 @@ export default defineConfig(() => {
                         },
                         mangle: true,
                     }),
-                ] as any,
+                ] as InputPluginOption,
             },
         },
         plugins: [

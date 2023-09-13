@@ -4,9 +4,7 @@ mod tls;
 mod websocket_client;
 mod websocket_server;
 use common::app_config::AppConfig;
-use common::authenticate_queue::AuthenticateQueues;
-use common::connection_peer::WebSocketPeer;
-use common::{ResponseType, ResponseUnit};
+use common::{AppContext, ResponseType, ResponseUnit};
 use futures::channel::mpsc;
 use futures::lock::Mutex;
 use http_body_util::StreamBody;
@@ -71,19 +69,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
         app_config.listen_address.port
     );
 
-    let peer_map = Arc::new(Mutex::new(HashMap::new()));
-    let queues = Arc::new(Mutex::new(HashMap::new()));
+    let websocket_peers = Arc::new(Mutex::new(HashMap::new()));
+    let authenticate_queues = Arc::new(Mutex::new(HashMap::new()));
     loop {
         match listener.accept().await {
             Ok((stream, addr)) => {
-                tokio::spawn(handle_connection(
-                    stream,
-                    addr,
-                    acceptor.clone(),
-                    app_config.clone(),
-                    peer_map.clone(),
-                    queues.clone(),
-                ));
+                let context = AppContext {
+                    app_config: app_config.clone(),
+                    websocket_peers: websocket_peers.clone(),
+                    authenticate_queues: authenticate_queues.clone(),
+                };
+                tokio::spawn(handle_connection(context, stream, addr, acceptor.clone()));
             }
             Err(e) => app_config.logger.err(format!(
                 "Failed to build connection for incoming connection: {:?}",
@@ -94,23 +90,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 async fn handle_connection(
+    context: AppContext,
     stream: TcpStream,
     addr: SocketAddr,
     acceptor: TlsAcceptor,
-    app_config: Arc<AppConfig>,
-    peer_map: Arc<Mutex<HashMap<String, WebSocketPeer>>>,
-    authenticate_queues: Arc<Mutex<HashMap<String, AuthenticateQueues>>>,
 ) -> Result<(), std::io::Error> {
     let stream = acceptor.accept(stream).await?;
-    let service = |req: Request<hyper::body::Incoming>| {
-        http_websocket_classify(&app_config, &peer_map, &authenticate_queues, addr, req)
-    };
+    let service =
+        |req: Request<hyper::body::Incoming>| http_websocket_classify(&context, &addr, req);
     if let Err(e) = http1::Builder::new()
         .serve_connection(stream, service_fn(service))
         .with_upgrades()
         .await
     {
-        app_config
+        context
+            .app_config
             .logger
             .err(format!("Error serving connection: {:?}", e));
     }
@@ -118,10 +112,8 @@ async fn handle_connection(
 }
 
 async fn http_websocket_classify(
-    app_config: &Arc<AppConfig>,
-    peer_map: &Arc<Mutex<HashMap<String, WebSocketPeer>>>,
-    authenticate_queues: &Arc<Mutex<HashMap<String, AuthenticateQueues>>>,
-    addr: SocketAddr,
+    context: &AppContext,
+    addr: &SocketAddr,
     req: Request<hyper::body::Incoming>,
 ) -> Result<ResponseType, Infallible> {
     const UPGRADE_HEADER_VALUE: HeaderValue = HeaderValue::from_static("Upgrade");
@@ -130,58 +122,66 @@ async fn http_websocket_classify(
     let key = headers.get(header::SEC_WEBSOCKET_KEY);
     if let Some(key) = key {
         let derived = tungstenite::handshake::derive_accept_key(key.as_bytes()).parse();
-        if let Ok(derived) = derived {
-            if req.method() == Method::GET
-                && req.version() >= Version::HTTP_11
-                && headers
-                    .get(header::CONNECTION)
-                    .and_then(|h| h.to_str().ok())
-                    .map(|h| {
-                        h.split(|c| c == ' ' || c == ',')
-                            .any(|p| p.eq_ignore_ascii_case("Upgrade"))
-                    })
-                    .unwrap_or(false)
-                && headers
-                    .get(header::UPGRADE)
-                    .and_then(|h| h.to_str().ok())
-                    .map(|h| h.eq_ignore_ascii_case("websocket"))
-                    .unwrap_or(false)
-                && headers
-                    .get(header::SEC_WEBSOCKET_VERSION)
-                    .map(|h| h == "13")
-                    .unwrap_or(false)
-            {
-                let ver = req.version();
-                let (mut tx, rx) = mpsc::channel(1);
-                tx.close_channel();
-                let mut res = Response::new(StreamBody::new(rx));
-                *res.status_mut() = StatusCode::SWITCHING_PROTOCOLS;
-                *res.version_mut() = ver;
-                let headers = res.headers_mut();
-                headers.append(header::CONNECTION, UPGRADE_HEADER_VALUE);
-                headers.append(header::UPGRADE, WEBSOCKET_HEADER_VALUE);
-                headers.append(header::SEC_WEBSOCKET_ACCEPT, derived);
-                tokio::spawn(upgrade_web_socket(
-                    app_config.to_owned(),
-                    peer_map.to_owned(),
-                    authenticate_queues.to_owned(),
-                    addr,
-                    req,
-                ));
-                return Ok(res);
+        match derived {
+            Ok(derived) => {
+                if req.method() == Method::GET
+                    && req.version() >= Version::HTTP_11
+                    && headers
+                        .get(header::CONNECTION)
+                        .and_then(|h| h.to_str().ok())
+                        .map(|h| {
+                            h.split(|c| c == ' ' || c == ',')
+                                .any(|p| p.eq_ignore_ascii_case("Upgrade"))
+                        })
+                        .unwrap_or(false)
+                    && headers
+                        .get(header::UPGRADE)
+                        .and_then(|h| h.to_str().ok())
+                        .map(|h| h.eq_ignore_ascii_case("websocket"))
+                        .unwrap_or(false)
+                    && headers
+                        .get(header::SEC_WEBSOCKET_VERSION)
+                        .map(|h| h == "13")
+                        .unwrap_or(false)
+                {
+                    let ver = req.version();
+                    let (mut tx, rx) = mpsc::channel(1);
+                    tx.close_channel();
+                    let mut res = Response::new(StreamBody::new(rx));
+                    *res.status_mut() = StatusCode::SWITCHING_PROTOCOLS;
+                    *res.version_mut() = ver;
+                    let headers = res.headers_mut();
+                    headers.append(header::CONNECTION, UPGRADE_HEADER_VALUE);
+                    headers.append(header::UPGRADE, WEBSOCKET_HEADER_VALUE);
+                    headers.append(header::SEC_WEBSOCKET_ACCEPT, derived);
+                    let context = context.clone();
+                    let addr = addr.clone();
+                    tokio::spawn(upgrade_web_socket(context, addr, req));
+                    return Ok(res);
+                } else {
+                    context
+                    .app_config.logger.err(format!(
+                        "Connection ({}) come with SEC_WEBSOCKET_KEY but can't upgrade to websocket and fallback to normal http handle. ",&addr
+                    ));
+                }
+            }
+            Err(err) => {
+                context
+                    .app_config
+                    .logger
+                    .err(format!("Error derive_accept_key: {}. ", err));
             }
         }
     }
-    return on_http(&app_config, peer_map, addr, req).await;
+    return on_http(context, addr, req).await;
 }
 
 async fn upgrade_web_socket(
-    app_config: Arc<AppConfig>,
-    peer_map: Arc<Mutex<HashMap<String, WebSocketPeer>>>,
-    authenticate_queues: Arc<Mutex<HashMap<String, AuthenticateQueues>>>,
+    context: AppContext,
     addr: SocketAddr,
     mut req: Request<hyper::body::Incoming>,
 ) {
+    let app_config = context.app_config.clone();
     match hyper::upgrade::on(&mut req).await {
         Ok(upgraded) => {
             let ws_stream = WebSocketStream::from_raw_socket(
@@ -190,15 +190,7 @@ async fn upgrade_web_socket(
                 None,
             )
             .await;
-            if let Err(err) = websocket_server::handle_request(
-                &app_config,
-                &peer_map,
-                &authenticate_queues,
-                &addr,
-                req,
-                ws_stream,
-            )
-            .await
+            if let Err(err) = websocket_server::handle_request(context, &addr, req, ws_stream).await
             {
                 app_config
                     .logger

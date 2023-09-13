@@ -12,8 +12,9 @@
     "strict": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
     "esModuleInterop": true,
-    "outDir": "./build"
   },
   "files": [
     "build-license.ts",

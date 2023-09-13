@@ -1,5 +1,5 @@
 use super::components::BUF_SIZE;
-use crate::{common::app_config::AppConfig, common::connection_peer::WebSocketPeer, ResponseType};
+use crate::{common::app_config::AppConfig, common::websocket_peer::WebSocketPeer, ResponseType};
 use futures::channel::mpsc::channel;
 use futures::lock::Mutex;
 use http_body_util::StreamBody;
@@ -11,8 +11,8 @@ use std::{collections::HashMap, convert::Infallible, sync::Arc};
 pub async fn on_client(
     _: &Arc<AppConfig>,
     peer_map: &Arc<Mutex<HashMap<String, WebSocketPeer>>>,
+    addr: &SocketAddr,
     mut req: Request<Incoming>,
-    addr: SocketAddr,
 ) -> Result<ResponseType, Infallible> {
     let is_loopback = match addr {
         SocketAddr::V4(v4) => v4.ip().is_loopback(),

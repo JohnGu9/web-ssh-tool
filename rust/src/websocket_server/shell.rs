@@ -4,7 +4,7 @@ use futures::{lock::Mutex, StreamExt};
 use russh::{client::Handle, client::Msg, Channel, ChannelMsg};
 use std::{collections::HashMap, sync::Arc};
 
-use crate::common::connection_peer::{Client, ClientConnection};
+use crate::common::websocket_peer::{Client, ClientConnection};
 
 pub async fn handle_request(
     request: serde_json::Value,
