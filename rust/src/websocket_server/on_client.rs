@@ -1,7 +1,7 @@
-use crate::common::AppContext;
-use futures::StreamExt;
+use crate::common::{websocket_peer::ClientConnection, AppContext};
+use futures::{lock::Mutex, StreamExt};
 use hyper::upgrade::Upgraded;
-use std::error::Error;
+use std::{error::Error, sync::Arc};
 use tokio_tungstenite::{tungstenite::Message, WebSocketStream};
 
 pub async fn handle_request(
@@ -10,23 +10,25 @@ pub async fn handle_request(
     token: &str,
 ) -> Result<(), Box<dyn Error>> {
     let app_config = &context.app_config;
-    let peer_map = &context.websocket_peers;
+    let suspended_clients = &context.suspended_clients;
+    let result = {
+        let mut map = suspended_clients.lock().await;
+        map.remove(token)
+    };
+    if let Some((callback, event_channel)) = result {
+        let (write, read) = ws_stream.split();
+        let client_connection = Arc::new(Mutex::new(ClientConnection::new(event_channel, write)));
+        if let Err(_) = callback.send(client_connection.clone()) {
+            app_config.logger.err(format!(
+                "Not found token({}) in current connecting peers",
+                token
+            ));
+            return Ok(());
+        }
 
-    let map = peer_map.lock().await;
-    if let Some(peer) = map.get(token) {
         app_config
             .logger
             .info(format!("Internal client for token({}) connected", token));
-
-        let (write, read) = ws_stream.split();
-        let client_connection = peer.client_connection.clone();
-        drop(map);
-
-        {
-            let mut lk = client_connection.lock().await;
-            lk.set_internal_client_stream(write);
-        }
-
         read.for_each_concurrent(10, |data| async {
             if let Ok(Message::Text(text)) = data {
                 if let Ok(serde_json::Value::Object(mut m)) =
@@ -58,11 +60,6 @@ pub async fn handle_request(
             }
         })
         .await;
-
-        {
-            let mut lk = client_connection.lock().await;
-            lk.clear_internal_client_stream();
-        }
 
         app_config
             .logger

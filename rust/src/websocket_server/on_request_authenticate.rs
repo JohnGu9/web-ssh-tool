@@ -1,8 +1,8 @@
 use super::encode_value;
 use super::internal_decompress;
 use super::on_authenticate;
-use crate::common::AppContext;
 use crate::common::websocket_peer::{Client, WebSocketPeer};
+use crate::common::AppContext;
 use futures::channel::{mpsc, oneshot};
 use futures::lock::Mutex;
 use futures::{SinkExt, StreamExt};
@@ -20,6 +20,8 @@ pub async fn handle_request(
     let app_config = &context.app_config;
     let peer_map = &context.websocket_peers;
     let authenticate_queues = &context.authenticate_queues;
+    let suspended_clients = &context.suspended_clients;
+
     app_config
         .logger
         .info(format!("New websocket connection({}) connected", addr));
@@ -45,6 +47,8 @@ pub async fn handle_request(
 
         let mut cause_cache = String::new();
         let result = async {
+            use tokio::time::{sleep, timeout, Duration};
+
             let (username, password) = match parse_username_and_password(text) {
                 Some(v) => v,
                 None => return Err("Sign in message format error"),
@@ -101,7 +105,6 @@ pub async fn handle_request(
             let _ = authenticate_queue.lock().await.send(rx).await;
             match session.authenticate_password(username, password).await {
                 Ok(false) => {
-                    use tokio::time::{sleep, Duration};
                     sleep(Duration::from_secs(5)).await;
                     tokio::task::yield_now().await;
                     return Err("Username and password authenticate failed");
@@ -114,12 +117,6 @@ pub async fn handle_request(
             };
             let _ = complete_authenticate.send(());
 
-            let mut map = peer_map.lock().await;
-            let token = uuid::Uuid::new_v4().to_string();
-            if let Some(_) = map.get(&token) {
-                return Err("Internal error: id generation failed");
-            }
-
             let mut channel = match session.channel_open_session().await {
                 Ok(ch) => ch,
                 Err(err) => {
@@ -128,16 +125,44 @@ pub async fn handle_request(
                 }
             };
 
+            let token = uuid::Uuid::new_v4().to_string();
+
+            let (mut map, mut clients) = futures::join!(peer_map.lock(), suspended_clients.lock());
+            match (map.get(&token), clients.get(&token)) {
+                (Some(_), _) | (_, Some(_)) => return Err("Internal error: id generation failed"),
+                _ => (),
+            }
+
+            let (event_channel_write_channel, event_channel_read_channel) = mpsc::channel(1);
+            let (client_write_channel_callback, rx) = oneshot::channel();
+            clients.insert(
+                token.clone(),
+                (client_write_channel_callback, event_channel_write_channel),
+            );
+            drop(clients);
+
             let command = format!(
                 "{} --client {} --listen-address localhost:{}",
                 app_config.bin, token, app_config.listen_address.port
             );
-            let (tx, rx) = mpsc::channel(1);
             tokio::spawn(async move { channel.exec(true, command).await });
-            let peer = WebSocketPeer::new(token.clone(), addr.clone(), tx);
+
+            let client_connection = match timeout(Duration::from_secs(5), rx).await {
+                Ok(Ok(client_write_channel)) => client_write_channel,
+                _ => {
+                    suspended_clients.lock().await.remove(&token);
+                    return Err("Failed to connect to client");
+                }
+            };
+            let peer = WebSocketPeer::new(token.clone(), addr.clone(), client_connection);
             let client_connection = peer.client_connection.clone();
             map.insert(token.clone(), peer);
-            return Ok((session, token, client_connection, rx));
+            return Ok((
+                session,
+                token,
+                client_connection,
+                event_channel_read_channel,
+            ));
         }
         .await;
 
@@ -164,9 +189,15 @@ pub async fn handle_request(
                 on_authenticate::handle_request(&token, &client_connection, ws_stream, rx, session)
                     .await;
         }
-        let mut map = peer_map.lock().await;
-        if let Some(peer) = map.remove(&token) {
-            peer.disconnect().await;
+        {
+            let mut map = peer_map.lock().await;
+            if let Some(peer) = map.remove(&token) {
+                peer.disconnect().await;
+            }
+        }
+        {
+            let mut map = suspended_clients.lock().await;
+            map.remove(&token);
         }
     }
 

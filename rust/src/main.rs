@@ -71,6 +71,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let websocket_peers = Arc::new(Mutex::new(HashMap::new()));
     let authenticate_queues = Arc::new(Mutex::new(HashMap::new()));
+    let suspended_clients = Arc::new(Mutex::new(HashMap::new()));
     loop {
         match listener.accept().await {
             Ok((stream, addr)) => {
@@ -78,6 +79,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     app_config: app_config.clone(),
                     websocket_peers: websocket_peers.clone(),
                     authenticate_queues: authenticate_queues.clone(),
+                    suspended_clients: suspended_clients.clone(),
                 };
                 tokio::spawn(handle_connection(context, stream, addr, acceptor.clone()));
             }

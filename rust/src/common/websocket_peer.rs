@@ -18,12 +18,12 @@ impl WebSocketPeer {
     pub fn new(
         token: String,
         addr: SocketAddr,
-        event_channel: mpsc::Sender<serde_json::Value>,
+        client_connection: Arc<Mutex<ClientConnection>>,
     ) -> Self {
         Self {
-            token: token,
-            addr: addr,
-            client_connection: Arc::new(Mutex::new(ClientConnection::new(event_channel))),
+            token,
+            addr,
+            client_connection,
             client_response_queue: Arc::new(Mutex::new(ClientResponseQueue::new())),
         }
     }
@@ -78,40 +78,35 @@ impl ClientResponseQueue {
     }
 }
 
+pub type ClientWriteChannel = SplitSink<WebSocketStream<Upgraded>, Message>;
+
+// @TODO: split ClientConnection [internal_client_stream] and [event_channel]
 pub struct ClientConnection {
     request_id: u64,
-    internal_client_stream: Option<SplitSink<WebSocketStream<Upgraded>, Message>>,
+    internal_client_stream: ClientWriteChannel,
     callbacks: HashMap<u64, oneshot::Sender<serde_json::Value>>,
     event_channel: mpsc::Sender<serde_json::Value>,
 }
 
 impl ClientConnection {
-    pub fn new(event_channel: mpsc::Sender<serde_json::Value>) -> Self {
+    pub fn new(
+        event_channel: mpsc::Sender<serde_json::Value>,
+        client_write_channel: ClientWriteChannel,
+    ) -> Self {
         Self {
             request_id: 0,
-            internal_client_stream: None,
+            internal_client_stream: client_write_channel,
             callbacks: HashMap::new(),
             event_channel,
         }
     }
 
     async fn disconnect(&mut self) {
-        if let Some(ref mut stream) = self.internal_client_stream {
-            let _ = stream.close().await;
-        }
+        let _ = futures::join!(
+            self.internal_client_stream.close(),
+            self.event_channel.close()
+        );
         self.callbacks.clear();
-        let _ = self.event_channel.close().await;
-    }
-
-    pub fn set_internal_client_stream(
-        &mut self,
-        stream: SplitSink<WebSocketStream<Upgraded>, Message>,
-    ) {
-        self.internal_client_stream = Some(stream);
-    }
-
-    pub fn clear_internal_client_stream(&mut self) {
-        self.internal_client_stream = None;
     }
 
     pub async fn send_request(
@@ -119,26 +114,24 @@ impl ClientConnection {
         request: serde_json::Map<String, serde_json::Value>,
         callback: oneshot::Sender<serde_json::Value>,
     ) -> Result<(), &'static str> {
-        if let Some(ref mut stream) = self.internal_client_stream {
-            self.request_id += 1;
-            let id = self.request_id;
-            self.callbacks.insert(id.clone(), callback);
-            let mut m = serde_json::Map::new();
-            m.insert(
-                "id".to_string(),
-                serde_json::Value::Number(id.clone().into()),
-            );
-            m.insert("request".to_string(), serde_json::Value::Object(request));
-            let request_object = serde_json::Value::Object(m);
-            return stream
-                .send(Message::Text(request_object.to_string()))
-                .map_err(|_| {
-                    self.callbacks.remove(&id);
-                    "Websocket send message failed"
-                })
-                .await;
-        }
-        Err("No internet client")
+        let stream = &mut self.internal_client_stream;
+        self.request_id += 1;
+        let id = self.request_id;
+        self.callbacks.insert(id.clone(), callback);
+        let mut m = serde_json::Map::new();
+        m.insert(
+            "id".to_string(),
+            serde_json::Value::Number(id.clone().into()),
+        );
+        m.insert("request".to_string(), serde_json::Value::Object(request));
+        let request_object = serde_json::Value::Object(m);
+        return stream
+            .send(Message::Text(request_object.to_string()))
+            .map_err(|_| {
+                self.callbacks.remove(&id);
+                "Websocket send message failed"
+            })
+            .await;
     }
 
     pub fn feed_response(
