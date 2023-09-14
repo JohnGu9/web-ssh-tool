@@ -189,19 +189,17 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
     const closeUploadManagement = () => this.setState({ uploadManagementOpen: false });
     return (
       <>
-        <MyResize>
-          <Elevation className='full-size column' depth={2}
-            style={{ paddingBottom: 16, }}>
-            <FileExplorer
-              controller={this._controller}
-              uploadItems={uploadItems}
-              config={config}
-              setConfig={config => this.setState({ config })}
-              upload={(file, dest) => this._upload(file, dest)}
-              openUploadManagement={() => this.setState({ uploadManagementOpen: true })}
-              reconnect={() => this._reconnect()} />
-          </Elevation>
-        </MyResize>
+        <Elevation className='full-size column' depth={2}
+          style={{ paddingBottom: 16, }}>
+          <FileExplorer
+            controller={this._controller}
+            uploadItems={uploadItems}
+            config={config}
+            setConfig={config => this.setState({ config })}
+            upload={(file, dest) => this._upload(file, dest)}
+            openUploadManagement={() => this.setState({ uploadManagementOpen: true })}
+            reconnect={() => this._reconnect()} />
+        </Elevation>
         <Dialog open={uploadManagementOpen}
           fullscreen
           onScrimClick={closeUploadManagement}
@@ -273,40 +271,7 @@ namespace MultiFileExplorer {
   };
 }
 
-function MyResize({ children }: { children: React.ReactNode }) {
-  const [enable, setEnable] = React.useState(0);
-  const [width, setWidth] = React.useState(320);
-  const startDrag = enable > 0;
-  React.useEffect(() => {
-    const onUp = () => setEnable(v => Math.max(v - 1, 0));
-    window.addEventListener('mouseup', onUp);
-    return () => {
-      window.removeEventListener('mouseup', onUp);
-    }
-  });
-  React.useEffect(() => {
-    if (startDrag) {
-      const onMove = (e: Event) => {
-        e.preventDefault();
-        setWidth(width => Math.max(width - (e as MouseEvent).movementX, 300));
-      };
-      window.addEventListener('mousemove', onMove);
-      return () => {
-        window.removeEventListener('mousemove', onMove);
-      }
-    }
-  }, [startDrag]);
-  return (
-    <div style={{ position: 'relative', height: '100%', width }}>
-      {children}
-      <div style={{ position: 'absolute', height: '100%', width: 8, left: 0, top: 0, cursor: 'ew-resize' }}
-        onMouseDown={(e) => {
-          e.preventDefault();
-          setEnable(v => v + 1);
-        }}></div>
-    </div>
-  );
-}
+
 
 function UploadItem(props: { controller: FileExplorer.UploadController }) {
   const [state, setState] = React.useState<FileExplorer.UploadController.State>(props.controller.detail.state);

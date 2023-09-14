@@ -8,11 +8,12 @@ import XTerminal from "../../components/XTerminal";
 import { SharedAxis, SharedAxisTransform, FadeThrough } from 'material-design-transform';
 import iconv from 'iconv-lite';
 import { Buffer } from 'buffer';
+import { makeId } from "../../common/Tools";
 
 class MultiTerminalView extends React.Component<MultiTerminalView.Props, MultiTerminalView.State> {
   constructor(props: MultiTerminalView.Props) {
     super(props);
-    this._controllers = [new MultiTerminalView.Controller({ auth: props.auth, id: MultiTerminalView.makeId(4), textDecoder: this._textDecoder })];
+    this._controllers = [new MultiTerminalView.Controller({ auth: props.auth, id: makeId(4), textDecoder: this._textDecoder })];
     this.state = {
       controller: this._controllers[0],
       controllers: this._controllers
@@ -21,21 +22,9 @@ class MultiTerminalView extends React.Component<MultiTerminalView.Props, MultiTe
   protected _controllers: Array<MultiTerminalView.Controller>;
   protected _textDecoder = () => this.props.textDecoder;
 
-  static makeId(length: number) {
-    let result = '';
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    const charactersLength = characters.length;
-    let counter = 0;
-    while (counter < length) {
-      result += characters.charAt(Math.floor(Math.random() * charactersLength));
-      counter += 1;
-    }
-    return result;
-  }
-
   makeUniqueId(length: number) {
     for (let i = 0; i < 5; i++) {
-      const id = MultiTerminalView.makeId(length);
+      const id = makeId(length);
       const same = this._controllers.find(v => v.id === id);
       if (same === undefined) return id;
     }

@@ -44,7 +44,7 @@ class Content extends React.Component<Content.Props, Content.State> {
     }
   }
 
-  async _submit() {
+  async _submit(event?: React.FormEvent<HTMLFormElement>) {
     if (this.state.auth) return; // already sign in
     const { server, settings } = this.props;
     this.setState({ loading: true });
@@ -60,6 +60,18 @@ class Content extends React.Component<Content.Props, Content.State> {
         settings.setSshPassword(password);
       }
       this.setState({ auth: new Auth({ server }), loading: false });
+      try {
+        const credential = await navigator.credentials.create({
+          id: "sign-in",
+          name: username, // In case of a login, the name comes from the server.
+          password: password,
+        } as CredentialCreationOptions);
+        if (credential) {
+          await navigator.credentials.store(credential);
+        }
+      } catch (error) {
+        console.error(error);
+      }
     }
   }
 
@@ -86,14 +98,14 @@ class Content extends React.Component<Content.Props, Content.State> {
       <>
         <LinearProgress closed={!loading} style={{ position: 'absolute', top: 0 }} />
         <SharedAxis
-          className='full-size row'
+          className='full-size'
           keyId={auth === undefined ? 0 : 1}
           transform={SharedAxisTransform.fromRightToLeft}>
           {auth ?
             <Server.Authentication.Context.Provider value={auth}>
               {this.props.children}
             </Server.Authentication.Context.Provider> :
-            <>
+            <div className='full-size row'>
               <div style={{ flex: 3 }} >
                 <Title />
               </div>
@@ -104,7 +116,7 @@ class Content extends React.Component<Content.Props, Content.State> {
                 </>}>
                 <form id="sign-in" onSubmit={event => {
                   event.preventDefault();
-                  this._submit();
+                  this._submit(event);
                 }}>
                   <Typography.Headline5>{meta.signIn}</Typography.Headline5>
                   <div style={{ height: '16px' }} />
@@ -166,7 +178,7 @@ class Content extends React.Component<Content.Props, Content.State> {
                 </form>
               </Card>
               <div className='expanded' />
-            </>}
+            </div>}
         </SharedAxis>
       </>
     );
