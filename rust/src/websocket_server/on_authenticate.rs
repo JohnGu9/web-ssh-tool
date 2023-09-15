@@ -2,7 +2,7 @@ use super::encode_value;
 use super::internal_decompress;
 use super::shell;
 use super::shell::PollChannelData;
-use crate::common::websocket_peer::{Client, ClientConnection};
+use crate::common::websocket_peer::{Client, ClientWebsocket};
 use futures::{
     channel::{mpsc, oneshot},
     lock::Mutex,
@@ -17,7 +17,7 @@ use tokio_tungstenite::{tungstenite::Message, WebSocketStream};
 
 pub async fn handle_request(
     token: &String,
-    client_connection: &Arc<Mutex<ClientConnection>>,
+    client_connection: &Arc<Mutex<ClientWebsocket>>,
     ws_stream: WebSocketStream<Upgraded>,
     event_channel: mpsc::Receiver<serde_json::Value>,
     session: Handle<Client>,
@@ -97,7 +97,7 @@ async fn poll_event(
 async fn build_response(
     token: &String,
     request: Option<serde_json::Value>,
-    client_connection: &Arc<Mutex<ClientConnection>>,
+    client_connection: &Arc<Mutex<ClientWebsocket>>,
     session: &Mutex<Handle<Client>>,
     shells: &Mutex<HashMap<String, mpsc::Sender<PollChannelData>>>,
 ) -> Result<serde_json::Value, RequestError> {
@@ -118,12 +118,10 @@ async fn build_response(
                 }
                 key => {
                     let (tx, rx) = oneshot::channel();
-                    let mut m = serde_json::Map::new();
-                    m.insert(key.to_string(), value);
 
                     {
                         let mut conn = client_connection.lock().await;
-                        if let Err(_) = conn.send_request(m, tx).await {
+                        if let Err(_) = conn.send_request(json!({key: value}), tx).await {
                             return Err(RequestError::SshConnectNotEstablish);
                         }
                     }

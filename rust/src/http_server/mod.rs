@@ -45,8 +45,8 @@ pub async fn on_http(
             let peer = peer_map.get(&token);
             match peer {
                 Some(peer) => {
-                    let queue = peer.client_response_queue.clone();
-                    let conn = peer.client_connection.clone();
+                    let queue = peer.client_http.clone();
+                    let conn = peer.client_websocket.clone();
                     drop(peer_map);
                     let mut upload_dir = vec![];
                     let mut upload_filename = None;

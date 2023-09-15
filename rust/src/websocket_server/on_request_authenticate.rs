@@ -149,13 +149,15 @@ pub async fn handle_request(
 
             let client_connection = match timeout(Duration::from_secs(5), rx).await {
                 Ok(Ok(client_write_channel)) => client_write_channel,
-                _ => {
-                    suspended_clients.lock().await.remove(&token);
+                v => {
+                    if let Err(_) = v {
+                        // error cause by timeout
+                        suspended_clients.lock().await.remove(&token);
+                    }
                     return Err("Failed to connect to client");
                 }
             };
-            let peer = WebSocketPeer::new(token.clone(), addr.clone(), client_connection);
-            let client_connection = peer.client_connection.clone();
+            let peer = WebSocketPeer::new(client_connection.clone());
             map.insert(token.clone(), peer);
             return Ok((
                 session,
@@ -189,15 +191,9 @@ pub async fn handle_request(
                 on_authenticate::handle_request(&token, &client_connection, ws_stream, rx, session)
                     .await;
         }
-        {
-            let mut map = peer_map.lock().await;
-            if let Some(peer) = map.remove(&token) {
-                peer.disconnect().await;
-            }
-        }
-        {
-            let mut map = suspended_clients.lock().await;
-            map.remove(&token);
+        let mut map = peer_map.lock().await;
+        if let Some(peer) = map.remove(&token) {
+            peer.disconnect().await;
         }
     }
 

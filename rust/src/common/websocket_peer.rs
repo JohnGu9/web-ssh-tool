@@ -4,50 +4,44 @@ use futures::channel::{mpsc, oneshot};
 use futures::{lock::Mutex, stream::SplitSink, SinkExt, TryFutureExt};
 use hyper::{body::Incoming, upgrade::Upgraded, Request};
 use russh_keys::key;
-use std::{collections::HashMap, net::SocketAddr, sync::Arc};
+use serde_json::json;
+use std::{collections::HashMap, sync::Arc};
 use tokio_tungstenite::{tungstenite::Message, WebSocketStream};
 
 pub struct WebSocketPeer {
-    pub token: String,
-    pub addr: SocketAddr,
-    pub client_connection: Arc<Mutex<ClientConnection>>, // websocket from client
-    pub client_response_queue: Arc<Mutex<ClientResponseQueue>>, // http from client
+    pub client_websocket: Arc<Mutex<ClientWebsocket>>, // websocket from client
+    pub client_http: Arc<Mutex<ClientHttp>>,           // http from client
 }
 
 impl WebSocketPeer {
-    pub fn new(
-        token: String,
-        addr: SocketAddr,
-        client_connection: Arc<Mutex<ClientConnection>>,
-    ) -> Self {
+    pub fn new(client_connection: Arc<Mutex<ClientWebsocket>>) -> Self {
         Self {
-            token,
-            addr,
-            client_connection,
-            client_response_queue: Arc::new(Mutex::new(ClientResponseQueue::new())),
+            client_websocket: client_connection,
+            client_http: Arc::new(Mutex::new(ClientHttp::new())),
         }
     }
 
     pub async fn disconnect(&self) {
-        let f1 = async {
-            let mut conn = self.client_connection.lock().await;
-            conn.disconnect().await
-        };
-        let f2 = async {
-            let mut queue = self.client_response_queue.lock().await;
-            queue.disconnect()
-        };
-        tokio::join!(f1, f2);
+        tokio::join!(
+            async {
+                let mut conn = self.client_websocket.lock().await;
+                conn.disconnect().await
+            },
+            async {
+                let mut queue = self.client_http.lock().await;
+                queue.disconnect()
+            }
+        );
     }
 }
 
-type QueueType = (Request<Incoming>, mpsc::Sender<ResponseUnit>);
-pub struct ClientResponseQueue {
+type HttpConnection = (Request<Incoming>, mpsc::Sender<ResponseUnit>);
+pub struct ClientHttp {
     request_id: u64,
-    queue: HashMap<u64, oneshot::Sender<QueueType>>,
+    queue: HashMap<u64, oneshot::Sender<HttpConnection>>,
 }
 
-impl ClientResponseQueue {
+impl ClientHttp {
     pub fn new() -> Self {
         Self {
             request_id: 0,
@@ -55,7 +49,7 @@ impl ClientResponseQueue {
         }
     }
 
-    pub fn register(&mut self, callback: oneshot::Sender<QueueType>) -> u64 {
+    pub fn register(&mut self, callback: oneshot::Sender<HttpConnection>) -> u64 {
         let id = self.request_id.clone();
         self.request_id += 1;
         self.queue.insert(id.clone(), callback);
@@ -66,7 +60,7 @@ impl ClientResponseQueue {
         self.queue.remove(id);
     }
 
-    pub fn feed(&mut self, id: &u64, response: QueueType) {
+    pub fn feed(&mut self, id: &u64, response: HttpConnection) {
         let slot = self.queue.remove(id);
         if let Some(sender) = slot {
             let _ = sender.send(response);
@@ -81,14 +75,14 @@ impl ClientResponseQueue {
 pub type ClientWriteChannel = SplitSink<WebSocketStream<Upgraded>, Message>;
 
 // @TODO: split ClientConnection [internal_client_stream] and [event_channel]
-pub struct ClientConnection {
+pub struct ClientWebsocket {
     request_id: u64,
     internal_client_stream: ClientWriteChannel,
     callbacks: HashMap<u64, oneshot::Sender<serde_json::Value>>,
     event_channel: mpsc::Sender<serde_json::Value>,
 }
 
-impl ClientConnection {
+impl ClientWebsocket {
     pub fn new(
         event_channel: mpsc::Sender<serde_json::Value>,
         client_write_channel: ClientWriteChannel,
@@ -111,20 +105,14 @@ impl ClientConnection {
 
     pub async fn send_request(
         &mut self,
-        request: serde_json::Map<String, serde_json::Value>,
+        request: serde_json::Value,
         callback: oneshot::Sender<serde_json::Value>,
     ) -> Result<(), &'static str> {
         let stream = &mut self.internal_client_stream;
         self.request_id += 1;
         let id = self.request_id;
         self.callbacks.insert(id.clone(), callback);
-        let mut m = serde_json::Map::new();
-        m.insert(
-            "id".to_string(),
-            serde_json::Value::Number(id.clone().into()),
-        );
-        m.insert("request".to_string(), serde_json::Value::Object(request));
-        let request_object = serde_json::Value::Object(m);
+        let request_object = json!({"id": id, "request": request});
         return stream
             .send(Message::Text(request_object.to_string()))
             .map_err(|_| {

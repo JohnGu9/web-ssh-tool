@@ -1,4 +1,4 @@
-use crate::common::{websocket_peer::ClientConnection, AppContext};
+use crate::common::{websocket_peer::ClientWebsocket, AppContext};
 use futures::{lock::Mutex, StreamExt};
 use hyper::upgrade::Upgraded;
 use std::{error::Error, sync::Arc};
@@ -17,7 +17,7 @@ pub async fn handle_request(
     };
     if let Some((callback, event_channel)) = result {
         let (write, read) = ws_stream.split();
-        let client_connection = Arc::new(Mutex::new(ClientConnection::new(event_channel, write)));
+        let client_connection = Arc::new(Mutex::new(ClientWebsocket::new(event_channel, write)));
         if let Err(_) = callback.send(client_connection.clone()) {
             app_config.logger.err(format!(
                 "Not found token({}) in current connecting peers",

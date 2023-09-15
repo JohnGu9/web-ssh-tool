@@ -1,7 +1,8 @@
 use crate::common::{
     app_config::AppConfig,
-    websocket_peer::{ClientConnection, ClientResponseQueue},
-    forward_async_read_to_sender, ResponseType,
+    forward_async_read_to_sender,
+    websocket_peer::{ClientHttp, ClientWebsocket},
+    ResponseType,
 };
 use crate::ResponseUnit;
 use futures::channel::{mpsc, oneshot};
@@ -39,8 +40,8 @@ pub const BUF_SIZE: usize = 64;
 pub async fn request_internal_client_http_connection(
     app_config: &Arc<AppConfig>,
     req: Request<Incoming>,
-    queue: Arc<Mutex<ClientResponseQueue>>,
-    conn: Arc<Mutex<ClientConnection>>,
+    queue: Arc<Mutex<ClientHttp>>,
+    conn: Arc<Mutex<ClientWebsocket>>,
     api_call: serde_json::Value,
 ) -> Result<ResponseType, InternalClientHttpConnectionError> {
     let (tx, rx) = oneshot::channel();
@@ -51,11 +52,10 @@ pub async fn request_internal_client_http_connection(
     {
         let (tx, rx) = oneshot::channel();
         {
-            let mut m = serde_json::Map::new();
-            m.insert("internal".to_string(), json!([id, api_call]));
             let result = {
                 let mut conn = conn.lock().await;
-                conn.send_request(m, tx).await
+                conn.send_request(json!({"internal": [id, api_call]}), tx)
+                    .await
             };
             if let Err(_) = result {
                 {

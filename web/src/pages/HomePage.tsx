@@ -31,26 +31,19 @@ function HomePage() {
   return (
     <LayoutBuilder
       className="full-size"
-      builder={function (size) {
+      builder={(size) => {
         if (size === undefined) return undefined;
-        if (size.width < 800) {
-          return (
-            <div className="full-size column">
-              <MultiTerminalView auth={auth} textDecoder={textDecoder} />
-              <MyResize axis="y">
-                <MultiFileExplorer auth={auth} server={server} settings={settings} />
-              </MyResize>
-            </div>);
-        } else {
-          return (
-            <div className="full-size row">
-              <MultiTerminalView auth={auth} textDecoder={textDecoder} />
-              <MyResize axis="x">
-                <MultiFileExplorer auth={auth} server={server} settings={settings} />
-              </MyResize>
-            </div>
-          );
-        }
+        const [className, axis]: [string, 'x' | 'y'] = size.width < 800 ?
+          ["full-size column", "y"] :
+          ["full-size row", "x"];
+        return (
+          <div className={className}>
+            <MultiTerminalView auth={auth} textDecoder={textDecoder} />
+            <MyResize axis={axis}>
+              <MultiFileExplorer auth={auth} server={server} settings={settings} />
+            </MyResize>
+          </div>
+        );
       }} />
   );
 }

@@ -26,7 +26,7 @@ pub async fn on_client(
                 let peer_map = peer_map.lock().await;
                 let peer = peer_map.get(peer);
                 if let (Some(peer), Ok(id)) = (peer, id.parse::<u64>()) {
-                    let client_response_queue = peer.client_response_queue.clone();
+                    let client_response_queue = peer.client_http.clone();
                     drop(peer_map);
                     client_response_queue.lock().await.feed(&id, (req, tx));
                 }

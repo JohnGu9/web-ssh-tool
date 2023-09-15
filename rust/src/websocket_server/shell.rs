@@ -4,11 +4,11 @@ use futures::{lock::Mutex, StreamExt};
 use russh::{client::Handle, client::Msg, Channel, ChannelMsg};
 use std::{collections::HashMap, sync::Arc};
 
-use crate::common::websocket_peer::{Client, ClientConnection};
+use crate::common::websocket_peer::{Client, ClientWebsocket};
 
 pub async fn handle_request(
     request: serde_json::Value,
-    client_connection: &Arc<Mutex<ClientConnection>>,
+    client_connection: &Arc<Mutex<ClientWebsocket>>,
     session: &Mutex<Handle<Client>>,
     shells: &Mutex<HashMap<String, mpsc::Sender<PollChannelData>>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -126,7 +126,7 @@ impl PollChannelData {
 async fn poll_channel(
     mut channel: Channel<Msg>,
     mut rx: mpsc::Receiver<PollChannelData>,
-    client_connection: Arc<Mutex<ClientConnection>>,
+    client_connection: Arc<Mutex<ClientWebsocket>>,
     id: String,
 ) -> Result<(), russh::Error> {
     use serde_json::json;

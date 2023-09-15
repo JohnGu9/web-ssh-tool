@@ -17,7 +17,7 @@ use tokio::io::{AsyncRead, AsyncReadExt};
 use self::{
     app_config::AppConfig,
     authenticate_queue::AuthenticateQueues,
-    websocket_peer::{ClientConnection, WebSocketPeer},
+    websocket_peer::{ClientWebsocket, WebSocketPeer},
 };
 
 pub type ResponseUnit = Result<Frame<Bytes>, Box<dyn std::error::Error + Send + Sync>>;
@@ -33,7 +33,7 @@ pub struct AppContext {
             HashMap<
                 String,
                 (
-                    oneshot::Sender<Arc<Mutex<ClientConnection>>>,
+                    oneshot::Sender<Arc<Mutex<ClientWebsocket>>>,
                     mpsc::Sender<serde_json::Value>,
                 ),
             >,
