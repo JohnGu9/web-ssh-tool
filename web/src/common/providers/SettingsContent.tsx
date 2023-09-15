@@ -24,6 +24,9 @@ export namespace Settings {
 
     darkMode: 'dark' | 'light' | null,
     setDarkMode: (value: 'dark' | 'light' | null) => void,
+
+    quickCommands: string | null,
+    setQuickCommands: (value: string | null) => void,
   };
 
   export class Service extends React.Component<Service.Props> {
@@ -68,8 +71,11 @@ export namespace Settings {
           get darkMode() { return localStorage.getItem('dark-mode') as null },
           setDarkMode: this._stringKeyCallback('dark-mode'),
 
-          get textDecode() { return localStorage.getItem('text-decode') as null },
+          get textDecode() { return localStorage.getItem('text-decode') },
           setTextDecode: this._stringKeyCallback('text-decode'),
+
+          get quickCommands() { return localStorage.getItem('quick-commands') },
+          setQuickCommands: this._stringKeyCallback('quick-commands'),
         }}>
           {this.props.children}
         </Context.Provider>

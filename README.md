@@ -8,6 +8,8 @@ At the same time, it also provide file system service. You can preview/download 
 
 <img src="doc/interface.png"/>
 
+The software would be built in only one binary file. No dynamic library, no resource file, no work directory. Portable and stable. (The built binary file contains your ssl cert and key. Do not share it to untrust devices. )
+
 # Get the software
 
 Project is open source. To build the app (after clone the project):
@@ -17,7 +19,7 @@ cd <project>
 npm i
 ```
 
-Put your key and cert in rust/src/tls (Do not share the bin to unknown device).
+Put your key and cert in rust/src/tls (Do not share the bin to untrust device).
 Or generate manually:
 
 ```console
@@ -74,7 +76,7 @@ Get run help
 <bin> --help
 ```
 
-The software does't need any permission like root permission. It can run by any user. Software will get the right permissions after you correctly login with your username and password on the website (login root and act like root, login guest and act like guest).
+The software does't need any permission like root permission (but network permission for http server). It can run under any user. Software will get the right permissions after you correctly login with your username and password on the website (login root and act like root, login guest and act like guest).
 
 # Software Runtime Structure
 

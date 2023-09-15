@@ -1,6 +1,6 @@
 import React from "react";
 import { Terminal } from "xterm";
-import { Icon, IconButton, Card, Button, Dialog, Typography, TabBar, Tab, Tooltip, Menu, ListItem, ListDivider, Radio } from 'rmcw';
+import { Icon, IconButton, Card, Button, Dialog, Typography, TabBar, Tab, Tooltip, Menu, ListItem, ListDivider, Radio, TextArea } from 'rmcw';
 
 import { Server, Settings, ThemeContext } from "../../common/Providers";
 import { DECODE_OPTION, Rest } from '../../common/Type';
@@ -283,7 +283,6 @@ function MoreButton() {
           })}
       </Dialog>
     </Menu>
-
   );
 }
 
@@ -349,6 +348,9 @@ function XTerminalView({ controller, remove }: {
           <IconButton
             onClick={() => controller.xterm.clear()}
           ><Icon>clear_all</Icon></IconButton>
+          <CommandButton runCommand={command => {
+            controller.xterm.paste(command);
+          }} />
           <div className='expanded' />
           <Typography.Button><SizeHint controller={controller} /></Typography.Button>
         </div>
@@ -369,4 +371,86 @@ function SizeHint({ controller }: {
     return () => controller.removeEventListener("resize", listener);
   }, [controller]);
   return (<>{size.rows} x {size.cols}</>);
+}
+
+function CommandButton({ runCommand }: { runCommand: (c: string) => unknown }) {
+  const settings = React.useContext(Settings.Context);
+  const [open, setOpen] = React.useState(false);
+  const [openCustom, setOpenCustom] = React.useState(false);
+  const [command, setCommand] = React.useState("");
+  const [label, setLabel] = React.useState("");
+  const close = () => setOpen(false);
+  const closeCustom = () => setOpenCustom(false);
+
+  const commandsRaw = settings.quickCommands;
+  const commands = React.useMemo<Array<{ command: string, label: string | null }>>(() => {
+    if (commandsRaw !== null) {
+      try {
+        const list = JSON.parse(commandsRaw);
+        if (list instanceof Array) {
+          return list.filter(v => typeof v.command === 'string');
+        }
+      } catch { }
+    }
+    return [];
+  }, [commandsRaw]);
+  return (<>
+    <IconButton
+      onClick={() => setOpen(true)}
+    ><Icon>code</Icon></IconButton>
+    <Dialog open={open && !openCustom}
+      onScrimClick={close}
+      onEscapeKey={close}
+      fullscreen
+      title="Quick Command"
+      actions={<>
+        <Button onClick={() => setOpenCustom(true)}>add custom command</Button>
+        <div className="expanded" />
+        <Button onClick={close}>close</Button>
+      </>}>
+      { }
+      {commands.length === 0 ?
+        <div className="column flex-center">No command</div> :
+        commands.map(({ command, label }, index) =>
+          <ListItem key={index}
+            primaryText={command}
+            secondaryText={label ?? undefined}
+            meta={<IconButton onClick={e => {
+              e.stopPropagation();
+              e.preventDefault();
+              const newCommands = commands.filter((_, i) => i !== index)
+              settings.setQuickCommands(JSON.stringify(newCommands));
+            }}><Icon>close</Icon></IconButton>}
+            onClick={e => {
+              close();
+              runCommand(command);
+            }} />)}
+    </Dialog>
+    <Dialog open={openCustom}
+      onScrimClick={closeCustom}
+      onEscapeKey={closeCustom}
+      title="Edit Custom Command"
+      actions={<>
+        <Button onClick={() => {
+          const l = label.length === 0 ? null : label;
+          const newCommands = [...commands, { command, label: l }];
+          settings.setQuickCommands(JSON.stringify(newCommands));
+          closeCustom();
+        }}>add</Button>
+        <Button onClick={closeCustom}>close</Button>
+      </>}>
+      <TextArea id="edit-custom-command"
+        style={{ width: '100%', display: 'block' }}
+        required
+        label="Command"
+        value={command}
+        onChange={e => setCommand(e.target.value)} />
+      <div style={{ minHeight: 16, minWidth: 320 }} />
+      <TextArea id="edit-custom-command-label"
+        style={{ width: '100%', display: 'block' }}
+        label="Label (optional)"
+        value={label}
+        onChange={e => setLabel(e.target.value)} />
+    </Dialog>
+  </>);
 }
