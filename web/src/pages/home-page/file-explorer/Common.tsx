@@ -164,6 +164,7 @@ namespace FileExplorer {
       this.addEventListener('close', () => {
         this.auth.watch.removeEventListener(this.id, this._listener);
         this.closed = true;
+        console.log(`file-explorer(${this.id}) closed`);
       }, { once: true });
       this.auth.watch.addEventListener(this.id, this._listener);
       const result = await this.auth.rest('watch', this.id);

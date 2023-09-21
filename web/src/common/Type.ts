@@ -105,3 +105,7 @@ export const DECODE_OPTION = [
   'shift-jis',
   'euc-kr',
 ];
+
+export enum Layout {
+  both, terminal, fileExplorer,
+};

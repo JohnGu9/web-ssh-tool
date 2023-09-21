@@ -11,6 +11,8 @@ import Scaffold from '../components/Scaffold';
 import LayoutBuilder from '../components/LayoutBuilder';
 import { decompressAndJson, stringifyAndCompress } from './workers/Compress';
 
+// @TODO: more-security way for storage username and password
+
 const HomePage = lazy(() => import('./HomePage'));
 HomePage.preload();
 

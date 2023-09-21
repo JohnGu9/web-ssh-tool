@@ -3,12 +3,13 @@ import { Terminal } from "xterm";
 import { Icon, IconButton, Card, Button, Dialog, Typography, TabBar, Tab, Tooltip, Menu, ListItem, ListDivider, Radio, TextArea } from 'rmcw';
 
 import { Server, Settings, ThemeContext } from "../../common/Providers";
-import { DECODE_OPTION, Rest } from '../../common/Type';
+import { DECODE_OPTION, Layout, Rest } from '../../common/Type';
 import XTerminal from "../../components/XTerminal";
 import { SharedAxis, SharedAxisTransform, FadeThrough } from 'material-design-transform';
 import iconv from 'iconv-lite';
 import { Buffer } from 'buffer';
 import { makeId } from "../../common/Tools";
+import HomePage from "../HomePage";
 
 class MultiTerminalView extends React.Component<MultiTerminalView.Props, MultiTerminalView.State> {
   constructor(props: MultiTerminalView.Props) {
@@ -170,6 +171,9 @@ namespace MultiTerminalView {
 
     protected async open() {
       const result = await this.auth.rest('shell', this.id);
+      this.onClose.addEventListener('close', () => {
+        console.log(`terminal(${this.id}) closed`);
+      }, { once: true });
       if (Rest.isError(result)) this.onClose.invoke();
     }
   }
@@ -195,6 +199,7 @@ function MoreButton() {
       return () => window.removeEventListener("click", i);
     }
   }, [open]);
+  const { layout, setLayout } = React.useContext(HomePage.Context);
 
   const license = `${document.location.href}LICENSE`;
   return (
@@ -222,6 +227,19 @@ function MoreButton() {
           onClick={() => settings.setDarkMode('dark')}
         />
         <ListDivider />
+        {layout === Layout.both ?
+          <ListItem
+            graphic={<Icon>fullscreen</Icon>}
+            primaryText="Hide File Explorer"
+            onClick={() => setLayout(Layout.terminal)} /> :
+          <ListItem
+            graphic={<Icon>fullscreen_exit</Icon>}
+            primaryText="Show File Explorer"
+            onClick={() => setLayout(Layout.both)} />}
+        <ListItem
+          graphic={<Icon>fit_screen</Icon>}
+          primaryText="SSH Text Decode"
+          onClick={() => setOpenTextDecode(true)} />
         <ListItem
           graphic={<Icon>tag</Icon>}
           primaryText="SSH Text Decode"

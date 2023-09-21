@@ -1,12 +1,13 @@
 import React from "react";
 import { Checkbox, Icon, IconButton, ListDivider, ListItem, Menu, Radio, Switch, Tooltip, Typography } from "rmcw";
 import { Server, ThemeContext } from "../../../../common/Providers";
-import { Lstat, Watch } from "../../../../common/Type";
+import { Layout, Lstat, Watch } from "../../../../common/Type";
 import Scaffold from "../../../../components/Scaffold";
 import FileExplorer from "../Common";
 import { NewDirectoryDialog, NewFileDialog } from "./NewDialog";
 import InformationDialog from "./InformationDialog";
 import DirectoryPreView from "../DirectoryPreview";
+import HomePage from "../../../HomePage";
 
 function ToolsBar() {
   const { state, setOnSelecting, setInformation } = React.useContext(DirectoryPreView.Context);
@@ -173,6 +174,8 @@ function MoreButton({ stats, setInformation }: {
 
   const [open, setOpen] = React.useState(false);
   const { config, setConfig } = React.useContext(FileExplorer.Context);
+  const { layout, setLayout } = React.useContext(HomePage.Context);
+
   React.useEffect(() => {
     if (open) {
       const listener = () => {
@@ -221,6 +224,15 @@ function MoreButton({ stats, setInformation }: {
               onClick={() => setConfig({ ...config, sort: t })} />
           )}
           <ListDivider />
+          {layout === Layout.both ?
+            <ListItem
+              meta={<Icon>fullscreen</Icon>}
+              primaryText="Hide Terminal"
+              onClick={() => setLayout(Layout.fileExplorer)} /> :
+            <ListItem
+              meta={<Icon>fullscreen_exit</Icon>}
+              primaryText="Show Terminal"
+              onClick={() => setLayout(Layout.both)} />}
           <ListItem primaryText={<span style={{ marginRight: 16 }}>Show Hidden Items</span>}
             meta={<Switch selected={config.showAll} />}
             onClick={() => setConfig({ ...config, showAll: !config.showAll })} />

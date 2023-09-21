@@ -27,6 +27,9 @@ export namespace Settings {
 
     quickCommands: string | null,
     setQuickCommands: (value: string | null) => void,
+
+    layout: 'terminal' | 'file-explorer' | null,
+    setLayout: (value: 'terminal' | 'file-explorer' | null) => void,
   };
 
   export class Service extends React.Component<Service.Props> {
@@ -76,6 +79,9 @@ export namespace Settings {
 
           get quickCommands() { return localStorage.getItem('quick-commands') },
           setQuickCommands: this._stringKeyCallback('quick-commands'),
+
+          get layout() { return localStorage.getItem('layout') as null },
+          setLayout: this._stringKeyCallback('layout'),
         }}>
           {this.props.children}
         </Context.Provider>
