@@ -65,7 +65,7 @@ class MultiTerminalView extends React.Component<MultiTerminalView.Props, MultiTe
   override render() {
     const { controllers, controller } = this.state;
     return (
-      <div className="column expanded">
+      <div className="column full-size">
         <div className="row" style={{ padding: '0 24px' }}>
           <MoreButton />
           <Tooltip label="new terminal">
@@ -236,10 +236,6 @@ function MoreButton() {
             graphic={<Icon>fullscreen_exit</Icon>}
             primaryText="Show File Explorer"
             onClick={() => setLayout(Layout.both)} />}
-        <ListItem
-          graphic={<Icon>fit_screen</Icon>}
-          primaryText="SSH Text Decode"
-          onClick={() => setOpenTextDecode(true)} />
         <ListItem
           graphic={<Icon>tag</Icon>}
           primaryText="SSH Text Decode"
