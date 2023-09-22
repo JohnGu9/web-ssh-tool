@@ -33,6 +33,7 @@ pin-project = "1.1.2"
 async-compat = "0.2.1"
 flate2 = { version = "1.0.27", default-features = false }
 mime_guess = "2.0.4"
+trash = "3.0.6"
 
 [dev-dependencies]
 cargo-license = "0.5.1"

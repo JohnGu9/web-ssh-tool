@@ -102,6 +102,7 @@ async fn handle_call(
         "fs.mkdir" => fs_api::fs_mkdir(argument).await,
         "fs.writeFile" => fs_api::fs_write_file(argument).await,
         "fs.cp" => fs_api::fs_cp(argument).await,
+        "fs.trash" => fs_api::fs_trash(argument).await,
         "unzip" => unzip::handle_request(argument).await,
         "watch" => watch::handle_request(argument, event_channel, watchers).await,
         // "download" => download::handle_request(app_config, token, event_channel, argument).await,

@@ -211,3 +211,22 @@ pub async fn fs_write_file(
     }
     return Err(Box::new(ArgumentsError(None)));
 }
+
+pub async fn fs_trash(
+    argument: &serde_json::Value,
+) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+    if let serde_json::Value::Array(array) = argument {
+        if array.len() == 1 {
+            if let serde_json::Value::Array(path_like) = &array[0] {
+                match path_like_to_path(path_like) {
+                    Some(path) => {
+                        trash::delete(path)?;
+                        return Ok(Null);
+                    }
+                    None => {}
+                }
+            }
+        }
+    }
+    return Err(Box::new(ArgumentsError(None)));
+}

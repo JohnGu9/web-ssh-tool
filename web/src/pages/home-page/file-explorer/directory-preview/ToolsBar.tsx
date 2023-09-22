@@ -295,10 +295,8 @@ export function SelectingToolsBar() {
       </div>
       <div style={{ width: 16 }} />
       <DownloadButton objects={selectedList} />
-      <MoveButton
-        objects={selectedList} />
-      <CopyButton
-        objects={selectedList} />
+      <CopyButton objects={selectedList} />
+      <MoveButton objects={selectedList} />
       <DeleteButton objects={selectedList} />
       <div className='expanded' />
       <IconButton onClick={() => setOnSelecting(false)} >

@@ -12,8 +12,42 @@ function DeleteDialog({ state, close }: { state: DeleteDialog.State, close: () =
   return (
     <Dialog open={state.open} onScrimClick={close} onEscapeKey={close}
       title="Delete"
+      fullscreen
       actions={<>
-        <Button type='submit' form={id} leading={<Icon>delete</Icon>} label='delete' />
+        <Button label="delete forever"
+          style={{ color: '#b00020' }}
+          onClick={async e => {
+            const value = await Promise.all(state.objects.map(async ({ type, path }) => {
+              if (path !== null && path !== undefined) {
+                switch (type) {
+                  case FileType.file: {
+                    const res = await auth.rest('fs.unlink', [[path]]);
+                    if (Rest.isError(res)) return false;
+                    return true;
+                  }
+                  case FileType.symbolicLink:
+                  case FileType.directory: {
+                    const res = await auth.rest('fs.rm', [[path]]);
+                    if (Rest.isError(res)) return false;
+                    return true;
+                  }
+
+                }
+              } return false;
+            }));
+            if (value.every(v => v === false)) {
+              showMessage({ content: 'Delete failed' });
+            } else {
+              if (value.some(v => v === false)) {
+                showMessage({ content: 'Some objects delete failed' });
+              } else {
+                showMessage({ content: 'Delete succeed' });
+              }
+              close();
+            }
+          }} />
+        <div className="expanded" />
+        <Button type='submit' form={id} leading={<Icon>delete</Icon>} label='trash' />
         <Button type='button' onClick={close} label='close' />
       </>}>
       <form id={id}
@@ -21,21 +55,11 @@ function DeleteDialog({ state, close }: { state: DeleteDialog.State, close: () =
           event.preventDefault();
           const value = await Promise.all(state.objects.map(async ({ type, path }) => {
             if (path !== null && path !== undefined) {
-              switch (type) {
-                case FileType.file: {
-                  const res = await auth.rest('fs.unlink', [[path]]);
-                  if (Rest.isError(res)) return false;
-                  return true;
-                }
-                case FileType.symbolicLink:
-                case FileType.directory: {
-                  const res = await auth.rest('fs.rm', [[path]]);
-                  if (Rest.isError(res)) return false;
-                  return true;
-                }
-
-              }
-            } return false;
+              const res = await auth.rest('fs.trash', [[path]]);
+              if (Rest.isError(res)) return false;
+              return true;
+            }
+            return false;
           }));
           if (value.every(v => v === false)) {
             showMessage({ content: 'Delete failed' });
@@ -47,7 +71,6 @@ function DeleteDialog({ state, close }: { state: DeleteDialog.State, close: () =
             }
             close();
           }
-
         }}>
         Do you sure to delete
         {state.objects.length < 4 ?
