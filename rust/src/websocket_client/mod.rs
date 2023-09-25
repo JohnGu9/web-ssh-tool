@@ -105,8 +105,6 @@ async fn handle_call(
         "fs.trash" => fs_api::fs_trash(argument).await,
         "unzip" => unzip::handle_request(argument).await,
         "watch" => watch::handle_request(argument, event_channel, watchers).await,
-        // "download" => download::handle_request(app_config, token, event_channel, argument).await,
-        // "upload" => upload::handle_request(app_config, token, argument).await,
         "internal" => handle_internal(app_config, token, event_channel, argument).await,
         _ => Err(Box::new(Unimplemented())),
     }

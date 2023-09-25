@@ -9,6 +9,7 @@ import Scaffold from "../../../../components/Scaffold";
 import styles from "./InformationDialog.module.css";
 import { useUuidV4 } from "../Common";
 import useInputAutoFocusRef from "../../../../components/InputAutoFocusRef";
+import DirectoryPreView from "../DirectoryPreview";
 
 function InformationDialog({ state, close }: {
   close: () => unknown,
@@ -17,14 +18,19 @@ function InformationDialog({ state, close }: {
   const auth = React.useContext(Server.Authentication.Context);
   const { themeData: theme } = React.useContext(ThemeContext);
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
-  const onError = (error: any) => showMessage({ content: `Delete failed (${error})` });
-  const onDeleted = (path: string) => showMessage({ content: `Deleted (${path})`, });
   const { type, size, path, basename, entries, ...stats } = state.stat as Watch.Directory;
 
   const [renameDialog, setRenameDialog] = React.useState<RenameDialog.State>({ open: false, dirPath: state.dirPath, file: state.stat });
-  const [deleteDialog, setDeleteDialog] = React.useState<DeleteDialog.State>({ open: false, onDelete: function () { }, path: "" });
   const closeRenameDialog = () => setRenameDialog(v => { return { ...v, open: false } });
-  const closeDeleteDialog = () => setDeleteDialog(v => { return { ...v, open: false } });
+  const { deleteDialog, setDeleteDialog } = React.useContext(DirectoryPreView.Context);
+
+  const toRename = () => {
+    setRenameDialog({ open: true, dirPath: state.dirPath, file: state.stat });
+  };
+  const toDelete = () => {
+    setDeleteDialog({ open: true, objects: [state.stat] });
+  };
+
   return (
     <>
       <Dialog open={state.open && !renameDialog.open && !deleteDialog.open}
@@ -33,45 +39,10 @@ function InformationDialog({ state, close }: {
         title="Information"
         fullscreen
         actions={<>
-          {(() => {
-            const { stat: { type, path } } = state;
-            if (path === undefined || path === null) {
-              return (<Button
-                leading={<Icon>delete</Icon>}
-                label='delete'
-                disabled />);
-            }
-            switch (type) {
-              case FileType.file:
-                return (<Button
-                  leading={<Icon>delete</Icon>}
-                  label='delete'
-                  onClick={() => {
-                    setDeleteDialog({
-                      open: true, path, onDelete: async () => {
-                        close();
-                        const result = await auth.rest('fs.unlink', [[path]]);
-                        if (Rest.isError(result)) return onError(result.error);
-                        onDeleted(path);
-                      }
-                    })
-                  }} />);
-              case FileType.directory:
-                return (<Button
-                  leading={<Icon>delete</Icon>}
-                  label='delete'
-                  onClick={() => {
-                    setDeleteDialog({
-                      open: true, path, onDelete: async () => {
-                        close();
-                        const result = await auth.rest('fs.rm', [[path]]);
-                        if (Rest.isError(result)) return onError(result.error);
-                        onDeleted(path);
-                      }
-                    })
-                  }} />);
-            }
-          })()}
+          <Button
+            leading={<Icon>delete</Icon>}
+            label='delete'
+            onClick={toDelete} />
           <div className='expanded' />
           {(() => {
             const { type, path } = state.stat;
@@ -82,14 +53,17 @@ function InformationDialog({ state, close }: {
                   return (
                     <>
                       <Tooltip label='rename'>
-                        <IconButton style={{ color: theme.primary }} onClick={() => {
-                          setRenameDialog(v => { return { ...v, open: true } })
-                        }} ><Icon>drive_file_rename_outline</Icon></IconButton>
+                        <IconButton style={{ color: theme.primary }} onClick={toRename} >
+                          <Icon>drive_file_rename_outline</Icon>
+                        </IconButton>
                       </Tooltip>
                       <Tooltip label='download'>
                         <IconButton style={{ color: theme.primary }}
-                          onClick={() => auth.download(path)
-                            .catch(e => showMessage({ content: `Download failed: ${e}` }))} >
+                          onClick={() => {
+                            showMessage({ content: "Preparing to download" });
+                            auth.download(path)
+                              .catch(e => showMessage({ content: `Download failed: ${e}` }));
+                          }} >
                           <Icon>download</Icon>
                         </IconButton>
                       </Tooltip>
@@ -107,7 +81,7 @@ function InformationDialog({ state, close }: {
           if (entries !== undefined) {
             return <div><Typography.Button className={styles.title}>file amount</Typography.Button>: {Object.entries(entries).length}</div>
           } else {
-            return <div ><Typography.Button className={styles.title}>size</Typography.Button>: {size === undefined ? "undefined" : fileSize(size)}</div>
+            return <div><Typography.Button className={styles.title}>size</Typography.Button>: {size === undefined ? "undefined" : fileSize(size)}</div>
           }
         })()}
         <div style={{ height: 8 }} />
@@ -127,9 +101,6 @@ function InformationDialog({ state, close }: {
           close();
           showMessage({ content: "Rename succeed" });
         }} />
-      <DeleteDialog
-        state={deleteDialog}
-        close={closeDeleteDialog} />
     </>
   );
 }
@@ -204,38 +175,5 @@ namespace RenameDialog {
     open: boolean,
     dirPath: string,
     file: Lstat,
-  };
-}
-
-
-function DeleteDialog({ state, close }: {
-  state: DeleteDialog.State,
-  close: () => unknown,
-}) {
-  return (
-    <Dialog open={state.open}
-      onScrimClick={close}
-      onEscapeKey={close}
-      title="Delete"
-      actions={<>
-        <Button leading={<Icon>delete</Icon>}
-          onClick={() => {
-            close();
-            state.onDelete();
-          }}>delete</Button>
-        <Button onClick={close}>close</Button>
-      </>}>
-      Are you sure delete this object?
-      <ul>
-        <li>{state.path}</li>
-      </ul>
-    </Dialog>
-  );
-}
-namespace DeleteDialog {
-  export type State = {
-    open: boolean,
-    onDelete: () => unknown,
-    path: string,
   };
 }

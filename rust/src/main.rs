@@ -45,9 +45,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
             "Running client mode (warning: this mode not for public usage) and connect to {}",
             master_server
         ));
-        let (client, _) =
-            connect_async_tls_with_config(master_server, None, false, Some(connector)).await?;
-        let _ = websocket_client::handle_request(&app_config, token, client).await;
+        if let Ok((client, _)) =
+            connect_async_tls_with_config(master_server, None, false, Some(connector)).await
+        {
+            let _ = websocket_client::handle_request(&app_config, token, client).await;
+        } else {
+            app_config
+                .logger
+                .err(format!("Client mode failed to connect to master! "));
+        }
         std::process::exit(0);
         // return Ok(());
     }

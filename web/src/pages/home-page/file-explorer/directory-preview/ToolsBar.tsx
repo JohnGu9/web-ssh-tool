@@ -106,8 +106,10 @@ export namespace DraggingToolbar {
 
   export function DownloadButton() {
     const auth = React.useContext(Server.Authentication.Context);
+    const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
     return <DropTargetButton icon="download"
       onDrop={(event) => {
+        showMessage({content:"Preparing to download"});
         const path = event.dataTransfer.getData('text');
         auth.download(path);
       }} />

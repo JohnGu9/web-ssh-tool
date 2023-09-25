@@ -46,7 +46,7 @@ impl AppConfig {
                 None => "22".to_string(),
             },
             client: opt.client,
-            bin: bin,
+            bin,
         }
     }
 }
@@ -94,6 +94,8 @@ pub enum Logger {
     Stdio(std::sync::Mutex<i32>),
     File(std::sync::Mutex<i32>, String),
 }
+
+// @TODO: file logger implement
 
 impl Logger {
     #[allow(dead_code)]
