@@ -26,7 +26,7 @@ export namespace Rest {
     'fs.trash': { parameter: [path: PathLike], return: null }, // delete directory
     'fs.exists': { parameter: [path: PathLike], return: boolean },
     'fs.mkdir': { parameter: [path: PathLike], return: Awaited<ReturnType<typeof fs.mkdir>> },
-    'fs.writeFile': { parameter: [path: PathLike, data: string], return: Awaited<ReturnType<typeof fs.writeFile>> }, // can't overwrite file
+    'fs.writeFile': { parameter: [path: PathLike, data: string], return: Awaited<ReturnType<typeof fs.writeFile>> }, // automatically create file and can't overwrite file
     'fs.cp': { parameter: [oldPath: PathLike, newPath: PathLike], return: Awaited<ReturnType<typeof fs.cp>> },
     'shell': {
       parameter:

@@ -2,7 +2,7 @@ import React from "react";
 import { Elevation, CircularProgress, IconButton, Icon, Tooltip, Dialog, Button, ListItem } from 'rmcw';
 import { v1 as uuid } from 'uuid';
 
-import { fileSize, delay } from "../../common/Tools";
+import { fileSize } from "../../common/Tools";
 import { Server, Settings } from "../../common/Providers";
 import { Rest } from "../../common/Type";
 import AnimatedList from "../../components/AnimatedList";
@@ -18,12 +18,6 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
   constructor(props: MultiFileExplorer.Props) {
     super(props);
     this._controller = new FileExplorer.Controller({ auth: props.auth });
-    this._controller.addEventListener('close', async () => {
-      this._controller.dispose();
-      await delay(1000);
-      this._controller = new FileExplorer.Controller({ auth: this._controller.auth });
-      this.setState({});
-    });
     this._uploadItems = [];
     this.state = {
       config: { showAll: false, sort: FileExplorer.SortType.alphabetically, uploadCompress: false },

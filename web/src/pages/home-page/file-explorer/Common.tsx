@@ -82,6 +82,7 @@ function FileExplorer({ controller, config, setConfig, upload, uploadItems, open
     }}>
       <SharedAxis
         className='full-size'
+        forceRebuildAfterSwitched={false}
         transform={transitionStyle.t}
         keyId={keyId}
         style={{

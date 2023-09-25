@@ -13,7 +13,6 @@ import FileMoveDialog from "./directory-preview/FileMoveDialog";
 import RequestPreviewDialog from "./directory-preview/RequestPreviewDialog";
 import DeleteDialog from "./directory-preview/DeleteDialog";
 import CopyToDialog from "./directory-preview/CopyToDialog";
-import MoveToDialog from "./directory-preview/MoveToDialog";
 
 function DirectoryPreView({ state }: { state: Watch.Directory }) {
   const { path, entries } = state;
@@ -21,18 +20,29 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
   const [dragging, setDragging] = React.useState<unknown | null>(null); // when any element is dragging
   const [onSelecting, setOnSelecting] = React.useState(false);
   const [selected, setSelected] = React.useState(new Set<Lstat>());
+
   const [information, setInformation] = React.useState<InformationDialog.State>({ open: false, stat: {} as Lstat, dirPath: path ?? "" });
   const [fileMove, setFileMove] = React.useState<FileMoveDialog.State>({ open: false, filename: "", path: "", target: "" });
   const [preview, setPreview] = React.useState<RequestPreviewDialog.State>({ open: false, lstat: null });
   const [deleteDialog, setDeleteDialog] = React.useState<DeleteDialog.State>({ objects: [], open: false });
   const [copyDialog, setCopyDialog] = React.useState<CopyToDialog.State>({ objects: [], open: false, });
-  const [moveDialog, setMoveDialog] = React.useState<MoveToDialog.State>({ objects: [], initialPath: state.path ?? "", open: false, });
   const { showAll, sort } = config;
   const fileList = React.useMemo(() => {
-    return FileExplorer.sortArray(Object.entries(entries).filter(showAll
+    return FileExplorer.sortArray(Object.entries(entries).filter(showAll || onSelecting
       ? () => true
       : ([key]) => !key.startsWith('.')), sort)
-  }, [entries, showAll, sort]);
+  }, [entries, onSelecting, showAll, sort]);
+
+  React.useEffect(() => {
+    setDragging(null);
+    setSelected(new Set());
+    setOnSelecting(false);
+    const open = false;
+    setInformation(v => { return { ...v, open } });
+    setFileMove(v => { return { ...v, open } });
+    setPreview(v => { return { ...v, open } });
+    setPreview(v => { return { ...v, open } });
+  }, [path]);
 
   React.useEffect(() => {
     const l = Object.values(entries);
@@ -72,7 +82,7 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
       selected, setSelected,
       onSelecting, setOnSelecting,
       setInformation, setFileMove, setPreview,
-      setDeleteDialog, setCopyDialog, setMoveDialog,
+      setDeleteDialog, setCopyDialog,
       deleteDialog,
     };
   }, [deleteDialog, onSelecting, selected, state]);
@@ -114,8 +124,6 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
           close={() => setDeleteDialog(v => { return { ...v, open: false } })} />
         <CopyToDialog state={copyDialog}
           close={() => setCopyDialog(v => { return { ...v, open: false } })} />
-        <MoveToDialog state={moveDialog}
-          close={() => setMoveDialog(v => { return { ...v, open: false } })} />
       </div>
     </DirectoryPreView.Context.Provider>
   );
@@ -135,7 +143,6 @@ namespace DirectoryPreView {
     setPreview: React.Dispatch<React.SetStateAction<RequestPreviewDialog.State>>,
     setDeleteDialog: React.Dispatch<React.SetStateAction<DeleteDialog.State>>,
     setCopyDialog: React.Dispatch<React.SetStateAction<CopyToDialog.State>>,
-    setMoveDialog: React.Dispatch<React.SetStateAction<MoveToDialog.State>>,
 
     deleteDialog: DeleteDialog.State,
   };

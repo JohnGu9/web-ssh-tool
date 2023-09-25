@@ -76,7 +76,6 @@ export function DraggingToolbar() {
       <div className="expanded" />
       <DraggingToolbar.DownloadButton />
       <DraggingToolbar.CopyButton />
-      <DraggingToolbar.MoveButton />
       <DraggingToolbar.DeleteButton />
     </>
   );
@@ -109,7 +108,7 @@ export namespace DraggingToolbar {
     const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
     return <DropTargetButton icon="download"
       onDrop={(event) => {
-        showMessage({content:"Preparing to download"});
+        showMessage({ content: "Preparing to download" });
         const path = event.dataTransfer.getData('text');
         auth.download(path);
       }} />
@@ -126,16 +125,6 @@ export namespace DraggingToolbar {
       }} />
   }
 
-  export function MoveButton() {
-    const { state, setMoveDialog } = React.useContext(DirectoryPreView.Context);
-    return <DropTargetButton icon="drag_handle"
-      onDrop={(event) => {
-        const path = event.dataTransfer.getData('text');
-        const lstat = Object.values(state.entries).find(v => v.path === path);
-        if (lstat === undefined) return;// @TODO: error handle
-        setMoveDialog(v => { return { ...v, open: true, objects: [lstat] } });
-      }} />
-  }
 
   export function DeleteButton() {
     const { state, setDeleteDialog } = React.useContext(DirectoryPreView.Context);
@@ -298,7 +287,6 @@ export function SelectingToolsBar() {
       <div style={{ width: 16 }} />
       <DownloadButton objects={selectedList} />
       <CopyButton objects={selectedList} />
-      <MoveButton objects={selectedList} />
       <DeleteButton objects={selectedList} />
       <div className='expanded' />
       <IconButton onClick={() => setOnSelecting(false)} >
@@ -320,19 +308,6 @@ function DownloadButton({ objects }: { objects: Lstat[], }) {
           .filter(v => v !== undefined && v !== null) as string[])
           .catch(e => showMessage({ content: `Download failed: ${e}` }))} >
         <Icon>download</Icon>
-      </IconButton>
-    </Tooltip>
-  );
-}
-
-function MoveButton({ objects }: { objects: Lstat[] }) {
-  const { setMoveDialog } = React.useContext(DirectoryPreView.Context);
-  return (
-    <Tooltip label='move'>
-      <IconButton
-        disabled={objects.length === 0}
-        onClick={() => setMoveDialog(v => { return { ...v, objects, open: true } })} >
-        <Icon>drag_handle</Icon>
       </IconButton>
     </Tooltip>
   );

@@ -43,7 +43,6 @@ function DropZone({ children, style, dirPath, dragging, setDragging }: {
           if (target.dataset['dropzone'] !== undefined)
             setHovering(target);
         }
-
       }
     }}
     onDragLeave={event => {
