@@ -4,13 +4,18 @@ import { useUuidV4 } from "../Common";
 import { Server } from "../../../../common/Providers";
 import Scaffold from "../../../../components/Scaffold";
 import { FileType, Lstat, Rest } from "../../../../common/Type";
+import DirectoryPreView from "../DirectoryPreview";
 
 function DeleteDialog({ state, close }: { state: DeleteDialog.State, close: () => unknown }) {
   const auth = React.useContext(Server.Authentication.Context);
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
   const id = useUuidV4();
+  const { setInformation } = React.useContext(DirectoryPreView.Context);
+
   return (
-    <Dialog open={state.open} onScrimClick={close} onEscapeKey={close}
+    <Dialog open={state.open}
+      onScrimClick={close}
+      onEscapeKey={close}
       title="Delete"
       fullscreen
       actions={<>
@@ -43,7 +48,15 @@ function DeleteDialog({ state, close }: { state: DeleteDialog.State, close: () =
               } else {
                 showMessage({ content: 'Delete succeed' });
               }
+              // @TODO: close related dialog
+              setInformation(v => {
+                if (state.objects.some((e, index) => e.path === v.stat.path && value[index])) {
+                  return { ...v, open: false };
+                }
+                return v;
+              })
               close();
+
             }
           }} />
         <div className="expanded" />

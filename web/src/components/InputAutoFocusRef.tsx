@@ -1,16 +1,16 @@
 import React from 'react';
 
-export default function useInputAutoFocusRef(open: boolean, elementTag = 'input') {
+export default function useInputAutoFocusRef(open: boolean, elementSelectors = 'input') {
     const ref = React.useRef<HTMLLabelElement>(null);
     React.useEffect(() => {
         if (open) {
             const { current } = ref;
             if (current) {
-                const input = current.querySelector(elementTag);
+                const input = current.querySelector(elementSelectors);
                 if (input instanceof HTMLElement)
                     input?.focus();
             }
         }
-    }, [elementTag, open]);
+    }, [elementSelectors, open]);
     return ref;
 }

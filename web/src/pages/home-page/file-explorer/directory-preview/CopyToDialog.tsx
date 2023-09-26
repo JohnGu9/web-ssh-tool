@@ -14,6 +14,7 @@ function CopyToDialog({ state: { open, objects }, close }: { state: CopyToDialog
   const auth = React.useContext(Server.Authentication.Context);
   const id = "copy-confirm";
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
+  const { cd } = React.useContext(FileExplorer.Context);
 
   const [value, setValue] = React.useState("");
   const [openInfo, setOpenInfo] = React.useState(false);
@@ -53,11 +54,12 @@ function CopyToDialog({ state: { open, objects }, close }: { state: CopyToDialog
       showMessage({ content: 'Copy failed' });
       return false;
     } else {
+      const action = <Button onClick={() => cd(newPath)}>view</Button>;
       if (value.some(value => value === false)) {
-        showMessage({ content: 'Some objects copy failed' });
+        showMessage({ content: 'Some objects copy failed', action });
         return true;
       } else {
-        showMessage({ content: 'Copy succeed' });
+        showMessage({ content: 'Copy succeed', action });
         return true;
       }
     }
@@ -83,11 +85,12 @@ function CopyToDialog({ state: { open, objects }, close }: { state: CopyToDialog
       showMessage({ content: 'Move failed' });
       return false;
     } else {
+      const action = <Button onClick={() => cd(newPath)}>view</Button>;
       if (value.some(value => value === false)) {
-        showMessage({ content: 'Some objects move failed' });
+        showMessage({ content: 'Some objects move failed', action });
         return true;
       } else {
-        showMessage({ content: 'Move succeed' });
+        showMessage({ content: 'Move succeed', action });
         return true;
       }
     }
@@ -143,12 +146,14 @@ function CopyToDialog({ state: { open, objects }, close }: { state: CopyToDialog
       fullscreen
       title="Copy"
       actions={<>
-        <Button onClick={async event => {
-          event.preventDefault();
-          if (await toMove(value)) close();
-        }}>move</Button>
+        <Button label="move" leading={<Icon>drag_handle</Icon>}
+          onClick={async event => {
+            event.preventDefault();
+            if (await toMove(value)) close();
+          }}></Button>
         <div className="expanded" />
-        <Button type='submit' form={id}>copy</Button>
+        <Button type='submit' form={id}
+          label="copy" leading={<Icon>file_copy</Icon>}></Button>
         <Button onClick={close}>close</Button>
       </>}>
       <form id={id} className="column flex-stretch"
