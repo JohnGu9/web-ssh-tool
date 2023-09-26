@@ -99,6 +99,13 @@ pub async fn fs_rename(
                     path_like_to_path(dest_path_like),
                 ) {
                     (Some(src), Some(dest)) => {
+                        // @TODO: wait for atomic rename overwrite check, rust has no this kind of fs api.
+                        let mut option = tokio::fs::OpenOptions::new();
+                        let _ = option
+                            .write(true)
+                            .create_new(true)
+                            .open(dest.clone())
+                            .await?;
                         tokio::fs::rename(src, dest).await?;
                         return Ok(Null);
                     }
@@ -146,13 +153,13 @@ pub async fn fs_cp(
                     (Some(src), Some(dest)) => {
                         let metadata = tokio::fs::metadata(src.clone()).await?;
                         if metadata.is_file() {
-                            tokio::fs::copy(src, dest).await?;
+                            copy_file(src, dest).await?;
                         } else if metadata.is_dir() {
                             copy_dir_all(src, dest)?;
                         } else if metadata.is_symlink() {
                             let real_src = tokio::fs::read_link(src.clone()).await?;
                             if real_src.is_file() {
-                                tokio::fs::copy(src, dest).await?;
+                                copy_file(src, dest).await?;
                             } else if real_src.is_dir() {
                                 copy_dir_all(src, dest)?;
                             } else {
@@ -169,6 +176,18 @@ pub async fn fs_cp(
         }
     }
     return Err(Box::new(ArgumentsError(None)));
+}
+
+async fn copy_file(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> std::io::Result<()> {
+    let mut option = tokio::fs::OpenOptions::new();
+    let (dst, src) = futures::join!(
+        option.write(true).create_new(true).open(dst),
+        tokio::fs::File::open(src)
+    );
+    let mut dst = dst?;
+    let mut src = src?;
+    tokio::io::copy(&mut src, &mut dst).await?;
+    Ok(())
 }
 
 fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> std::io::Result<()> {

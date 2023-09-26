@@ -15,6 +15,15 @@ function CopyToDialog({ state: { open, objects }, close }: { state: CopyToDialog
   const id = "copy-confirm";
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
   const { cd } = React.useContext(FileExplorer.Context);
+  const baseNames = React.useMemo(() => {
+    const s = new Set<string>();
+    for (const object of objects) {
+      if (typeof object.basename === 'string') {
+        s.add(object.basename);
+      }
+    }
+    return s;
+  }, [objects]);
 
   const [value, setValue] = React.useState("");
   const [openInfo, setOpenInfo] = React.useState(false);
@@ -50,6 +59,7 @@ function CopyToDialog({ state: { open, objects }, close }: { state: CopyToDialog
       }
       return false;
     }));
+
     if (value.every(v => v === false)) {
       showMessage({ content: 'Copy failed' });
       return false;
@@ -137,6 +147,7 @@ function CopyToDialog({ state: { open, objects }, close }: { state: CopyToDialog
   }) : undefined;
 
   const height = 560 - 59 - 65 - 48 - 56 - 32;
+
   return (<>
     <Dialog
       ref={dialogRef}
@@ -193,6 +204,7 @@ function CopyToDialog({ state: { open, objects }, close }: { state: CopyToDialog
                   key={index}
                   style={style}
                   stat={entry}
+                  baseNames={baseNames}
                   name={name}
                   controller={controller} />;
               }}
@@ -229,11 +241,14 @@ function CopyToDialog({ state: { open, objects }, close }: { state: CopyToDialog
       fullscreen
       title="Files"
       actions={<Button onClick={closeInfo}>close</Button>}>
-      {objects.map((v, index) =>
-        <ListItem key={index}
+      {objects.map((v, index) => {
+        const repeat = typeof v.basename === 'string' && directory?.entries?.[v.basename] !== undefined;
+        return <ListItem key={index}
+          selected={repeat}
           graphic={<Icon>{fileIcon(v)}</Icon>}
           primaryText={v.basename}
-          secondaryText={v.path} />)}
+          secondaryText={repeat ? 'current directory contains repeated name file or directory' : v.path} />
+      })}
     </Dialog>
     <Dialog open={openNew}
       onScrimClick={closeNew}
@@ -271,17 +286,21 @@ namespace CopyToDialog {
 
 export default CopyToDialog;
 
-function MyListItem({ stat: entry, name, style, controller }: {
+function MyListItem({ stat: entry, baseNames, name, style, controller }: {
   stat: Lstat,
+  baseNames: Set<string>,
   name: string,
   style: React.CSSProperties,
-  controller: FileExplorer.Controller
+  controller: FileExplorer.Controller,
 }) {
   const [hover, setHover] = React.useState(false);
   const { state, setInformation } = React.useContext(DirectoryPreView.Context);
+  const repeat = baseNames.has(name);
+
   switch (entry.type) {
     case FileType.directory:
       return <ListItem style={style}
+        selected={repeat}
         graphic={<Icon>folder</Icon>}
         primaryText={name}
         meta={<IconButton
@@ -302,9 +321,12 @@ function MyListItem({ stat: entry, name, style, controller }: {
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)} />;
   }
-  return <ListItem nonInteractive style={style}
+  return <ListItem nonInteractive
+    style={style}
+    selected={repeat}
     graphic={<Icon>{fileIcon(entry)}</Icon>}
     primaryText={name}
+    secondaryText={repeat ? "repeated name" : undefined}
     meta={<IconButton
       style={{ opacity: hover ? 1 : 0, transition: 'opacity 300ms' }}
       onClick={event => {
