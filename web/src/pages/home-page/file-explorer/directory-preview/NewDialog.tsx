@@ -71,9 +71,6 @@ export function NewDirectoryDialog({ state, close }: { state: NewFileDialog.Stat
           const newName = value;
           if (newName.length === 0) return showMessage({ content: "Error (File name can't be empty)" });
           const target = [state.path, newName];
-          const exists = await auth.rest('fs.exists', [target]);
-          if (Rest.isError(exists)) return showMessage({ content: `${exists.error}` });
-          if (exists) return showMessage({ content: `Error (File [${target}] already exists)` });
           const result = await auth.rest('fs.mkdir', [target]);
           if (Rest.isError(result)) return showMessage({ content: `${result.error}` });
           close();

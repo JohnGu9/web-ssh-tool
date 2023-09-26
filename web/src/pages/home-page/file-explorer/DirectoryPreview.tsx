@@ -83,9 +83,10 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
       onSelecting, setOnSelecting,
       setInformation, setFileMove, setPreview,
       setDeleteDialog, setCopyDialog,
+      informationDialog: information,
       deleteDialog,
     };
-  }, [deleteDialog, onSelecting, selected, state]);
+  }, [deleteDialog, information, onSelecting, selected, state]);
 
   return (
     <DirectoryPreView.Context.Provider value={context}>
@@ -144,6 +145,7 @@ namespace DirectoryPreView {
     setDeleteDialog: React.Dispatch<React.SetStateAction<DeleteDialog.State>>,
     setCopyDialog: React.Dispatch<React.SetStateAction<CopyToDialog.State>>,
 
+    informationDialog: InformationDialog.State,
     deleteDialog: DeleteDialog.State,
   };
   export const Context = React.createContext<ContextType>(undefined as unknown as ContextType);

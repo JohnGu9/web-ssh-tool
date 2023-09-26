@@ -16,6 +16,11 @@
     justify-content: center;
 }
 
+.row.flex-stretch,
+.column.flex-stretch {
+    align-items: stretch;
+}
+
 .expanded {
     flex: 1;
     min-width: 0;

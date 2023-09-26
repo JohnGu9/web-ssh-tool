@@ -29,6 +29,7 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
   _uploadItems: FileExplorer.UploadController[];
   protected _mounted = true;
 
+  // @TODO: redesign reconnect process
   async _reconnect() {
     this._controller.dispose();
     this._controller = new FileExplorer.Controller({ auth: this._controller.auth });

@@ -81,7 +81,7 @@ function FileListTile({ name, stats, uploading, style }: {
       className='column flex-center'>
       {onSelecting
         ? <Checkbox readOnly checked={beSelected} style={{ height: 24 }}></Checkbox>
-        : <Icon>{uploading ? 'file_upload' : FileIcon(stats, extension)}</Icon>}
+        : <Icon>{uploading ? 'file_upload' : fileIcon(stats, extension)}</Icon>}
     </SharedAxis>}
     primaryText={<div className='expanded' style={{ overflowX: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>}
     meta={<IconButton
@@ -172,7 +172,7 @@ function checkTypeSupport(extension?: string) {
   return false;
 }
 
-function FileIcon({ type }: { type?: FileType | null, }, extension?: string) {
+export function fileIcon({ type }: { type?: FileType | null, }, extension?: string) {
   switch (type) {
     case FileType.directory:
       return 'folder';
