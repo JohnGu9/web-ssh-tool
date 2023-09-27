@@ -3,7 +3,6 @@ import { Checkbox, Icon, IconButton, ListItem } from "rmcw";
 import { FileType, Lstat } from "../../../../common/Type";
 import { SharedAxis, SharedAxisTransform } from 'material-design-transform';
 import DropZone from "./DropZone";
-import { Server } from "../../../../common/Providers";
 import DirectoryPreView from "../DirectoryPreview";
 import FileExplorer from "../Common";
 
@@ -14,9 +13,8 @@ function FileListTile({ name, stats, uploading, style }: {
   style?: React.CSSProperties,
 }) {
   const { cd } = React.useContext(FileExplorer.Context);
-  const { state, selected, setSelected, onSelecting, setInformation, setFileMove, setPreview } = React.useContext(DirectoryPreView.Context);
+  const { state, selected, setSelected, onSelecting, setInformation, setFileMove, setPreview, setRequestPreview } = React.useContext(DirectoryPreView.Context);
   const { hovering, dragging, setDragging } = React.useContext(DropZone.Context);
-  const auth = React.useContext(Server.Authentication.Context);
   const [hover, setHover] = React.useState(false);
   const { path, type, realType } = stats;
   const [disabled, isFile, isDirectory] = (() => {
@@ -108,9 +106,9 @@ function FileListTile({ name, stats, uploading, style }: {
           if (isFile) {
             if (typeof stats.path === 'string') {
               if (checkTypeSupport(extension)) {
-                auth.preview(stats.path);
+                setPreview({ open: true, lstat: stats });
               } else {
-                setPreview({ open: true, lstat: stats })
+                setRequestPreview({ open: true, lstat: stats })
               }
               return;
             }

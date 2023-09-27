@@ -6,12 +6,13 @@ import { Buffer } from 'buffer';
 import Scaffold from "../../../../components/Scaffold";
 import { DECODE_OPTION, Lstat } from "../../../../common/Type";
 import { fileSize } from "../../../../common/Tools";
+import DirectoryPreView from "../DirectoryPreview";
 
 function RequestPreviewDialog({ state, close }: {
   close: () => unknown,
   state: RequestPreviewDialog.State
 }) {
-  const auth = React.useContext(Server.Authentication.Context);
+  const { setPreview } = React.useContext(DirectoryPreView.Context);
   const [previewState, setPreviewState] = React.useState<{ open: boolean, lstat: Lstat | null }>({ open: false, lstat: null });
   return (<>
     <Dialog
@@ -30,9 +31,7 @@ function RequestPreviewDialog({ state, close }: {
         <Button onClick={(e) => {
           e.preventDefault();
           close();
-          if (typeof state.lstat?.path === 'string') {
-            auth.preview(state.lstat.path);
-          }
+          setPreview({ open: true, lstat: state.lstat });
         }}>preview</Button>
         <Button onClick={close}>close</Button>
       </>}>
@@ -151,6 +150,6 @@ function PreviewWindow({ open, lstat, close }: { open: boolean, lstat: Lstat | n
     </>}>
     <LinearProgress closed={loading === false} progress={typeof loading === 'number' ? loading : undefined}
       style={{ position: 'sticky', top: 0 }} />
-    <code style={{ opacity: loading ? 0.5 : 1, transition: 'opacity 200ms' }}>{text}</code>
+    <code style={{ opacity: loading ? 0.5 : 1, transition: 'opacity 200ms', whiteSpace: 'pre', wordWrap: 'normal' }}>{text}</code>
   </Dialog>
 }

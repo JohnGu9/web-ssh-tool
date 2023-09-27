@@ -17,9 +17,9 @@ export namespace Server {
       { path: string | undefined, error: string | undefined };;
 
     export interface Type {
-      readonly ws: WebSocket;
       readonly shell: EventTarget;
       readonly watch: EventTarget;
+      readonly notification: EventTarget;
       signOut(): void;
       upload(data: File, dest: Rest.PathLike, filename: string | null, init?: {
         signal?: AbortSignal | null

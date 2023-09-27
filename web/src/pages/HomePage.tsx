@@ -53,6 +53,14 @@ function HomePage() {
     }
   };
 
+  React.useEffect(() => {
+    const listener = (e: Event) => showMessage({ content: (e as CustomEvent<string>).detail });
+    auth.notification.addEventListener('change', listener);
+    return () => {
+      auth.notification.removeEventListener('change', listener);
+    };
+  }, [auth.notification, showMessage]);
+
   return (
     <HomePage.Context.Provider value={{ layout, setLayout }}>
       <LayoutBuilder

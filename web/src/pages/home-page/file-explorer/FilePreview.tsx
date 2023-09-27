@@ -5,8 +5,10 @@ import { Watch } from "../../../common/Type";
 import FileExplorer, { NavigatorBar } from "./Common";
 import { FixedSizeList } from "../../../components/AdaptedWindow";
 import Scaffold from "../../../components/Scaffold";
+import DirectoryPreView from "./DirectoryPreview";
 
 function FilePreview({ state }: { state: Watch.File }) {
+  const { setPreview } = React.useContext(DirectoryPreView.Context);
   const { cdToParent } = React.useContext(FileExplorer.Context);
   const auth = React.useContext(Server.Authentication.Context);
   const { themeData: theme } = React.useContext(ThemeContext);
@@ -32,8 +34,7 @@ function FilePreview({ state }: { state: Watch.File }) {
       <Center>
         <Button buttonStyle="raised"
           onClick={() => {
-            if (typeof filePath === 'string')
-              auth.preview(filePath);
+            setPreview({ open: true, lstat: state });
           }}>Preview</Button>
       </Center>
       <div style={{ height: 16 }} />

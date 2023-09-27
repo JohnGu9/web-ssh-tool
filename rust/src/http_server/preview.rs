@@ -2,7 +2,7 @@ use super::components::request_internal_client_http_connection;
 use super::not_found::not_found;
 use crate::common::{
     app_config::AppConfig,
-    websocket_peer::{ClientWebsocket, ClientHttp},
+    websocket_peer::{ClientHttp, ClientWebsocket},
     ResponseType,
 };
 use futures::lock::Mutex;
@@ -17,6 +17,11 @@ pub async fn on_preview(
     conn: Arc<Mutex<ClientWebsocket>>,
     file: String,
 ) -> Result<ResponseType, Infallible> {
+    {
+        let mut conn = conn.lock().await;
+        let msg = format!("Previewing the file [{}]. ", file);
+        let _ = conn.forward_event(json!({"notification": msg})).await;
+    }
     match request_internal_client_http_connection(
         app_config,
         req,

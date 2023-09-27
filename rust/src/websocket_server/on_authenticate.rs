@@ -86,8 +86,8 @@ async fn poll_event(
     tx: Arc<Mutex<SplitSink<WebSocketStream<Upgraded>, Message>>>,
 ) {
     while let Some(event) = event_channel.next().await {
-        let mut tx = tx.lock().await;
         let msg = encode_value(json!({ "event": event }));
+        let mut tx = tx.lock().await;
         if let Err(_) = tx.send(msg).await {
             break;
         }

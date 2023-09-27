@@ -224,7 +224,6 @@ class Auth implements Server.Authentication.Type {
   constructor(props: { server: Server.Type }) {
     this._ws = props.server.ws;
     this._ws.addEventListener('message', async ({ data }) => {
-      // console.log(data);
       const obj = await decodeMessage(data);
       if (obj === undefined) return;
       const { tag, response, event } = obj;
@@ -235,6 +234,7 @@ class Auth implements Server.Authentication.Type {
       } else if (event !== undefined) {
         if ('shell' in event) this.shell.invoke(event.shell);
         else if ('watch' in event) this.watch.invoke(event.watch);
+        else if ('notification' in event) this.notification.invoke(event.notification);
       }
     });
   }
@@ -243,7 +243,12 @@ class Auth implements Server.Authentication.Type {
   protected _tag = 0;
   protected _callbacks = new Map<number, (response: any) => unknown>();
 
-  get ws() { return this._ws }
+  readonly notification = new (class extends EventTarget {
+    invoke(n: string) {
+      const event = new CustomEvent('change', { detail: n });
+      this.dispatchEvent(event);
+    }
+  })();
 
   readonly shell = new (class extends EventTarget {
     invoke({ id, ...props }: Server.Authentication.ShellEventDetail & { id: string }) {
@@ -327,7 +332,7 @@ class Auth implements Server.Authentication.Type {
     window.open(await this.previewUrl(path));
   }
 
-  signOut() { wsSafeClose(this.ws) }
+  signOut() { wsSafeClose(this._ws) }
 
 }
 
