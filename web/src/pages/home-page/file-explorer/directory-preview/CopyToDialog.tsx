@@ -146,6 +146,8 @@ function CopyToDialog({ state: { open, objects }, close }: { state: CopyToDialog
     return compare(f[0], s[0]);
   }) : undefined;
 
+  const repeats = new Set(objects.filter(v => typeof v.basename === 'string' && directory?.entries?.[v.basename] !== undefined));
+
   const height = 560 - 59 - 65 - 48 - 56 - 32;
 
   return (<>
@@ -188,11 +190,15 @@ function CopyToDialog({ state: { open, objects }, close }: { state: CopyToDialog
             e.preventDefault();
             setOpenNew(true);
           }}><Icon>create_new_folder</Icon></IconButton>
-          <Tooltip label={`Total ${objects.length} ${objects.length === 1 ? 'item' : 'items'}`}>
+          <Tooltip label={repeats.size === 0 ?
+            `Total ${objects.length} ${objects.length === 1 ? 'item' : 'items'}` :
+            'File name conflict'}>
             <IconButton onClick={e => {
               e.preventDefault();
               setOpenInfo(true);
-            }}><Icon>info</Icon></IconButton>
+            }}><Icon style={{
+              color: repeats.size === 0 ? undefined : '#b00020',
+            }}>info</Icon></IconButton>
           </Tooltip>
         </div>
         <SharedAxis keyId={directory?.path}>
@@ -242,7 +248,7 @@ function CopyToDialog({ state: { open, objects }, close }: { state: CopyToDialog
       title="Files"
       actions={<Button onClick={closeInfo}>close</Button>}>
       {objects.map((v, index) => {
-        const repeat = typeof v.basename === 'string' && directory?.entries?.[v.basename] !== undefined;
+        const repeat = repeats.has(v);
         return <ListItem key={index}
           selected={repeat}
           graphic={<Icon>{fileIcon(v)}</Icon>}

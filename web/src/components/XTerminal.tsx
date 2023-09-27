@@ -45,11 +45,8 @@ class XTerminal extends React.Component<XTerminal.Props> {
       style={style}
       className={className}
       builder={() => {
-        window.setTimeout(this.fit, 0);
-        return <div
-          key={this.props.terminal as any}
-          ref={this._ref}
-          className='full-size' />;
+        window.requestAnimationFrame(this.fit);
+        return <div ref={this._ref} className='full-size' />;
       }} />;
   }
 }

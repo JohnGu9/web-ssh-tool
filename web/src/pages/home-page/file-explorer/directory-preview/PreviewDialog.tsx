@@ -1,5 +1,5 @@
 import React from "react";
-import { Button, Dialog, Icon, IconButton, LinearProgress } from "rmcw";
+import { Button, CircularProgress, Dialog, Icon, IconButton } from "rmcw";
 import { Lstat } from "../../../../common/Type";
 import { Server } from "../../../../common/Providers";
 
@@ -20,7 +20,6 @@ function PreviewDialog({ state, close }: {
         .then(v => {
           if (abort) return;
           setUrl(v);
-          setLoading(false);
         });
       return () => {
         abort = true;
@@ -43,13 +42,27 @@ function PreviewDialog({ state, close }: {
           onClick={() => {
             if (url) window.open(url);
           }}><Icon>open_in_new</Icon></IconButton>
-        <IconButton
-          onClick={() => setRefresh(v => v + 1)}><Icon>refresh</Icon></IconButton>
+        {loading ?
+          <div className="column flex-center" style={{ height: 48, width: 48 }}>
+            <CircularProgress sizing="Small" />
+          </div> :
+          <IconButton
+            onClick={() => {
+              setLoading(true);
+              setRefresh(v => v + 1)
+            }}><Icon>refresh</Icon></IconButton>}
         <div className="expanded" />
         <Button onClick={close}>close</Button>
       </>}>
-      <LinearProgress closed={!loading} />
-      <iframe id="preview-iframe" key={refresh} title="Preview" src={url?.toString()} height={300} width={512} style={{ resize: 'both' }} />
+      <div className="column flex-center">
+        <iframe id="preview-iframe" title="Preview"
+          key={refresh}
+          src={url?.toString()}
+          height={300}
+          width={300 / window.innerHeight * window.innerWidth}
+          style={{ resize: 'both', opacity: loading ? 0.5 : 1 }}
+          onLoad={() => setLoading(false)} />
+      </div>
     </Dialog>
   );
 }

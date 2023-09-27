@@ -11,7 +11,6 @@ function DeleteDialog({ state, close }: { state: DeleteDialog.State, close: () =
   const { showMessage } = React.useContext(Scaffold.Snackbar.Context);
   const id = useUuidV4();
   const { setInformation } = React.useContext(DirectoryPreView.Context);
-
   return (
     <Dialog open={state.open}
       onScrimClick={close}

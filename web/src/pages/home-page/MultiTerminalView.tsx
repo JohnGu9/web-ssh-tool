@@ -313,7 +313,7 @@ function XTerminalView({ controller, remove }: {
     const onClose = () => setClosed(true);
     control.onClose?.addEventListener('close', onClose);
     return () => { control.onClose?.removeEventListener('close', onClose); };
-  });
+  }, [controller]);
   if (controller.xterm)
     controller.xterm.options.theme = {
       background: theme.surface,
