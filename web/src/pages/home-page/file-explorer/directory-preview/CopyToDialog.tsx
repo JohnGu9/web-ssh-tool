@@ -332,7 +332,6 @@ function MyListItem({ stat: entry, baseNames, name, style, controller }: {
     selected={repeat}
     graphic={<Icon>{fileIcon(entry)}</Icon>}
     primaryText={name}
-    secondaryText={repeat ? "repeated name" : undefined}
     meta={<IconButton
       style={{ opacity: hover ? 1 : 0, transition: 'opacity 300ms' }}
       onClick={event => {

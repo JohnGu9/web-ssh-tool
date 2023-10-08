@@ -311,7 +311,7 @@ async fn object_to_json(
     let file_type = file_type_to_string(&meta);
 
     let real_path = if meta.is_symlink() {
-        match tokio::fs::read_link(path.clone()).await {
+        match tokio::fs::read_link(path).await {
             Ok(real_path) => match real_path.to_str() {
                 Some(s) => Some(s.to_string()),
                 None => None,

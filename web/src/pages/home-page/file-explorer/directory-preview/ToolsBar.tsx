@@ -289,9 +289,12 @@ export function SelectingToolsBar() {
       <CopyButton objects={selectedList} />
       <DeleteButton objects={selectedList} />
       <div className='expanded' />
-      <IconButton onClick={() => setOnSelecting(false)} >
-        <Icon>close</Icon>
-      </IconButton>
+      <Tooltip label="Exit Select Mode">
+        <IconButton onClick={() => setOnSelecting(false)} >
+          <Icon>exit_to_app</Icon>
+        </IconButton>
+      </Tooltip>
+
     </>
   );
 }
