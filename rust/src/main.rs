@@ -7,7 +7,7 @@ use common::app_config::AppConfig;
 use common::{AppContext, ResponseType, ResponseUnit};
 use futures::channel::mpsc;
 use futures::lock::Mutex;
-use futures::Future;
+use futures::{Future, SinkExt, StreamExt};
 use http_body_util::StreamBody;
 use http_server::on_http;
 use hyper::header;
@@ -22,7 +22,6 @@ use std::error::Error;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tls::{load_certs, load_keys};
-use tokio::net::TcpStream;
 use tokio_rustls::rustls::ServerConfig;
 use tokio_rustls::TlsAcceptor;
 use tokio_tungstenite::{tungstenite, WebSocketStream};
@@ -78,70 +77,81 @@ async fn main() -> Result<(), Box<dyn Error>> {
         app_config.listen_address.port
     );
 
+    let (mut tx, rx) = mpsc::channel(0);
+    tokio::spawn(async move {
+        loop {
+            let item = listener.accept().await;
+            if let Err(_) = tx.send(item).await {
+                break;
+            }
+        }
+    });
+
     let websocket_peers = Arc::new(Mutex::new(HashMap::new()));
     let authenticate_queues = Arc::new(Mutex::new(HashMap::new()));
     let suspended_clients = Arc::new(Mutex::new(HashMap::new()));
-    loop {
-        match listener.accept().await {
+    let context = AppContext {
+        app_config: app_config.clone(),
+        websocket_peers: websocket_peers.clone(),
+        authenticate_queues: authenticate_queues.clone(),
+        suspended_clients: suspended_clients.clone(),
+    };
+    let http1_service = http1::Builder::new();
+    let http2_service = http2::Builder::new(TokioExecutor);
+
+    // @TODO: concurrent limit can be set by arguments
+    rx.for_each_concurrent(None, |item| async {
+        match item {
             Ok((stream, addr)) => {
-                let context = AppContext {
-                    app_config: app_config.clone(),
-                    websocket_peers: websocket_peers.clone(),
-                    authenticate_queues: authenticate_queues.clone(),
-                    suspended_clients: suspended_clients.clone(),
-                };
-                tokio::spawn(handle_connection(context, stream, addr, acceptor.clone()));
+                match acceptor.accept(stream).await {
+                    Ok(stream) => {
+                        let (_, session) = stream.get_ref();
+                        let is_h2 = match session.alpn_protocol() {
+                            Some(alpn) => alpn == b"h2",
+                            None => false,
+                        };
+                        let res = if is_h2 {
+                            let handle = |req| {
+                                let context = context.clone();
+                                let addr = addr.clone();
+                                async move { on_http(&context, &addr, req).await }
+                            };
+                            // Warning:
+                            // ```let handle = move |req| on_http(&context, &addr, req);```
+                            // doesn't work!
+                            // Because the reference (for example &content) only catch by the sync function ```move |req| {/* */}```
+                            // But the sync function return a future and this future will be scheduled by tokio async machine and the lifecycle detach from the sync function.
+                            // So the future may or may not live longer than the sync function.
+                            // The lifecycle-detach future still access the sync function data so that causes error.
+                            http2_service
+                                .serve_connection(stream, service_fn(handle))
+                                .await
+                        } else {
+                            let handle = |req| http_websocket_classify(&context, &addr, req);
+                            http1_service
+                                .serve_connection(stream, service_fn(handle))
+                                .with_upgrades()
+                                .await
+                        };
+                        if let Err(e) = res {
+                            app_config
+                                .logger
+                                .err(format!("Failed to serve connection: {:?}", e));
+                        }
+                    }
+                    Err(e) => app_config
+                        .logger
+                        .err(format!("Failed to ssl handshake from {:?}: {:?}", addr, e)),
+                }
             }
             Err(e) => app_config.logger.err(format!(
                 "Failed to build connection for incoming connection: {:?}",
                 e
             )),
         }
-    }
-}
+    })
+    .await;
 
-async fn handle_connection(
-    context: AppContext,
-    stream: TcpStream,
-    addr: SocketAddr,
-    acceptor: TlsAcceptor,
-) -> Result<(), std::io::Error> {
-    let stream = acceptor.accept(stream).await?;
-    let (_, session) = stream.get_ref();
-    let is_h2 = match session.alpn_protocol() {
-        Some(alpn) => alpn == b"h2",
-        None => false,
-    };
-    let app_config = context.app_config.clone();
-    let res = if is_h2 {
-        let handle = move |req| {
-            let context = context.clone();
-            let addr = addr.clone();
-            async move { on_http(&context, &addr, req).await }
-        };
-        // Warning:
-        // ```let handle = move |req| on_http(&context, &addr, req);```
-        // doesn't work!
-        // Because the reference (for example &content) only catch by the sync function ```move |req| {/* */}```
-        // But the sync function return a future and this future will be scheduled by tokio async machine and the lifecycle detach from the sync function.
-        // So the future may or may not live longer than the sync function.
-        // The lifecycle-detach future still access the sync function data so that causes error.
-        http2::Builder::new(TokioExecutor)
-            .serve_connection(stream, service_fn(handle))
-            .await
-    } else {
-        let handle = |req| http_websocket_classify(&context, &addr, req);
-        http1::Builder::new()
-            .serve_connection(stream, service_fn(handle))
-            .with_upgrades()
-            .await
-    };
-
-    if let Err(e) = res {
-        app_config
-            .logger
-            .err(format!("Error serving connection: {:?}", e));
-    }
     Ok(())
 }
 
