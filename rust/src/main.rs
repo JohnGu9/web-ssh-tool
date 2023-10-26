@@ -7,11 +7,13 @@ use common::app_config::AppConfig;
 use common::{AppContext, ResponseType, ResponseUnit};
 use futures::channel::mpsc;
 use futures::lock::Mutex;
+use futures::Future;
 use http_body_util::StreamBody;
 use http_server::on_http;
 use hyper::header;
 use hyper::header::HeaderValue;
-use hyper::server::conn::http1;
+use hyper::rt::Executor;
+use hyper::server::conn::{http1, http2};
 use hyper::service::service_fn;
 use hyper::{Method, Request, Response, StatusCode, Version};
 use std::collections::HashMap;
@@ -61,10 +63,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let certs = load_certs()?;
     let mut keys = load_keys()?;
 
-    let config = ServerConfig::builder()
+    let mut config = ServerConfig::builder()
         .with_safe_defaults()
         .with_no_client_auth()
         .with_single_cert(certs, keys.pop().unwrap())?;
+    config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec(), b"http/1.0".to_vec()];
     let acceptor = TlsAcceptor::from(Arc::new(config));
 
     // Create the event loop and TCP listener we'll accept connections on.
@@ -104,19 +107,55 @@ async fn handle_connection(
     acceptor: TlsAcceptor,
 ) -> Result<(), std::io::Error> {
     let stream = acceptor.accept(stream).await?;
-    let service =
-        |req: Request<hyper::body::Incoming>| http_websocket_classify(&context, &addr, req);
-    if let Err(e) = http1::Builder::new()
-        .serve_connection(stream, service_fn(service))
-        .with_upgrades()
-        .await
-    {
-        context
-            .app_config
+    let (_, session) = stream.get_ref();
+    let is_h2 = match session.alpn_protocol() {
+        Some(alpn) => alpn == b"h2",
+        None => false,
+    };
+    let app_config = context.app_config.clone();
+    let res = if is_h2 {
+        let handle = move |req| {
+            let context = context.clone();
+            let addr = addr.clone();
+            async move { on_http(&context, &addr, req).await }
+        };
+        // Warning:
+        // ```let handle = move |req| on_http(&context, &addr, req);```
+        // doesn't work!
+        // Because the reference (for example &content) only catch by the sync function ```move |req| {/* */}```
+        // But the sync function return a future and this future will be scheduled by tokio async machine and the lifecycle detach from the sync function.
+        // So the future may or may not live longer than the sync function.
+        // The lifecycle-detach future still access the sync function data so that causes error.
+        http2::Builder::new(TokioExecutor)
+            .serve_connection(stream, service_fn(handle))
+            .await
+    } else {
+        let handle = |req| http_websocket_classify(&context, &addr, req);
+        http1::Builder::new()
+            .serve_connection(stream, service_fn(handle))
+            .with_upgrades()
+            .await
+    };
+
+    if let Err(e) = res {
+        app_config
             .logger
             .err(format!("Error serving connection: {:?}", e));
     }
     Ok(())
+}
+
+#[derive(Clone)]
+struct TokioExecutor;
+
+impl<F> Executor<F> for TokioExecutor
+where
+    F: Future + Send + 'static,
+    F::Output: Send + 'static,
+{
+    fn execute(&self, future: F) {
+        tokio::spawn(future);
+    }
 }
 
 async fn http_websocket_classify(
