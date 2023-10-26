@@ -59,9 +59,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
         // return Ok(());
     }
 
-    let certs = load_certs()?;
-    let mut keys = load_keys()?;
+    let (listener, cert_source, key_source) = futures::join!(
+        tokio::net::TcpListener::bind(&app_config.listen_address.addr),
+        read_file(&app_config.certificate, "Failed to read certificate file"),
+        read_file(&app_config.private_key, "Failed to read private key file"),
+    );
+    let listener = listener?;
 
+    let certs = load_certs(&cert_source)?;
+    let mut keys = load_keys(&key_source)?;
     let mut config = ServerConfig::builder()
         .with_safe_defaults()
         .with_no_client_auth()
@@ -70,7 +76,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let acceptor = TlsAcceptor::from(Arc::new(config));
 
     // Create the event loop and TCP listener we'll accept connections on.
-    let listener = tokio::net::TcpListener::bind(&app_config.listen_address.addr).await?;
     println!("{}", app_config);
     println!(
         "Please visit: https://localhost:{}\n",
@@ -92,9 +97,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let suspended_clients = Arc::new(Mutex::new(HashMap::new()));
     let context = AppContext {
         app_config: app_config.clone(),
-        websocket_peers: websocket_peers.clone(),
-        authenticate_queues: authenticate_queues.clone(),
-        suspended_clients: suspended_clients.clone(),
+        websocket_peers: websocket_peers,
+        authenticate_queues: authenticate_queues,
+        suspended_clients: suspended_clients,
     };
     let http1_service = http1::Builder::new();
     let http2_service = http2::Builder::new(TokioExecutor);
@@ -153,6 +158,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
     .await;
 
     Ok(())
+}
+
+async fn read_file(path: &Option<String>, expect: &str) -> Option<Vec<u8>> {
+    match path {
+        Some(path) => {
+            let v = tokio::fs::read(path).await.expect(expect);
+            Some(v)
+        }
+        None => None,
+    }
 }
 
 #[derive(Clone)]

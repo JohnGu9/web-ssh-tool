@@ -8,15 +8,23 @@ use tokio_rustls::rustls::{Certificate, PrivateKey};
 mod cert_verifier;
 pub use cert_verifier::CustomServerCertVerifier;
 
-pub fn load_certs() -> Result<Vec<Certificate>, io::Error> {
+pub fn load_certs(out: &Option<Vec<u8>>) -> Result<Vec<Certificate>, io::Error> {
     let bytes = include_bytes!("server.crt");
+    let bytes = match &out {
+        Some(bytes) => bytes.as_slice(),
+        None => bytes,
+    };
     certs(&mut bytes.reader())
         .map_err(|_| io::Error::new(ErrorKind::InvalidInput, "invalid cert"))
         .map(|mut certs| certs.drain(..).map(Certificate).collect())
 }
 
-pub fn load_keys() -> Result<Vec<PrivateKey>, io::Error> {
+pub fn load_keys(out: &Option<Vec<u8>>) -> Result<Vec<PrivateKey>, io::Error> {
     let bytes = include_bytes!("server.key");
+    let bytes = match &out {
+        Some(bytes) => bytes.as_slice(),
+        None => bytes,
+    };
     private_keys(&mut bytes.reader())
         .map_err(|_| io::Error::new(ErrorKind::InvalidInput, "invalid key"))
         .map(|mut keys| keys.drain(..).map(PrivateKey).collect())
