@@ -29,7 +29,7 @@ pub async fn handle_request(
         app_config
             .logger
             .info(format!("Internal client for token({}) connected", token));
-        read.for_each_concurrent(10, |data| async {
+        read.for_each_concurrent(None, |data| async {
             if let Ok(Message::Text(text)) = data {
                 if let Ok(serde_json::Value::Object(mut m)) =
                     serde_json::from_str::<serde_json::Value>(text.as_str())

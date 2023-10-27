@@ -30,6 +30,7 @@ use tokio_tungstenite::{tungstenite, WebSocketStream};
 async fn main() -> Result<(), Box<dyn Error>> {
     let app_config = Arc::new(AppConfig::new());
     if let Some(ref token) = app_config.client {
+        // @TODO: send log to master
         // internal client mode
         use tls::CustomServerCertVerifier;
         use tokio_rustls::rustls::ClientConfig;
@@ -217,8 +218,7 @@ async fn http_websocket_classify(
                         .unwrap_or(false)
                 {
                     let ver = req.version();
-                    let (mut tx, rx) = mpsc::channel(1);
-                    tx.close_channel();
+                    let (_, rx) = mpsc::channel(1);
                     let mut res = Response::new(StreamBody::new(rx));
                     *res.status_mut() = StatusCode::SWITCHING_PROTOCOLS;
                     *res.version_mut() = ver;

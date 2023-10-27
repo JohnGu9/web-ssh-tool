@@ -32,7 +32,7 @@ pub async fn handle_request(
     let tx = Mutex::new(tx);
     tokio::spawn(poll_event(rx, write.clone()));
 
-    read.for_each_concurrent(10, |data| async {
+    read.for_each_concurrent(None, |data| async {
         if let Ok(Message::Text(text)) = data {
             fn handle_error(err: Box<dyn std::error::Error>) -> serde_json::Value {
                 let result = format!("{:?}", err);

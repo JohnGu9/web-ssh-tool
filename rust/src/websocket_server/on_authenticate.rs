@@ -27,7 +27,7 @@ pub async fn handle_request(
     let session = Mutex::new(session);
     let shells = Mutex::new(HashMap::new());
     tokio::spawn(poll_event(event_channel, write.clone()));
-    read.for_each_concurrent(10, |data| async {
+    read.for_each_concurrent(16, |data| async {
         let text = match data {
             Ok(Message::Text(t)) => t,
             Ok(Message::Binary(bytes)) => match internal_decompress(&bytes[..]) {

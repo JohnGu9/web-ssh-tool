@@ -10,7 +10,7 @@ pub use cert_verifier::CustomServerCertVerifier;
 
 pub fn load_certs(out: &Option<Vec<u8>>) -> Result<Vec<Certificate>, io::Error> {
     let bytes = include_bytes!("server.crt");
-    let bytes = match &out {
+    let bytes = match out {
         Some(bytes) => bytes.as_slice(),
         None => bytes,
     };
@@ -21,7 +21,7 @@ pub fn load_certs(out: &Option<Vec<u8>>) -> Result<Vec<Certificate>, io::Error> 
 
 pub fn load_keys(out: &Option<Vec<u8>>) -> Result<Vec<PrivateKey>, io::Error> {
     let bytes = include_bytes!("server.key");
-    let bytes = match &out {
+    let bytes = match out {
         Some(bytes) => bytes.as_slice(),
         None => bytes,
     };

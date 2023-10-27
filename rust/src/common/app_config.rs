@@ -1,6 +1,8 @@
 use argh::FromArgs;
 use chrono::prelude::*;
+use futures::{channel::mpsc, lock::Mutex, SinkExt, StreamExt};
 use std::path::PathBuf;
+use tokio::io::AsyncWriteExt;
 
 #[derive(Debug)]
 pub struct AppConfig {
@@ -33,7 +35,11 @@ impl AppConfig {
             logger: match opt.disable_logger {
                 true => Logger::None,
                 false => match opt.logger {
-                    Some(path) => Logger::File(std::sync::Mutex::new(0), path),
+                    Some(path) => {
+                        let (tx, rx) = mpsc::channel::<String>(16);
+                        tokio::spawn(run_file_logger(rx, path.clone()));
+                        Logger::File(Mutex::new(tx), path)
+                    }
                     None => Logger::Stdio(std::sync::Mutex::new(0)),
                 },
             },
@@ -47,6 +53,47 @@ impl AppConfig {
             },
             client: opt.client,
             bin,
+        }
+    }
+}
+
+async fn run_file_logger(mut rx: mpsc::Receiver<String>, path: String) {
+    let mut option = tokio::fs::OpenOptions::new();
+    option.create(true).write(true).append(true);
+    let mut file = option.open(&path).await.expect("Failed to open log file. ");
+    let mut has_lost_some_log = false;
+    while let Some(message) = rx.next().await {
+        if let Err(e) = file.write(message.as_bytes()).await {
+            eprintln!(
+                "Failed to write log to file ({:?}). Trying reopen log file. ",
+                e
+            );
+            match option.open(&path).await {
+                Ok(f) => file = f,
+                Err(e) => {
+                    eprintln!("Failed to reopen log file ({}).", e);
+                }
+            }
+            if let Err(e) = file.write(message.as_bytes()).await {
+                has_lost_some_log = true;
+                eprintln!(
+                    "Failed to write log to file ({:?}) and output log to stdio. ",
+                    e
+                );
+                println!("{}", message);
+            }
+        } else {
+            if has_lost_some_log {
+                if let Ok(_) = file
+                    .write(format!(
+                        "{} [ERROR] Some log messages have been lost. The lost messages would be outputted in app stdio. \n",
+                        Utc::now().format("%+")
+                    ).as_bytes())
+                    .await
+                {
+                    has_lost_some_log = false;
+                }
+            }
         }
     }
 }
@@ -92,7 +139,7 @@ impl std::fmt::Display for AppConfig {
 pub enum Logger {
     None,
     Stdio(std::sync::Mutex<i32>),
-    File(std::sync::Mutex<i32>, String),
+    File(Mutex<mpsc::Sender<String>>, String),
 }
 
 // @TODO: file logger implement
@@ -105,9 +152,14 @@ impl Logger {
                 let _ = m.lock();
                 println!("{} [INFO]  {}", Utc::now().format("%+"), message)
             }
-            Logger::File(m, _) => {
-                let _ = m.lock();
-                println!("{} [INFO]  {}", Utc::now().format("%+"), message)
+            Logger::File(tx, _) => {
+                futures::executor::block_on(async {
+                    let _ = tx
+                        .lock()
+                        .await
+                        .send(format!("{} [INFO]  {}\n", Utc::now().format("%+"), message))
+                        .await;
+                });
             }
             Logger::None => {}
         }
@@ -119,9 +171,14 @@ impl Logger {
                 let _ = m.lock();
                 eprintln!("{} [ERROR] {}", Utc::now().format("%+"), message)
             }
-            Logger::File(m, _) => {
-                let _ = m.lock();
-                eprintln!("{} [ERROR] {}", Utc::now().format("%+"), message)
+            Logger::File(tx, _) => {
+                futures::executor::block_on(async {
+                    let _ = tx
+                        .lock()
+                        .await
+                        .send(format!("{} [ERROR] {}\n", Utc::now().format("%+"), message))
+                        .await;
+                });
             }
             Logger::None => {}
         }
