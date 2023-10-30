@@ -10,10 +10,12 @@ pub struct AppConfig {
     pub certificate: Option<String>,
     pub private_key: Option<String>,
     pub logger: Logger,
-    pub assets_path: Option<PathBuf>,
     pub local_ssh_port: String,
-    pub client: Option<String>,
     pub bin: String,
+
+    // internal use
+    pub assets_path: Option<PathBuf>,
+    pub client: Option<String>,
 }
 
 impl AppConfig {
@@ -35,12 +37,12 @@ impl AppConfig {
             logger: match opt.disable_logger {
                 true => Logger::None,
                 false => match opt.logger {
+                    None => Logger::Stdio,
                     Some(path) => {
                         let (tx, rx) = mpsc::channel::<String>(16);
                         tokio::spawn(run_file_logger(rx, path.clone()));
                         Logger::File(Mutex::new(tx), path)
                     }
-                    None => Logger::Stdio(std::sync::Mutex::new(0)),
                 },
             },
             assets_path: match opt.assets_path {
@@ -86,7 +88,7 @@ async fn run_file_logger(mut rx: mpsc::Receiver<String>, path: String) {
             if has_lost_some_log {
                 if let Ok(_) = file
                     .write_all(format!(
-                        "{} [ERROR] Some log messages have been lost. The lost messages would be outputted in app stdio. \n",
+                        "{} [ERROR] Some log messages have been lost. Please check out the lost messages in app stdio. \n",
                         Utc::now().format("%+")
                     ).as_bytes())
                     .await
@@ -125,20 +127,19 @@ impl std::fmt::Display for ListenAddress {
 impl std::fmt::Display for AppConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         writeln!(f, "AppConfig: ")?;
-        writeln!(f, "   logger:             {:?}", self.logger)?;
-        writeln!(f, "   assets_path:        {:?}", self.assets_path)?;
-        writeln!(f, "   bin:                {:?}", self.bin)?;
-        writeln!(f, "   local_ssh_port:     {}", self.local_ssh_port)?;
+        writeln!(f, "   listen_address:     {}", self.listen_address)?;
         writeln!(f, "   certificate:        {:?}", self.certificate)?;
         writeln!(f, "   private_key:        {:?}", self.private_key)?;
-        writeln!(f, "   listen_address:     {}", self.listen_address)?;
+        writeln!(f, "   logger:             {:?}", self.logger)?;
+        writeln!(f, "   local_ssh_port:     {}", self.local_ssh_port)?;
+        writeln!(f, "   bin:                {:?}", self.bin)?;
         Ok(())
     }
 }
 
 pub enum Logger {
     None,
-    Stdio(std::sync::Mutex<i32>),
+    Stdio,
     File(Mutex<mpsc::Sender<String>>, String),
 }
 
@@ -148,8 +149,7 @@ impl Logger {
     #[allow(dead_code)]
     pub fn info<T: std::fmt::Display>(&self, message: T) {
         match self {
-            Logger::Stdio(m) => {
-                let _ = m.lock();
+            Logger::Stdio => {
                 println!("{} [INFO]  {}", Utc::now().format("%+"), message)
             }
             Logger::File(tx, _) => {
@@ -167,8 +167,7 @@ impl Logger {
     #[allow(dead_code)]
     pub fn err<T: std::fmt::Display>(&self, message: T) {
         match self {
-            Logger::Stdio(m) => {
-                let _ = m.lock();
+            Logger::Stdio => {
                 eprintln!("{} [ERROR] {}", Utc::now().format("%+"), message)
             }
             Logger::File(tx, _) => {
@@ -189,7 +188,7 @@ impl std::fmt::Debug for Logger {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::None => write!(f, "None"),
-            Self::Stdio(_) => write!(f, "Stdio"),
+            Self::Stdio => write!(f, "Stdio"),
             Self::File(_, path) => write!(f, "File({})", path),
         }
     }
