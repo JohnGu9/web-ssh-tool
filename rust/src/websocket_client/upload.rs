@@ -95,7 +95,7 @@ pub async fn handle_request(
                     while let Some(Ok(mut frame)) = body.frame().await {
                         if let Some(data) = frame.data_mut() {
                             let vec = data.to_vec();
-                            if let Err(_) = file.write(&vec[..]).await {
+                            if let Err(_) = file.write_all(&vec[..]).await {
                                 break;
                             }
                         }

@@ -63,29 +63,29 @@ async fn run_file_logger(mut rx: mpsc::Receiver<String>, path: String) {
     let mut file = option.open(&path).await.expect("Failed to open log file. ");
     let mut has_lost_some_log = false;
     while let Some(message) = rx.next().await {
-        if let Err(e) = file.write(message.as_bytes()).await {
-            eprintln!(
-                "Failed to write log to file ({:?}). Trying reopen log file. ",
-                e
-            );
-            match option.open(&path).await {
-                Ok(f) => file = f,
-                Err(e) => {
-                    eprintln!("Failed to reopen log file ({}).", e);
-                }
-            }
-            if let Err(e) = file.write(message.as_bytes()).await {
-                has_lost_some_log = true;
+        if let Err(e) = file.write_all(message.as_bytes()).await {
+            if !has_lost_some_log {
                 eprintln!(
-                    "Failed to write log to file ({:?}) and output log to stdio. ",
+                    "Failed to write log to file ({:?}). Trying reopen log file. ",
                     e
                 );
+            }
+            match option.open(&path).await {
+                Ok(f) => file = f,
+                Err(_) => {}
+            }
+            if let Err(e) = file.write_all(message.as_bytes()).await {
+                if !has_lost_some_log {
+                    eprintln!("Failed to reopen log file and write log to file ({:?}). Output log to stdio. ", e);
+                }
+
+                has_lost_some_log = true;
                 println!("{}", message);
             }
         } else {
             if has_lost_some_log {
                 if let Ok(_) = file
-                    .write(format!(
+                    .write_all(format!(
                         "{} [ERROR] Some log messages have been lost. The lost messages would be outputted in app stdio. \n",
                         Utc::now().format("%+")
                     ).as_bytes())
@@ -210,23 +210,23 @@ struct Options {
     #[argh(option, short = 'k')]
     private_key: Option<String>,
 
-    /// use app log output (default: stdio, example: /tmp/my.log)
+    /// use app log output, if this argument is set, stdio log output will be disable (default: stdio, example: /tmp/my.log)
     #[argh(option)]
     logger: Option<String>,
 
-    /// whether or not disable logger (default: false)
+    /// whether or not disable logger, if disable is true, '--logger' argument become useless (default: false)
     #[argh(switch)]
     disable_logger: bool,
 
-    /// use custom assets (default: bin's directory, example: /tmp/my_assets)
-    #[argh(option, short = 'a')]
-    assets_path: Option<String>,
-
-    /// use custom ssh target (default: localhost:22, example: localhost:8080)
+    /// use custom ssh port (default: 22, example: 8080)
     #[argh(option)]
     local_ssh_port: Option<String>,
 
-    /// internal use
+    /// use custom static assets and don't set this argument until you know what it means (default: bin internal static assets, example: /tmp/my_assets)
+    #[argh(option)]
+    assets_path: Option<String>,
+
+    /// internal use and don't set this argument until you know what it means
     #[argh(option)]
     client: Option<String>,
 }
