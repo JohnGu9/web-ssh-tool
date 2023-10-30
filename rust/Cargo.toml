@@ -4,36 +4,40 @@ version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = ["internal-certificate", "internal-private-key"]
+internal-certificate = []
+internal-private-key = []
 
 [dependencies]
-argh = "0.1.10"
-bytes = "1.4.0"
-chrono = "0.4.24"
+argh = "0.1.12"
+async-compat = "0.2.3"
+async-trait = "0.1.74"
+async_zip = { version = "0.0.15", features = ["deflate"] }
+bytes = "1"
+chrono = "0.4.31"
+flate2 = { version = "1", default-features = false }
+futures = "0.3.29"
 http-body-util = "0.1.0-rc.2"
 hyper = { version = "=1.0.0-rc.3", features = ["full"] }
-rustls-pemfile = "1.0.2"
-serde_json = "1.0.96"
+mime_guess = "2"
+notify = "6"
+pin-project = "1"
+russh = "0.39.0"
+russh-keys = "0.38.0"
+rustls-pemfile = "1"
+serde_json = "1"
 tokio = { version = "1", features = ["full"] }
-tokio-rustls = { version = "0.24.0", features = ["dangerous_configuration"] }
-tokio-tungstenite = { version = "0.19.0", features = [
+tokio-rustls = { version = "0.24.1", features = ["dangerous_configuration"] }
+tokio-tungstenite = { version = "0.20.1", features = [
     "rustls-tls-native-roots",
     "handshake",
 ] }
-uuid = { version = "1.3.3", features = ["v4", "fast-rng", "macro-diagnostics"] }
-notify = "6.0.0"
-russh = "0.37.1"
-russh-keys = "0.37.1"
-async-trait = "0.1.68"
-url = "2.4.0"
-tokio-util = { version = "0.7.8", features = ["full"] }
-walkdir = "2.3.3"
-async_zip = { version = "0.0.15", features = ["deflate"] }
-futures = "0.3.28"
-pin-project = "1.1.2"
-async-compat = "0.2.1"
-flate2 = { version = "1.0.27", default-features = false }
-mime_guess = "2.0.4"
-trash = "3.0.6"
+tokio-util = { version = "0.7.10", features = ["full"] }
+trash = "3"
+url = "2"
+uuid = { version = "1", features = ["v4", "fast-rng", "macro-diagnostics"] }
+walkdir = "2"
 
 [dev-dependencies]
 cargo-license = "0.5.1"

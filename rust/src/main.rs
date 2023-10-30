@@ -24,7 +24,11 @@ use std::sync::Arc;
 use tls::{load_certs, load_keys};
 use tokio_rustls::rustls::ServerConfig;
 use tokio_rustls::TlsAcceptor;
-use tokio_tungstenite::{tungstenite, WebSocketStream};
+use tokio_tungstenite::tungstenite::{
+    handshake::derive_accept_key,
+    protocol::{Role, WebSocketConfig},
+};
+use tokio_tungstenite::WebSocketStream;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -38,7 +42,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let connector = Connector::Rustls(Arc::new(
             ClientConfig::builder()
                 .with_safe_defaults()
-                .with_custom_certificate_verifier(Arc::new(CustomServerCertVerifier {}))
+                .with_custom_certificate_verifier(Arc::new(CustomServerCertVerifier {})) // @TODO: verify server cert
                 .with_no_client_auth(),
         ));
 
@@ -72,7 +76,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut config = ServerConfig::builder()
         .with_safe_defaults()
         .with_no_client_auth()
-        .with_single_cert(certs, keys.pop().unwrap())?;
+        .with_single_cert(certs, keys.pop().expect("SSL private key not found"))?;
     config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec(), b"http/1.0".to_vec()];
     let acceptor = TlsAcceptor::from(Arc::new(config));
 
@@ -98,9 +102,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let suspended_clients = Arc::new(Mutex::new(HashMap::new()));
     let context = AppContext {
         app_config: app_config.clone(),
-        websocket_peers: websocket_peers,
-        authenticate_queues: authenticate_queues,
-        suspended_clients: suspended_clients,
+        websocket_peers,
+        authenticate_queues,
+        suspended_clients,
     };
     let http1_service = http1::Builder::new();
     let http2_service = http2::Builder::new(TokioExecutor);
@@ -194,7 +198,7 @@ async fn http_websocket_classify(
     let headers = req.headers();
     let key = headers.get(header::SEC_WEBSOCKET_KEY);
     if let Some(key) = key {
-        let derived = tungstenite::handshake::derive_accept_key(key.as_bytes()).parse();
+        let derived = derive_accept_key(key.as_bytes()).parse();
         match derived {
             Ok(derived) => {
                 if req.method() == Method::GET
@@ -218,6 +222,10 @@ async fn http_websocket_classify(
                         .unwrap_or(false)
                 {
                     let ver = req.version();
+                    let context = context.clone();
+                    let addr = addr.clone();
+                    tokio::spawn(upgrade_websocket(context, addr, req));
+
                     let (_, rx) = mpsc::channel(1);
                     let mut res = Response::new(StreamBody::new(rx));
                     *res.status_mut() = StatusCode::SWITCHING_PROTOCOLS;
@@ -226,9 +234,6 @@ async fn http_websocket_classify(
                     headers.append(header::CONNECTION, UPGRADE_HEADER_VALUE);
                     headers.append(header::UPGRADE, WEBSOCKET_HEADER_VALUE);
                     headers.append(header::SEC_WEBSOCKET_ACCEPT, derived);
-                    let context = context.clone();
-                    let addr = addr.clone();
-                    tokio::spawn(upgrade_web_socket(context, addr, req));
                     return Ok(res);
                 } else {
                     context
@@ -248,7 +253,7 @@ async fn http_websocket_classify(
     return on_http(context, addr, req).await;
 }
 
-async fn upgrade_web_socket(
+async fn upgrade_websocket(
     context: AppContext,
     addr: SocketAddr,
     mut req: Request<hyper::body::Incoming>,
@@ -258,8 +263,8 @@ async fn upgrade_web_socket(
         Ok(upgraded) => {
             let ws_stream = WebSocketStream::from_raw_socket(
                 upgraded,
-                tungstenite::protocol::Role::Server,
-                None,
+                Role::Server,
+                Some(WebSocketConfig::default()),
             )
             .await;
             if let Err(err) = websocket_server::handle_request(context, &addr, req, ws_stream).await
