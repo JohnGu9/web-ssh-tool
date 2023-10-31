@@ -1,12 +1,15 @@
 use argh::FromArgs;
 use chrono::prelude::*;
 use futures::{channel::mpsc, lock::Mutex, SinkExt, StreamExt};
-use std::path::PathBuf;
+use std::{
+    net::{SocketAddr, ToSocketAddrs},
+    path::PathBuf,
+};
 use tokio::io::AsyncWriteExt;
 
 #[derive(Debug)]
 pub struct AppConfig {
-    pub listen_address: ListenAddress,
+    pub listen_address: SocketAddr,
     pub certificate: Option<String>,
     pub private_key: Option<String>,
     pub logger: Logger,
@@ -23,7 +26,10 @@ impl AppConfig {
         let opt: Options = argh::from_env();
         let listen_address = opt
             .listen_address
-            .unwrap_or_else(|| "127.0.0.1:7200".to_string());
+            .unwrap_or_else(|| "localhost:7200".to_string())
+            .to_socket_addrs()
+            .expect("--listen-address argument format error")
+            .as_slice()[0];
         let bin = std::env::current_exe()
             .unwrap()
             .to_str()
@@ -31,7 +37,7 @@ impl AppConfig {
             .unwrap();
 
         AppConfig {
-            listen_address: ListenAddress::new(listen_address),
+            listen_address,
             certificate: opt.certificate,
             private_key: opt.private_key,
             logger: match opt.disable_logger {
@@ -80,9 +86,8 @@ async fn run_file_logger(mut rx: mpsc::Receiver<String>, path: String) {
                 if !has_lost_some_log {
                     eprintln!("Failed to reopen log file and write log to file ({:?}). Output log to stdio. ", e);
                 }
-
-                has_lost_some_log = true;
                 println!("{}", message);
+                has_lost_some_log = true;
             }
         } else {
             if has_lost_some_log {
@@ -97,30 +102,6 @@ async fn run_file_logger(mut rx: mpsc::Receiver<String>, path: String) {
                 }
             }
         }
-    }
-}
-
-#[derive(Debug)]
-pub struct ListenAddress {
-    pub domain: String,
-    pub port: String,
-    pub addr: String,
-}
-
-impl ListenAddress {
-    fn new(addr: String) -> Self {
-        let v: Vec<_> = addr.split(':').collect();
-        return ListenAddress {
-            domain: v[0].to_string(),
-            port: v[1].to_string(),
-            addr,
-        };
-    }
-}
-
-impl std::fmt::Display for ListenAddress {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}:{}", self.domain, self.port)
     }
 }
 

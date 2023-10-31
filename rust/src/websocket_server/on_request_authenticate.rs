@@ -143,7 +143,9 @@ pub async fn handle_request(
 
             let command = format!(
                 "{} --client {} --listen-address localhost:{}",
-                app_config.bin, token, app_config.listen_address.port
+                app_config.bin,
+                token,
+                app_config.listen_address.port()
             );
             tokio::spawn(async move { channel.exec(true, command).await });
 

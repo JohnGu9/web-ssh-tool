@@ -4,6 +4,7 @@ import basicSsl from '@vitejs/plugin-basic-ssl';
 import { terser } from 'rollup-plugin-terser';
 import preload from "vite-plugin-preload";
 import { InputPluginOption } from 'vite/node_modules/rollup';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(() => {
     return {
@@ -39,6 +40,12 @@ export default defineConfig(() => {
         },
         plugins: [
             react(),
+            VitePWA({
+                registerType: 'autoUpdate',
+                workbox: {
+                    globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+                }
+            }),
             basicSsl(),
             preload(),
         ],

@@ -56,7 +56,8 @@ pub async fn http_to_master(
     use std::net::{IpAddr, Ipv4Addr};
     use tokio::net::TcpStream;
     use tokio_rustls::{rustls::ClientConfig, TlsConnector};
-    let stream = TcpStream::connect(app_config.listen_address.addr.as_str()).await?;
+    let addr = format!("localhost:{}", app_config.listen_address.port()); // use domain is more robust than SocketAddr
+    let stream = TcpStream::connect(addr).await?;
     let config = ClientConfig::builder()
         .with_safe_defaults()
         .with_custom_certificate_verifier(Arc::new(CustomServerCertVerifier {}))

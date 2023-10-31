@@ -46,26 +46,34 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .with_no_client_auth(),
         ));
 
-        let master_server = format!("wss://{}/client?t={}", app_config.listen_address, token);
+        let master_server = format!(
+            "wss://localhost:{}/client?t={}",
+            app_config.listen_address.port(),
+            token
+        );
+        // use domain is more robust than SocketAddr
+        // "localhost" will be convert to '::1' with 'to_socket_addrs'
+        // but '::1' can't connect to '127.0.0.1' and 'localhost' can connect to '127.0.0.1' with tokio_tungstenite
         app_config.logger.info(format!(
             "Running client mode (warning: this mode not for public usage) and connect to {}",
             master_server
         ));
-        if let Ok((client, _)) =
-            connect_async_tls_with_config(master_server, None, false, Some(connector)).await
-        {
-            let _ = websocket_client::handle_request(&app_config, token, client).await;
-        } else {
-            app_config
-                .logger
-                .err(format!("Client mode failed to connect to master! "));
+        match connect_async_tls_with_config(master_server, None, false, Some(connector)).await {
+            Ok((client, _)) => {
+                let _ = websocket_client::handle_request(&app_config, token, client).await;
+            }
+            Err(e) => {
+                app_config
+                    .logger
+                    .err(format!("Client mode failed to connect to master! {:?}", e));
+            }
         }
         std::process::exit(0);
         // return Ok(());
     }
 
     let (listener, cert_source, key_source) = futures::join!(
-        tokio::net::TcpListener::bind(&app_config.listen_address.addr),
+        tokio::net::TcpListener::bind(&app_config.listen_address),
         read_file(&app_config.certificate, "Failed to read certificate file"),
         read_file(&app_config.private_key, "Failed to read private key file"),
     );
@@ -84,7 +92,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!("{}", app_config);
     println!(
         "Please visit: https://localhost:{}\n",
-        app_config.listen_address.port
+        app_config.listen_address.port()
     );
 
     let (mut tx, rx) = mpsc::channel(0);

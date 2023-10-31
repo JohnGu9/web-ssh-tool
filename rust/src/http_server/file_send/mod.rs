@@ -27,7 +27,12 @@ pub async fn file_send(
             let guess = guess.first_or_text_plain();
             let mime = HeaderValue::from_str(guess.to_string().as_str())
                 .unwrap_or(HeaderValue::from_static("text/plain"));
-            res.headers_mut().append(header::CONTENT_TYPE, mime);
+            let headers = res.headers_mut();
+            headers.append(header::CONTENT_TYPE, mime);
+            headers.append(
+                header::CACHE_CONTROL,
+                HeaderValue::from_static("min-fresh=5"),
+            );
             Ok(res)
         }
         Err(_) => Ok(not_found(app_config, format!("No such file: {}", filename)).await),

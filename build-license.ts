@@ -22,6 +22,7 @@ export async function licenseBundle(target: string) {
     }
     if (rustLicenses !== null) {
         for (const license of rustLicenses) {
+            if (license.name === "rust") continue; // self
             writeStream.write(Buffer.from(`\n${license.name}@${license.version}\n`));
             if (license.license_file) {
                 for await (const chunk of createReadStream(license.license_file))

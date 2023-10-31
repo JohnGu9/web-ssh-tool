@@ -195,7 +195,7 @@ function MoreButton() {
   React.useEffect(() => {
     if (open) {
       const i = () => { setOpen(false) };
-      window.addEventListener("click", i);
+      window.addEventListener("click", i, { passive: true });
       return () => window.removeEventListener("click", i);
     }
   }, [open]);
@@ -381,7 +381,7 @@ function SizeHint({ controller }: {
     const listener = () => {
       setSize(controller.size);
     };
-    controller.addEventListener("resize", listener);
+    controller.addEventListener("resize", listener, { passive: true });
     return () => controller.removeEventListener("resize", listener);
   }, [controller]);
   return (<>{size.rows} x {size.cols}</>);

@@ -31,7 +31,7 @@ class LayoutBuilder extends React.Component<LayoutBuilder.Props, LayoutBuilder.S
   override componentDidMount() {
     if (this._resizeObserver === null) {
       this._resize();
-      window.addEventListener('resize', this._resize);
+      window.addEventListener('resize', this._resize, { passive: true });
     }
   }
 

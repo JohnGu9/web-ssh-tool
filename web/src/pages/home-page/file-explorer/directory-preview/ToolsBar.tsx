@@ -172,7 +172,7 @@ function MoreButton({ stats, setInformation }: {
       const listener = () => {
         setOpen(false);
       };
-      window.addEventListener('click', listener);
+      window.addEventListener('click', listener, { passive: true });
       return () => window.removeEventListener('click', listener);
     }
   }, [open]);

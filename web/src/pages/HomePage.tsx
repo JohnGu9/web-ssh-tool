@@ -211,7 +211,7 @@ function MyResize({ children, axis, divRef, length, setLength, style, onTransiti
   const startDrag = enable > 0;
   React.useEffect(() => {
     const onUp = () => setEnable(v => Math.max(v - 1, 0));
-    window.addEventListener('mouseup', onUp);
+    window.addEventListener('mouseup', onUp, { passive: true });
     return () => {
       window.removeEventListener('mouseup', onUp);
     }
