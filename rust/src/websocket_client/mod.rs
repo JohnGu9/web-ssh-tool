@@ -28,8 +28,7 @@ pub async fn handle_request(
     let (write, read) = ws_stream.split();
     let write = Arc::new(Mutex::new(write));
     let watchers = Mutex::new(HashMap::new());
-    let (tx, rx) = channel(1); // event_channel
-    let tx = Mutex::new(tx);
+    let (tx, rx) = channel(0); // event_channel
     tokio::spawn(poll_event(rx, write.clone()));
 
     read.for_each_concurrent(None, |data| async {
@@ -90,7 +89,7 @@ async fn handle_call(
     token: &String,
     call: &String,
     argument: &serde_json::Value,
-    event_channel: &Mutex<Sender<serde_json::Value>>,
+    event_channel: &Sender<serde_json::Value>,
     watchers: &Mutex<HashMap<String, Arc<Mutex<watch::MyWatcher>>>>,
 ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     match call.as_str() {
@@ -105,7 +104,7 @@ async fn handle_call(
         "fs.trash" => fs_api::fs_trash(argument).await,
         "unzip" => unzip::handle_request(argument).await,
         "watch" => watch::handle_request(argument, event_channel, watchers).await,
-        "internal" => handle_internal(app_config, token, event_channel, argument).await,
+        "internal" => handle_internal(app_config, token, argument).await,
         _ => Err(Box::new(Unimplemented())),
     }
 }
@@ -113,7 +112,6 @@ async fn handle_call(
 async fn handle_internal(
     app_config: &Arc<AppConfig>,
     token: &String,
-    event_channel: &Mutex<Sender<serde_json::Value>>,
     argument: &serde_json::Value,
 ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     if let serde_json::Value::Array(argument) = argument {
@@ -125,14 +123,8 @@ async fn handle_internal(
                     for (key, argument) in argument.iter() {
                         match key.as_str() {
                             "download" => {
-                                return download::handle_request(
-                                    app_config,
-                                    token,
-                                    event_channel,
-                                    id,
-                                    argument,
-                                )
-                                .await;
+                                return download::handle_request(app_config, token, id, argument)
+                                    .await;
                             }
                             "upload" => {
                                 return upload::handle_request(app_config, token, id, argument)

@@ -11,10 +11,10 @@ export async function licenseBundle(target: string) {
         rustLicense(),
     ]);
 
-    const buffer2 = Buffer.from('\n\n');
+    const buffer2 = Buffer.from('\n==============================================================================\n\n');
     for (const [name, { licenseFile }] of [...Object.entries(webLicense), ...Object.entries(licenses)]) {
         if (licenseFile && licenseFile.toLowerCase().includes("license")) {
-            writeStream.write(Buffer.from(`\n${name}\n`));
+            writeStream.write(Buffer.from(`${name}\n`));
             for await (const chunk of createReadStream(licenseFile))
                 writeStream.write(chunk);
             writeStream.write(buffer2);
@@ -23,12 +23,12 @@ export async function licenseBundle(target: string) {
     if (rustLicenses !== null) {
         for (const license of rustLicenses) {
             if (license.name === "rust") continue; // self
-            writeStream.write(Buffer.from(`\n${license.name}@${license.version}\n`));
+            writeStream.write(Buffer.from(`${license.name}@${license.version}\n`));
             if (license.license_file) {
                 for await (const chunk of createReadStream(license.license_file))
                     writeStream.write(chunk);
             } else {
-                writeStream.write(Buffer.from(`${license.authors}\n${license.repository}\n${license.license}`));
+                writeStream.write(Buffer.from(`${license.authors}\n${license.repository}\n${license.license}\n`));
             }
             writeStream.write(buffer2);
         }

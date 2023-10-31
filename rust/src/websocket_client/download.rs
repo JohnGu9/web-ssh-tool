@@ -5,9 +5,7 @@ use async_zip::{base::write::ZipFileWriter, error::ZipError, Compression, ZipEnt
 use bytes::Bytes;
 use futures::{
     channel::{mpsc, oneshot},
-    join,
-    lock::Mutex,
-    AsyncWrite, Sink, SinkExt,
+    join, AsyncWrite, Sink,
 };
 use http_body_util::{BodyExt, StreamBody};
 use hyper::{body::Frame, header, http::HeaderValue, HeaderMap, Method, Request};
@@ -23,7 +21,6 @@ use walkdir::WalkDir;
 pub async fn handle_request(
     app_config: &Arc<AppConfig>,
     token: &String,
-    event_channel: &Mutex<mpsc::Sender<serde_json::Value>>,
     id: u64,
     argument: &serde_json::Value,
 ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
@@ -48,8 +45,8 @@ pub async fn handle_request(
     );
     headers.append(header::CONNECTION, HeaderValue::from_static("close"));
     let (rx, on_end) = match paths.len() {
-        1 => download_single(paths[0].to_owned(), event_channel, headers).await?,
-        _ => download_multi(paths, event_channel, headers).await?,
+        1 => download_single(app_config, paths[0].to_owned(), headers).await?,
+        _ => download_multi(app_config, paths, headers).await?,
     };
 
     let mut sender = http_to_master(app_config).await?;
@@ -70,8 +67,8 @@ pub async fn handle_request(
 }
 
 pub async fn download_single(
+    app_config: &Arc<AppConfig>,
     path: String,
-    event_channel: &Mutex<mpsc::Sender<serde_json::Value>>,
     headers: &mut HeaderMap,
 ) -> Result<(mpsc::Receiver<ResponseUnit>, oneshot::Receiver<()>), ArgumentsError> {
     let p = Path::new(path.as_str()).to_path_buf();
@@ -122,11 +119,11 @@ pub async fn download_single(
         } else if p.is_dir() {
             let (tx, rx) = mpsc::channel(BUF_SIZE);
             let p = p.to_path_buf();
-            let mut event_channel = event_channel.lock().await.clone();
+            let app_config = app_config.clone();
             tokio::spawn(async move {
                 if let Err(e) = zip_dir(p, tx, Compression::Deflate).await {
                     let error = format!("ZipError: {:?}", e);
-                    let _ = event_channel.send(json!({"error":error})).await;
+                    app_config.logger.err(error);
                 }
                 let _ = on_end_callback.send(());
             });
@@ -162,17 +159,17 @@ async fn zip_dir(
 }
 
 async fn download_multi(
+    app_config: &Arc<AppConfig>,
     paths: Vec<String>,
-    event_channel: &Mutex<mpsc::Sender<serde_json::Value>>,
     headers: &mut HeaderMap,
 ) -> Result<(mpsc::Receiver<ResponseUnit>, oneshot::Receiver<()>), Infallible> {
     let (on_end_callback, on_end) = oneshot::channel();
     let (tx, rx) = mpsc::channel(BUF_SIZE);
-    let mut event_channel = event_channel.lock().await.clone();
+    let app_config = app_config.clone();
     tokio::spawn(async move {
         if let Err(e) = zip_multi(paths, tx, Compression::Deflate).await {
             let error = format!("ZipError: {:?}", e);
-            let _ = event_channel.send(json!({"error":error})).await;
+            app_config.logger.err(error);
         }
         let _ = on_end_callback.send(());
     });

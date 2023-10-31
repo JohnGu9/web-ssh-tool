@@ -5,6 +5,7 @@ import { terser } from 'rollup-plugin-terser';
 import preload from "vite-plugin-preload";
 import { InputPluginOption } from 'vite/node_modules/rollup';
 import { VitePWA } from 'vite-plugin-pwa';
+import removeConsole from "vite-plugin-remove-console";
 
 export default defineConfig(() => {
     return {
@@ -48,6 +49,7 @@ export default defineConfig(() => {
             }),
             basicSsl(),
             preload(),
+            removeConsole(),
         ],
     };
 });

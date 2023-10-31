@@ -52,7 +52,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             token
         );
         // use domain is more robust than SocketAddr
-        // "localhost" will be convert to '::1' with 'to_socket_addrs'
+        // 'localhost' will be convert to '::1' with 'to_socket_addrs'
         // but '::1' can't connect to '127.0.0.1' and 'localhost' can connect to '127.0.0.1' with tokio_tungstenite
         app_config.logger.info(format!(
             "Running client mode (warning: this mode not for public usage) and connect to {}",
@@ -85,7 +85,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .with_safe_defaults()
         .with_no_client_auth()
         .with_single_cert(certs, keys.pop().expect("SSL private key not found"))?;
-    config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec(), b"http/1.0".to_vec()];
+    config.alpn_protocols = [b"h2".to_vec(), b"http/1.1".to_vec(), b"http/1.0".to_vec()].into();
     let acceptor = TlsAcceptor::from(Arc::new(config));
 
     // Create the event loop and TCP listener we'll accept connections on.
@@ -95,15 +95,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         app_config.listen_address.port()
     );
 
-    let (mut tx, rx) = mpsc::channel(0);
-    tokio::spawn(async move {
-        loop {
-            let item = listener.accept().await;
-            if let Err(_) = tx.send(item).await {
-                break;
-            }
-        }
-    });
+    let (mut tx, rx) = mpsc::channel(8);
+    tokio::spawn(async move { while let Ok(_) = tx.send(listener.accept().await).await {} });
 
     let websocket_peers = Arc::new(Mutex::new(HashMap::new()));
     let authenticate_queues = Arc::new(Mutex::new(HashMap::new()));

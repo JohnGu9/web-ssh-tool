@@ -16,15 +16,15 @@ use std::{
 
 pub async fn handle_request(
     request: &serde_json::Value,
-    event_channel: &Mutex<mpsc::Sender<serde_json::Value>>,
+    event_channel: &mpsc::Sender<serde_json::Value>,
     watchers: &Mutex<HashMap<String, Arc<Mutex<MyWatcher>>>>,
 ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     let mut watchers = watchers.lock().await;
     match request {
         serde_json::Value::String(request) => {
             if let None = watchers.get(request) {
-                let (tx, mut rx) = mpsc::channel::<serde_json::Value>(1);
-                let mut event_channel = event_channel.lock().await.clone();
+                let (tx, mut rx) = mpsc::channel(1);
+                let mut event_channel = event_channel.clone();
                 tokio::spawn(async move {
                     while let Some(data) = rx.next().await {
                         if let Err(_) = event_channel.send(json!({ "watch": data })).await {
@@ -45,7 +45,6 @@ pub async fn handle_request(
             if let Some(serde_json::Value::String(id)) = request.get("id") {
                 if let Some(_) = request.get("close") {
                     if let Some(watcher) = watchers.remove(id) {
-                        let watcher = watcher.clone();
                         drop(watchers);
                         let mut watcher = watcher.lock().await;
                         watcher.close().await;
