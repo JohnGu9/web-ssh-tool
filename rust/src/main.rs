@@ -33,7 +33,7 @@ use tokio_tungstenite::WebSocketStream;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let app_config = Arc::new(AppConfig::new());
-    if let Some(ref token) = app_config.client {
+    if let Some(token) = &app_config.client {
         // @TODO: send log to master
         // internal client mode
         use tls::CustomServerCertVerifier;
@@ -42,7 +42,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let connector = Connector::Rustls(Arc::new(
             ClientConfig::builder()
                 .with_safe_defaults()
-                .with_custom_certificate_verifier(Arc::new(CustomServerCertVerifier {})) // @TODO: verify server cert
+                .with_custom_certificate_verifier(Arc::new(CustomServerCertVerifier)) // @TODO: verify server cert
                 .with_no_client_auth(),
         ));
 
@@ -95,7 +95,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         app_config.listen_address.port()
     );
 
-    let (mut tx, rx) = mpsc::channel(8);
+    let (mut tx, rx) = mpsc::channel(0);
     tokio::spawn(async move { while let Ok(_) = tx.send(listener.accept().await).await {} });
 
     let websocket_peers = Arc::new(Mutex::new(HashMap::new()));
@@ -227,7 +227,7 @@ async fn http_websocket_classify(
                     let addr = addr.clone();
                     tokio::spawn(upgrade_websocket(context, addr, req));
 
-                    let (_, rx) = mpsc::channel(1);
+                    let (_, rx) = mpsc::channel(0);
                     let mut res = Response::new(StreamBody::new(rx));
                     *res.status_mut() = StatusCode::SWITCHING_PROTOCOLS;
                     *res.version_mut() = ver;

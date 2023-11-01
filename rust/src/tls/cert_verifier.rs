@@ -3,7 +3,7 @@ use tokio_rustls::rustls::{
     Certificate, DigitallySignedStruct, Error, ServerName,
 };
 
-pub struct CustomServerCertVerifier {}
+pub struct CustomServerCertVerifier;
 
 impl ServerCertVerifier for CustomServerCertVerifier {
     fn verify_server_cert(

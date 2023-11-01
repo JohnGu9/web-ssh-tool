@@ -24,7 +24,7 @@ pub async fn handle_request(
                     .request_pty(true, "xterm", 83, 34, 512, 512, &[])
                     .await?;
                 channel.request_shell(true).await?;
-                let (tx, rx) = mpsc::channel(1);
+                let (tx, rx) = mpsc::channel(0);
                 shells.insert(id.clone(), tx);
                 drop(shells);
                 tokio::spawn(poll_channel(channel, rx, client_connection.clone(), id));

@@ -31,10 +31,9 @@ impl AppConfig {
             .expect("--listen-address argument format error")
             .as_slice()[0];
         let bin = std::env::current_exe()
-            .unwrap()
-            .to_str()
-            .map(|s| s.to_string())
-            .unwrap();
+            .ok()
+            .and_then(|p| p.to_str().map(|s| s.to_string()))
+            .expect("current operation system doesn't support (can't get bin file path)");
 
         AppConfig {
             listen_address,
@@ -45,7 +44,7 @@ impl AppConfig {
                 false => match opt.logger {
                     None => Logger::Stdio,
                     Some(path) => {
-                        let (tx, rx) = mpsc::channel::<String>(16);
+                        let (tx, rx) = mpsc::channel::<String>(64);
                         tokio::spawn(run_file_logger(rx, path.clone()));
                         Logger::File(Mutex::new(tx), path)
                     }

@@ -71,4 +71,4 @@ pub async fn http_to_master(
     Ok(sender)
 }
 
-pub const BUF_SIZE: usize = 64;
+pub const BUF_SIZE: usize = 8;

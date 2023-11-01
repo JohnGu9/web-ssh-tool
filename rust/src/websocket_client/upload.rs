@@ -31,7 +31,7 @@ pub async fn handle_request(
     match argus {
         Some((dir_str, filename)) => {
             use futures::channel::mpsc::channel;
-            let (mut tx, rx) = channel(1);
+            let (mut tx, rx) = channel(0);
             let body = StreamBody::new(rx);
             let mut req = Request::new(body);
             *req.uri_mut() = "/client".parse()?;

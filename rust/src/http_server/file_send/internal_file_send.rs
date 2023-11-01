@@ -48,11 +48,17 @@ fn convert_data(
     response: &mut ResponseType,
 ) -> Bytes {
     match accept_encoding {
-        None => {}
         Some(accept_encoding) => match accept_encoding.to_str() {
             Ok(accept_encoding) => {
-                let accept_encoding = accept_encoding.to_lowercase();
-                if accept_encoding.contains("gzip") {
+                if accept_encoding.contains("Gzip") {
+                    let mut compress = vec![];
+                    if let Ok(_) = internal_gzip(data, &mut compress) {
+                        response
+                            .headers_mut()
+                            .append(header::CONTENT_ENCODING, HeaderValue::from_static("Gzip"));
+                        return Bytes::from(compress);
+                    }
+                } else if accept_encoding.contains("gzip") {
                     let mut compress = vec![];
                     if let Ok(_) = internal_gzip(data, &mut compress) {
                         response
@@ -60,8 +66,16 @@ fn convert_data(
                             .append(header::CONTENT_ENCODING, HeaderValue::from_static("gzip"));
                         return Bytes::from(compress);
                     }
-                }
-                if accept_encoding.contains("deflate") {
+                } else if accept_encoding.contains("Deflate") {
+                    let mut compress = vec![];
+                    if let Ok(_) = internal_deflate(data, &mut compress) {
+                        response.headers_mut().append(
+                            header::CONTENT_ENCODING,
+                            HeaderValue::from_static("Deflate"),
+                        );
+                        return Bytes::from(compress);
+                    }
+                } else if accept_encoding.contains("deflate") {
                     let mut compress = vec![];
                     if let Ok(_) = internal_deflate(data, &mut compress) {
                         response.headers_mut().append(
@@ -74,6 +88,7 @@ fn convert_data(
             }
             Err(_) => {}
         },
+        None => {}
     }
     Bytes::from_static(data)
 }

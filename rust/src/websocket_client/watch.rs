@@ -23,7 +23,7 @@ pub async fn handle_request(
     match request {
         serde_json::Value::String(request) => {
             if let None = watchers.get(request) {
-                let (tx, mut rx) = mpsc::channel(1);
+                let (tx, mut rx) = mpsc::channel(0);
                 let mut event_channel = event_channel.clone();
                 tokio::spawn(async move {
                     while let Some(data) = rx.next().await {
@@ -145,7 +145,7 @@ impl MyWatcher {
                         };
                         if let Err(_) = err {
                             break;
-                        } 
+                        }
                     } else {
                         break;
                     }
@@ -405,7 +405,7 @@ impl std::fmt::Display for MyWatcherError {
 impl std::error::Error for MyWatcherError {}
 
 fn async_watcher() -> notify::Result<(RecommendedWatcher, mpsc::Receiver<notify::Result<Event>>)> {
-    let (mut tx, rx) = mpsc::channel(1);
+    let (mut tx, rx) = mpsc::channel(0);
 
     // Automatically select the best implementation for your platform.
     // You can also access each implementation directly e.g. INotifyWatcher.

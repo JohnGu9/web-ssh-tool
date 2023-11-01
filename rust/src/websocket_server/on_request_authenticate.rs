@@ -133,7 +133,7 @@ pub async fn handle_request(
                 _ => (),
             }
 
-            let (event_channel_write_channel, event_channel_read_channel) = mpsc::channel(1);
+            let (event_channel_write_channel, event_channel_read_channel) = mpsc::channel(0);
             let (client_write_channel_callback, rx) = oneshot::channel();
             clients.insert(
                 token.clone(),

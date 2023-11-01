@@ -107,10 +107,22 @@ class Content extends React.Component<Content.Props, Content.State> {
             <Server.Authentication.Context.Provider value={auth}>
               {this.props.children}
             </Server.Authentication.Context.Provider> :
-            <div className='full-size row'>
-              <div style={{ flex: 3 }} >
-                <Title />
-              </div>
+            <LayoutBuilder className='full-size row'
+              builder={(size, children) => {
+                const showTitle = size && size.width >= 1080;
+                return <>
+                  <div style={{
+                    opacity: showTitle ? 1 : 0,
+                    flex: showTitle ? 3 : 1,
+                    transition: 'flex ease 300ms, opacity ease 250ms',
+                    overflowX: 'hidden'
+                  }} >
+                    {showTitle ? <Title /> : undefined}
+                  </div>
+                  {children}
+                  <div className='expanded' />
+                </>
+              }}>
               <Card style={{ width: '360px', minWidth: 0, padding: '24px', paddingTop: '8px' }}
                 actionButtons={<>
                   <Button buttonStyle='raised' type='submit' autoFocus
@@ -179,8 +191,8 @@ class Content extends React.Component<Content.Props, Content.State> {
                   </Tooltip>
                 </form>
               </Card>
-              <div className='expanded' />
-            </div>}
+            </LayoutBuilder>
+          }
         </SharedAxis>
       </>
     );
@@ -206,17 +218,12 @@ namespace Content {
 
 function Title() {
   return (
-    <LayoutBuilder
-      className='full-size column flex-center'
-      builder={(size, children) => {
-        if (size === undefined || size.width < 500) return;
-        return children;
-      }}>
+    <div className='full-size column flex-center' style={{ minWidth: 480 }}>
       <Typography.Headline3 style={{ margin: '32px 0' }}>SSH TOOL FOR WEB</Typography.Headline3>
       <Typography.Body1>On browser, nothing to install, everywhere, anytime</Typography.Body1>
       <Typography.Body1>Feature with shell terminal and file explorer</Typography.Body1>
       <Typography.Body1>Ease to deploy, ease to use</Typography.Body1>
-    </LayoutBuilder>
+    </div>
   );
 }
 

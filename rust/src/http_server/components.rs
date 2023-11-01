@@ -35,7 +35,7 @@ pub async fn forward_body_to_sender(mut body: Incoming, mut sender: mpsc::Sender
     }
 }
 
-pub const BUF_SIZE: usize = 64;
+pub const BUF_SIZE: usize = 8;
 
 pub async fn request_internal_client_http_connection(
     app_config: &Arc<AppConfig>,
