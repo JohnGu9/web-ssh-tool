@@ -52,6 +52,7 @@ function DirectoryPreView({ state }: { state: Watch.Directory }) {
       const c = Array.from(current);
       return new Set(
         c.filter(v => e.has(v.path) && typeof v.basename === 'string')
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           .map(v => entries[v.basename!]));
     });
     setInformation(current => {
@@ -157,16 +158,18 @@ namespace DirectoryPreView {
 
 export default DirectoryPreView;
 
-class List extends React.Component<{
+type Prop = {
   fileList: [string, Lstat][],
   uploadItems: FileExplorer.UploadController[],
-}> {
+};
+
+class List extends React.Component<Prop> {
 
   protected readonly eventTarget = new EventTarget();
-  override componentDidUpdate(oldProp: any) {
+  override componentDidUpdate(oldProp: Prop) {
     if (this.props.uploadItems !== oldProp.uploadItems) {
       this.eventTarget.dispatchEvent(new Event('change'));
-    } else if (Object.keys(this.props).some(value => (this.props as any)[value] !== oldProp[value])) {
+    } else if (this.props.fileList !==  oldProp.fileList) {
       this.eventTarget.dispatchEvent(new Event('change'));
     }
   }

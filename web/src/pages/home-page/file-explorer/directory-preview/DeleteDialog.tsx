@@ -1,10 +1,10 @@
 import React from "react";
 import { Button, Dialog, Icon } from "rmcw";
-import { useUuidV4 } from "../Common";
 import { Server } from "../../../../common/Providers";
 import Scaffold from "../../../../components/Scaffold";
 import { FileType, Lstat, Rest } from "../../../../common/Type";
 import DirectoryPreView from "../DirectoryPreview";
+import { useUuidV4 } from "../common/UuidV4";
 
 function DeleteDialog({ state, close }: { state: DeleteDialog.State, close: () => unknown }) {
   const auth = React.useContext(Server.Authentication.Context);

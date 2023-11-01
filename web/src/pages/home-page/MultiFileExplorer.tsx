@@ -10,7 +10,7 @@ import AnimatedList from "../../components/AnimatedList";
 import FileExplorer from './file-explorer/Common';
 import { SharedAxis, SharedAxisTransform } from "material-design-transform";
 import { AnimatedSize } from "animated-size";
-import { compress } from "../workers/Compress";
+import { compress } from "../../workers/Compress";
 
 // @TODO: real multi explorer support
 
@@ -53,10 +53,9 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
 
     let fileGuard = false;
     const createPlaceholderFile = async () => {
-      let res = await auth.rest('fs.writeFile',
+      const res = await auth.rest('fs.writeFile',
         [target, "# Web-ssh-tool try to create file here. Don't edit/move/delete this file"]);
-      if (Rest.isError(res)) {
-      } else {
+      if (Rest.isError(res)) { /* empty */ } else {
         fileGuard = true;
       }
       return res;
@@ -242,7 +241,7 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
             {uploadItems.map(value => {
               return {
                 listId: value.detail.id,
-                children: <AnimatedList.Wrap><UploadItem key={value as any} controller={value} /></AnimatedList.Wrap>,
+                children: <AnimatedList.Wrap><UploadItem key={value.id} controller={value} /></AnimatedList.Wrap>,
               }
             })}
           </AnimatedList>

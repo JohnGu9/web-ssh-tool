@@ -7,9 +7,9 @@ import { FileType, Lstat, Rest, Watch } from "../../../../common/Type";
 import LongPressButton from "../../../../components/LongPressButton";
 import Scaffold from "../../../../components/Scaffold";
 import styles from "./InformationDialog.module.css";
-import { useUuidV4 } from "../Common";
 import useInputAutoFocusRef from "../../../../components/InputAutoFocusRef";
 import DirectoryPreView from "../DirectoryPreview";
+import { useUuidV4 } from "../common/UuidV4";
 
 function InformationDialog({ state, close }: {
   close: () => unknown,

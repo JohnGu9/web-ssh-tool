@@ -7,14 +7,14 @@ export namespace Server {
     readonly ws: WebSocket;
     readonly id: number;
     signIn: (props: { username: string, password: string }) => Promise<{ token: string } | { error: Error }>;
-  };
+  }
   export const Context = React.createContext<Type>(undefined as unknown as Type);
 
   export namespace Authentication {
-    export type ShellEventDetail = { data: string } | { close: any };
+    export type ShellEventDetail = { data: string } | { close: unknown };
     export type WatchEventDetail =
       { path: string | undefined, realPath: string | undefined } |
-      { path: string | undefined, error: string | undefined };;
+      { path: string | undefined, error: string | undefined };
 
     export interface Type {
       readonly shell: EventTarget;
@@ -30,7 +30,7 @@ export namespace Server {
       previewUrl(path: string): Promise<URL>;
       preview(path: string): Promise<void>;
       rest<T extends keyof Rest.Map>(type: T, parameter: Rest.Map.Parameter<T>): Promise<Rest.Map.Return<T> | Rest.Error>;
-    };
+    }
     export const Context = React.createContext<Type>(undefined as unknown as Type);
   }
 }

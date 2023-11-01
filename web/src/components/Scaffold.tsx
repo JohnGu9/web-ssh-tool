@@ -76,6 +76,7 @@ class AsyncSequence {
   protected async _run() {
     if (this._running) return;
     this._running = true;
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       const p = this._fns.shift();
       if (p === undefined) break;
@@ -102,9 +103,7 @@ class AsyncSequence {
     this._fns.push(async () => {
       try {
         await fn();
-      } catch (error) {
-
-      }
+      } catch (error) { /* empty */ }
     });
     this._run();
   }

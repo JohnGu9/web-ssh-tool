@@ -4,8 +4,8 @@ import { Button, TextField, Dialog, TextArea } from "rmcw";
 import { Server } from "../../../../common/Providers";
 import Scaffold from "../../../../components/Scaffold";
 import { Rest } from "../../../../common/Type";
-import { useUuidV4 } from "../Common";
 import useInputAutoFocusRef from "../../../../components/InputAutoFocusRef";
+import { useUuidV4 } from "../common/UuidV4";
 
 export function NewFileDialog({ state, close }: { state: NewFileDialog.State, close: () => unknown }) {
   const auth = React.useContext(Server.Authentication.Context);

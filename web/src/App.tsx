@@ -4,8 +4,9 @@ import delay from './common/Delay';
 import { wsSafeClose } from './common/DomTools';
 import { LocaleContext, LocaleContextType, LocaleService, Server, SettingsService, ThemeService } from './common/Providers';
 import { SharedAxis, SharedAxisTransform } from 'material-design-transform';
-import SignInPage, { decodeMessage, encodeMessage } from './pages/SignInPage';
+import SignInPage from './pages/SignInPage';
 import Scaffold from './components/Scaffold';
+import { decodeMessage, encodeMessage } from './workers/Compress';
 
 function App() {
   return (
@@ -31,7 +32,6 @@ const { host } = document.location;
 
 // const isDebug = process.env.NODE_ENV !== 'production'; // do not export this variable
 // const _ = process.env.NODE_ENV !== 'production' ? fetch(`https://${hostname}:7200/`, { mode: 'cors' }).catch(error => { }) : {};
-// @ts-ignore
 // const wsUri = import.meta.env.DEV ? `wss://${hostname}:7200/rest` : `wss://${host}/rest`
 
 const wsUri = `wss://${host}/rest`;
@@ -49,19 +49,18 @@ class AppServer implements Server.Type {
 
   async signIn(props: { username: string, password: string }): Promise<{ token: string; } | { error: Error; }> {
     const config = { ...props };
-    return new Promise(async (resolve, reject) => {
+    const arr = await encodeMessage(config);
+    return new Promise((resolve, reject) => {
       const ws = this.ws;
       ws.addEventListener('message',
         async ({ data }) => {
-          let obj = await decodeMessage(data);
+          const obj = await decodeMessage(data);
           if (obj === undefined) reject(obj);
           resolve(obj)
         }, { once: true });
-
-      const arr = await encodeMessage(config);
       ws.send(arr);
     });
-  };
+  }
 }
 
 
@@ -83,7 +82,7 @@ class Service extends React.Component<Service.Props, Service.State> {
 
   protected readonly _onOpen = () => {
     this._connectionMayBeLost = false;
-    this.setState({ server: new AppServer({ ws: this._ws! }) });
+    this.setState({ server: new AppServer({ ws: this._ws }) });
   }
   protected readonly _onError = () => {
     if (this._ws) wsSafeClose(this._ws)

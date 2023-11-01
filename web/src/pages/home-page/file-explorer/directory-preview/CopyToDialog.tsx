@@ -7,8 +7,8 @@ import useInputAutoFocusRef from "../../../../components/InputAutoFocusRef";
 import FileExplorer from "../Common";
 import { FixedSizeList } from "../../../../components/AdaptedWindow";
 import { SharedAxis } from "material-design-transform";
-import { fileIcon } from "./FileListTile";
 import DirectoryPreView from "../DirectoryPreview";
+import { fileIcon } from "../common/FileIcon";
 
 function CopyToDialog({ state: { open, objects }, close }: { state: CopyToDialog.State, close: () => unknown }) {
   const auth = React.useContext(Server.Authentication.Context);

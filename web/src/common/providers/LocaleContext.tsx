@@ -50,7 +50,8 @@ const english = {
 const defaultLocale = {
   name: 'English',
   meta: english,
-  toggle: (_: string) => { }
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  toggle: function (_: string) { }
 }
 export type LocaleContextType = typeof defaultLocale;
 export const LocaleContext = React.createContext<LocaleContextType>(defaultLocale);
@@ -64,23 +65,23 @@ export function LocaleService({ children }: { children: React.ReactNode }) {
   );
 }
 
-export namespace LocaleService {
-  function buildState(locale: string) {
-    switch (locale) {
-      // case 'zh':
-      // case 'zh-CN':
-      //   return {
-      //     name: 'Chinese (Simplified)',
-      //     locale: chineseSimplified,
-      //   };
-      default:
-        return {
-          name: 'English',
-          meta: english,
-        };
-    }
+function buildState(locale: string) {
+  switch (locale) {
+    // case 'zh':
+    // case 'zh-CN':
+    //   return {
+    //     name: 'Chinese (Simplified)',
+    //     locale: chineseSimplified,
+    //   };
+    default:
+      return {
+        name: 'English',
+        meta: english,
+      };
   }
+}
 
+export namespace LocaleService {
   export class Service extends React.Component<Service.Props, Service.State> {
     constructor(props: Service.Props) {
       super(props);

@@ -21,7 +21,7 @@ self.onmessage = msg => {
     }
     if (handleFn === undefined) break;
     try {
-      const res = handleFn(value as any);
+      const res = handleFn(value as ArrayBuffer);
       if (res instanceof ArrayBuffer) {
         self.postMessage({ tag, data: res }, [res]);
       } else {

@@ -1,7 +1,8 @@
 import React from "react";
 import { Button, TextField, Dialog } from "rmcw";
-import FileExplorer, { useUuidV4 } from "../Common";
+import FileExplorer from "../Common";
 import useInputAutoFocusRef from "../../../../components/InputAutoFocusRef";
+import { useUuidV4 } from "./UuidV4";
 
 function GoToDialog({ state: { open, path }, close }: { state: GoToDialog.State, close: () => unknown }) {
   const [value, setValue] = React.useState(path);

@@ -3,7 +3,7 @@ import { Button, Icon, IconButton, Typography } from "rmcw";
 import FileExplorer, { NavigatorBar } from "./Common";
 import { ThemeContext } from "../../../common/Providers";
 
-function ErrorPreview({ state: { error, path } }: { state: { error: any, path?: string | null } }) {
+function ErrorPreview({ state: { error, path } }: { state: { error: unknown, path?: string | null } }) {
   const { themeData: theme } = React.useContext(ThemeContext);
   const { cd, cdToParent, setGoToDialog } = React.useContext(FileExplorer.Context);
   return (
@@ -23,7 +23,7 @@ function ErrorPreview({ state: { error, path } }: { state: { error: any, path?: 
       </div>
       <div className="expanded" />
       <Typography.Subtitle1 className="row flex-center" style={{ padding: '0px 16px' }}><Icon style={{ marginRight: 8 }}>error</Icon>Error Occur</Typography.Subtitle1>
-      <Typography.Body1 style={{ margin: '0 16px', opacity: 0.7 }}>{error}</Typography.Body1>
+      <Typography.Body1 style={{ margin: '0 16px', opacity: 0.7 }}>{error as React.ReactNode}</Typography.Body1>
       <div style={{ height: 64 }} />
       <div className="expanded" />
       {path === undefined || path === null ?

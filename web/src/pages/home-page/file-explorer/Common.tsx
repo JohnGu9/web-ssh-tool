@@ -1,7 +1,6 @@
 import React from "react";
 import { Lstat, Rest, Watch } from "../../../common/Type";
 import { Server } from "../../../common/Providers";
-import { v4 } from "uuid";
 import { SharedAxis, SharedAxisTransform } from "material-design-transform";
 import { LinearProgress } from "rmcw";
 import DirectoryPreView from "./DirectoryPreview";
@@ -11,6 +10,11 @@ import Loading from "./Loading";
 import { v1 as uuid } from 'uuid';
 import GoToDialog from "./common/GoToDialog";
 import LostConnection from "./LostConnection";
+
+// eslint-disable-next-line react-refresh/only-export-components
+export * from "./common/NavigatorBar";
+// eslint-disable-next-line react-refresh/only-export-components
+export * from "./common/GoToDialog";
 
 function FileExplorer({ controller, config, setConfig, upload, uploadItems, openUploadManagement, reconnect }: {
   controller: FileExplorer.Controller,
@@ -171,7 +175,7 @@ namespace FileExplorer {
       const result = await this.auth.rest('watch', this.id);
       if (Rest.isError(result)) this.dispatchEvent(new Event('close'));
     }
-  };
+  }
 
   export type Type = {
     cd: (path: string | null) => unknown,
@@ -185,25 +189,10 @@ namespace FileExplorer {
   }
   export const Context = React.createContext<Type>(undefined as unknown as Type);
 
-  export const enum SortType { alphabetically = 'alphabetically', date = 'date', type = 'type' };
+  export const enum SortType { alphabetically = 'alphabetically', date = 'date', type = 'type' }
   export type Config = { showAll: boolean, sort: SortType, uploadCompress: boolean };
 
-  function compare<T>(a: T, b: T) {
-    if (a < b) return -1;
-    if (a > b) return 1;
-    return 0;
-  }
-  function stringReserveCompare(a: string, b: string) {
-    const aLen = a.length;
-    const bLen = b.length;
-    for (let i = 0; i < aLen && i < bLen; i++) {
-      const aCode = a.charCodeAt(aLen - i - 1);
-      const bCode = b.charCodeAt(bLen - i - 1);
-      if (aCode === bCode) { continue; }
-      return aCode - bCode;
-    }
-    return aLen - bLen;
-  }
+
   export function sortArray(array: Array<[string, Lstat]>, type: SortType) {
     switch (type) {
       case SortType.type:
@@ -284,6 +273,8 @@ namespace FileExplorer {
       this.dispatchEvent(new CustomEvent('download', { detail: event }));
     }
 
+    get id() { return this.detail.id }
+
     protected _upload?: ProgressEvent;
     get upload() { return this._upload }
 
@@ -296,7 +287,7 @@ namespace FileExplorer {
       dest: Rest.PathLike,
       basename: string,
       state: UploadController.State,
-      error?: any,
+      error?: unknown,
       isClosed: boolean,
     };
 
@@ -331,11 +322,21 @@ function Content({ state, closed, reconnect }: {
   return <FilePreview state={state} />;
 }
 
-export function useUuidV4() {
-  return React.useMemo(() => v4(), []);
-}
-
 export default FileExplorer;
 
-export * from "./common/NavigatorBar";
-export * from "./common/GoToDialog";
+function compare<T>(a: T, b: T) {
+  if (a < b) return -1;
+  if (a > b) return 1;
+  return 0;
+}
+function stringReserveCompare(a: string, b: string) {
+  const aLen = a.length;
+  const bLen = b.length;
+  for (let i = 0; i < aLen && i < bLen; i++) {
+    const aCode = a.charCodeAt(aLen - i - 1);
+    const bCode = b.charCodeAt(bLen - i - 1);
+    if (aCode === bCode) { continue; }
+    return aCode - bCode;
+  }
+  return aLen - bLen;
+}

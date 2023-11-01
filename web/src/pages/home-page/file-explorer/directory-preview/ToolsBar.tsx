@@ -81,28 +81,28 @@ export function DraggingToolbar() {
   );
 }
 
-export namespace DraggingToolbar {
-  function DropTargetButton({ icon, onDrop }: { icon: React.ReactNode, onDrop: (event: React.DragEvent<HTMLButtonElement>) => unknown }) {
-    const [hovering, setHovering] = React.useState(false);
-    return <IconButton
-      style={{ opacity: hovering ? 0.5 : 1, transition: 'opacity 200ms' }}
-      onDragOver={e => e.preventDefault()}
-      onDragEnter={e => {
-        e.preventDefault();
-        setHovering(true);
-      }}
-      onDragLeave={e => {
-        e.preventDefault();
-        setHovering(false);
-      }}
-      onDrop={event => {
-        event.preventDefault();
-        setHovering(false);
-        onDrop(event);
-      }}
-    ><Icon>{icon}</Icon></IconButton>;
-  }
+function DropTargetButton({ icon, onDrop }: { icon: React.ReactNode, onDrop: (event: React.DragEvent<HTMLButtonElement>) => unknown }) {
+  const [hovering, setHovering] = React.useState(false);
+  return <IconButton
+    style={{ opacity: hovering ? 0.5 : 1, transition: 'opacity 200ms' }}
+    onDragOver={e => e.preventDefault()}
+    onDragEnter={e => {
+      e.preventDefault();
+      setHovering(true);
+    }}
+    onDragLeave={e => {
+      e.preventDefault();
+      setHovering(false);
+    }}
+    onDrop={event => {
+      event.preventDefault();
+      setHovering(false);
+      onDrop(event);
+    }}
+  ><Icon>{icon}</Icon></IconButton>;
+}
 
+export namespace DraggingToolbar {
   export function DownloadButton() {
     const auth = React.useContext(Server.Authentication.Context);
     const { showMessage } = React.useContext(Scaffold.Snackbar.Context);

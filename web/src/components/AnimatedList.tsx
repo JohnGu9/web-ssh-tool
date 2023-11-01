@@ -53,7 +53,7 @@ class AnimatedList extends React.Component<AnimatedList.Props> {
 export default AnimatedList;
 
 namespace AnimatedList {
-  export type KeyType = any;
+  export type KeyType = React.Key | null | undefined;
   export type Props = {
     children: { listId: KeyType, children: React.ReactNode }[],
     duration?: number,

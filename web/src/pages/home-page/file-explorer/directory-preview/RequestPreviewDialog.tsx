@@ -82,8 +82,7 @@ function PreviewWindow({ open, lstat, close }: { open: boolean, lstat: Lstat | n
     const xhr = new XMLHttpRequest();
     xhr.responseType = 'arraybuffer';
     xhr.onprogress = event => {
-      if (event.total === 0) {
-      } else if (event.lengthComputable) {
+      if (event.total === 0) { /* empty */ } else if (event.lengthComputable) {
         setLoading(event.loaded / event.total);
       }
     };

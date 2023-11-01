@@ -12,12 +12,14 @@ class XTerminal extends React.Component<XTerminal.Props> {
   protected fit = () => {
     this._fit.fit();
     const { onResize, terminal } = this.props;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const { clientHeight, clientWidth } = this._ref.current!;
     onResize?.({ height: clientHeight, width: clientWidth, cols: terminal.cols, rows: terminal.rows });
   }
 
   override componentDidMount() {
     this._fit = new FitAddon();
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const current = this._ref.current!;
     this.props.terminal.loadAddon(this._fit);
     this.props.terminal.open(current);
@@ -28,6 +30,7 @@ class XTerminal extends React.Component<XTerminal.Props> {
     if (oldProps.terminal !== this.props.terminal) {
       this._fit.dispose();
       this._fit = new FitAddon();
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const current = this._ref.current!;
       this.props.terminal.loadAddon(this._fit);
       this.props.terminal.open(current);

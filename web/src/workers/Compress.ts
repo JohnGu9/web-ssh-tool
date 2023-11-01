@@ -2,13 +2,13 @@ import { deflate, inflate, stringifyAndDeflate, inflateAndJson } from "./Compres
 
 let tag = 0;
 type SuspendType = {
-    resolve: (value: any) => void,
-    reject: (reason?: any) => void
+    resolve: (value: unknown) => void,
+    reject: (reason?: unknown) => void
 
 };
 const suspend: Map<number, SuspendType> = new Map();
-function onMessage(msg: MessageEvent<any>) {
-    const { tag, data, error } = msg.data;
+function onMessage(msg: MessageEvent<unknown>) {
+    const { tag, data, error } = msg.data as { tag: number, data: unknown, error: unknown };
     const callback = suspend.get(tag);
     if (callback !== undefined) {
         suspend.delete(tag);
@@ -35,7 +35,7 @@ function request<T>() {
     if (closed) return;
     const messageTag = tag++;
     const promise = new Promise<T>((resolve, reject) => {
-        suspend.set(messageTag, { resolve, reject });
+        suspend.set(messageTag, { resolve, reject } as SuspendType);
     });
     return { tag: messageTag, promise };
 }
@@ -49,8 +49,7 @@ export async function compress(buffer: ArrayBuffer) {
             worker.postMessage({ tag, requestDeflate: buffer }, [buffer]);
             const res = await promise;
             return res;
-        } catch (error) {
-        }
+        } catch (error) { /* empty */ }
     }
     return deflate(buffer);
 }
@@ -64,8 +63,7 @@ export async function decompress(buffer: ArrayBuffer) {
             worker.postMessage({ tag, requestInflate: buffer }, [buffer]);
             const res = await promise;
             return res;
-        } catch (error) {
-        }
+        } catch (error) { /* empty */ }
     }
     return inflate(buffer);
 }
@@ -78,22 +76,42 @@ export async function stringifyAndCompress(obj: unknown) {
             worker.postMessage({ tag, stringifyAndDeflate: obj });
             const res = await promise;
             return res;
-        } catch (error) {
-        }
+        } catch (error) { /* empty */ }
     }
     return stringifyAndDeflate(obj);
 }
 
 export async function decompressAndJson(arr: ArrayBuffer) {
-    const req = request<any>();
+    const req = request<unknown>();
     if (req !== undefined) {
         const { tag, promise } = req;
         try {
             worker.postMessage({ tag, inflateAndJson: arr }, [arr]);
             const res = await promise;
             return res;
-        } catch (error) {
-        }
+        } catch (error) { /* empty */ }
     }
     return inflateAndJson(arr);
+}
+
+
+/// https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/message_event
+export async function decodeMessage(data: unknown) {
+    if (data instanceof Blob) {
+        return await decompressAndJson(await data.arrayBuffer());
+    } else if (data instanceof ArrayBuffer) {
+        return await decompressAndJson(data);
+    } else if (typeof data === 'string') {
+        return JSON.parse(data);
+    } else {
+        return;
+    }
+}
+
+export async function encodeMessage(obj: unknown) {
+    try {
+        return await stringifyAndCompress(obj);
+    } catch (error) {
+        return JSON.stringify(obj);
+    }
 }

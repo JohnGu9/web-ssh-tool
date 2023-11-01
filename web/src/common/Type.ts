@@ -12,13 +12,13 @@ export const enum FileType {
   symbolicLink = 'symbolic link',
   fifo = 'fifo',
   socket = 'socket'
-};
+}
 
 export namespace Rest {
   export type PathLike = string[];
   export type Map = {
     // @TODO: update return type for new rust backend
-    'token': { parameter: any, return: string },
+    'token': { parameter: unknown, return: string },
     'unzip': { parameter: [string /** src */, PathLike /** dest */], return: void },
     'fs.rename': { parameter: [oldPath: PathLike, newPath: PathLike], return: Awaited<ReturnType<typeof fs.rename>> },
     'fs.unlink': { parameter: [path: PathLike], return: Awaited<ReturnType<typeof fs.unlink>> }, // delete file
@@ -31,7 +31,7 @@ export namespace Rest {
     'shell': {
       parameter:
       { id: string, data: string | number[] } |                                                          // send data
-      { id: string, close: any } |                                                            // request close
+      { id: string, close: unknown } |                                                            // request close
       { id: string, resize: { rows: number, cols: number, height: number, width: number } } | // resize window
       string,                                                                                 // request open new shell with id
       return: void
@@ -40,7 +40,7 @@ export namespace Rest {
       parameter:
       { id: string, cd: string | null } |
       { id: string, cdToParent: null } |                                                       // send data
-      { id: string, close: any } |                                                            // request close
+      { id: string, close: unknown } |                                                            // request close
       string,                                                                                 // request open new shell with id
       return: void
     },
@@ -49,9 +49,9 @@ export namespace Rest {
     export type Parameter<Key extends keyof Map> = Map[Key] extends { parameter: infer R } ? R : never;
     export type Return<Key extends keyof Map> = Map[Key] extends { return: infer R } ? R : never;
   }
-  export type Error = { error: any };
+  export type Error = { error: unknown };
 
-  export function isError(value: any): value is Error {
+  export function isError(value: unknown): value is Error {
     return typeof value === 'object' && value !== null && 'error' in value;
   }
 }
@@ -110,4 +110,4 @@ export const DECODE_OPTION = [
 
 export enum Layout {
   both, terminal, fileExplorer,
-};
+}

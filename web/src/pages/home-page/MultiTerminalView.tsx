@@ -120,6 +120,7 @@ namespace MultiTerminalView {
       this.onClose.addEventListener('close', () => {
         this.auth.shell.removeEventListener(this.id, this._listener);
         this.closed = true;
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
         textDecoder = function () { } as () => string;
       }, { once: true });
       this.open();
@@ -404,7 +405,7 @@ function CommandButton({ runCommand }: { runCommand: (c: string) => unknown }) {
         if (list instanceof Array) {
           return list.filter(v => typeof v.command === 'string');
         }
-      } catch { }
+      } catch { /* empty */ }
     }
     return [];
   }, [commandsRaw]);

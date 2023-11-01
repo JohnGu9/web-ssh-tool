@@ -9,7 +9,7 @@ import { Rest } from '../common/Type';
 import { wsSafeClose } from '../common/DomTools';
 import Scaffold from '../components/Scaffold';
 import LayoutBuilder from '../components/LayoutBuilder';
-import { decompressAndJson, stringifyAndCompress } from './workers/Compress';
+import { decodeMessage, encodeMessage } from '../workers/Compress';
 
 // @TODO: more-security way for storage username and password
 
@@ -248,7 +248,7 @@ class Auth implements Server.Authentication.Type {
 
   protected _ws: WebSocket;
   protected _tag = 0;
-  protected _callbacks = new Map<number, (response: any) => unknown>();
+  protected _callbacks = new Map<number, (response: unknown) => unknown>();
 
   readonly notification = new (class extends EventTarget {
     invoke(n: string) {
@@ -272,11 +272,11 @@ class Auth implements Server.Authentication.Type {
   })();
 
   async rest<T extends keyof Rest.Map>(type: T, parameter: Rest.Map.Parameter<T>): Promise<Rest.Map.Return<T> | Rest.Error> {
-    return new Promise(async resolve => {
-      const tag = this._tag++;
+    const tag = this._tag++;
+    const arr = await encodeMessage({ tag, request: { [type]: parameter } });
+    return new Promise(resolve => {
       // console.log(`rest ${tag} ${type} ${JSON.stringify(parameter)}`);
-      this._callbacks.set(tag, resolve);
-      const arr = await encodeMessage({ tag, request: { [type]: parameter } });
+      this._callbacks.set(tag, resolve as (_: unknown) => unknown);
       this._ws.send(arr);
     });
   }
@@ -343,23 +343,4 @@ class Auth implements Server.Authentication.Type {
 
 }
 
-/// https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/message_event
-export async function decodeMessage(data: any) {
-  if (data instanceof Blob) {
-    return await decompressAndJson(await data.arrayBuffer());
-  } else if (data instanceof ArrayBuffer) {
-    return await decompressAndJson(data);
-  } else if (typeof data === 'string') {
-    return JSON.parse(data);
-  } else {
-    return;
-  }
-}
 
-export async function encodeMessage(obj: any) {
-  try {
-    return await stringifyAndCompress(obj);
-  } catch (error) {
-    return JSON.stringify(obj);
-  }
-}

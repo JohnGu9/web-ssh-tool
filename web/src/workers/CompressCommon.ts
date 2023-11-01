@@ -8,7 +8,7 @@ export function inflate(arr: ArrayBuffer) {
     return pako.ungzip(new Uint8Array(arr)).buffer;
 }
 
-export function stringifyAndDeflate(obj: any) {
+export function stringifyAndDeflate(obj: unknown) {
     const str = JSON.stringify(obj);
     const buf = utf8TextEncode(str);
     const arr = deflate(buf.buffer);
