@@ -1,42 +1,60 @@
-import { defineConfig } from 'vite';
+import { defineConfig, UserConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import basicSsl from '@vitejs/plugin-basic-ssl';
-import { terser } from 'rollup-plugin-terser';
 import preload from "vite-plugin-preload";
-import { InputPluginOption } from 'vite/node_modules/rollup';
 import { VitePWA } from 'vite-plugin-pwa';
-import removeConsole from "vite-plugin-remove-console";
 
-export default defineConfig(() => {
-    return {
-        server: {
-            port: 3000,
-            proxy: {
-                '/upload': { target: 'https://localhost:7200', secure: false, changeOrigin: true },
-                '/download': { target: 'https://localhost:7200', secure: false, changeOrigin: true },
-                '/preview': { target: 'https://localhost:7200', secure: false, changeOrigin: true },
-                '/rest': {
-                    target: 'wss://localhost:7200',
-                    ws: true,
-                    secure: false,
-                    changeOrigin: true,
-                }
+export default defineConfig(({ command }): UserConfig => {
+    if (command === 'serve') {
+        return {
+            server: {
+                port: 3000,
+                proxy: {
+                    '/upload': { target: 'https://localhost:7200', secure: false, changeOrigin: true },
+                    '/download': { target: 'https://localhost:7200', secure: false, changeOrigin: true },
+                    '/preview': { target: 'https://localhost:7200', secure: false, changeOrigin: true },
+                    '/rest': {
+                        target: 'wss://localhost:7200',
+                        ws: true,
+                        secure: false,
+                        changeOrigin: true,
+                    }
+                },
             },
+            plugins: [
+                react(),
+                basicSsl(),
+            ],
+        };
+    }
+    return {
+        esbuild: {
+            sourcemap: false,
+            legalComments: "none",
+            drop: ["console", "debugger"],
         },
         build: {
             outDir: "build",
-            minify: "terser" as "terser",
+            minify: "terser",
             rollupOptions: {
-                plugins: [
-                    terser({
-                        format: {
-                            comments: false,
-                            preserve_annotations: false,
-                            ecma: 2015,
-                        },
-                        mangle: true,
-                    }),
-                ] as InputPluginOption,
+                treeshake: true,
+            },
+            terserOptions: {
+                sourceMap: false,
+                toplevel: true,
+                ecma: 2015,
+                parse: {
+                    html5_comments: false,
+                },
+                compress: {
+                    drop_console: true,
+                    passes: 2,
+                },
+                format: {
+                    comments: false,
+                    preserve_annotations: false,
+                },
+                mangle: true,
             },
         },
         plugins: [
@@ -49,7 +67,6 @@ export default defineConfig(() => {
             }),
             basicSsl(),
             preload(),
-            removeConsole(),
         ],
     };
 });
