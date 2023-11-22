@@ -36,9 +36,6 @@ export default defineConfig(({ command }): UserConfig => {
         build: {
             outDir: "build",
             minify: "terser",
-            rollupOptions: {
-                treeshake: true,
-            },
             terserOptions: {
                 sourceMap: false,
                 toplevel: true,
