@@ -1,7 +1,6 @@
 import React from "react";
 import { Rest } from "../Type";
 
-
 export namespace Server {
   export interface Type {
     readonly ws: WebSocket;

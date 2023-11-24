@@ -250,7 +250,7 @@ function CheckListButton({ setOnSelect }: { setOnSelect: (value: boolean) => unk
   return (
     <Tooltip label='select'>
       <IconButton
-        onClick={event => setOnSelect(true)} >
+        onClick={() => setOnSelect(true)} >
         <Icon>checklist</Icon>
       </IconButton>
     </Tooltip>

@@ -169,7 +169,7 @@ class List extends React.Component<Prop> {
   override componentDidUpdate(oldProp: Prop) {
     if (this.props.uploadItems !== oldProp.uploadItems) {
       this.eventTarget.dispatchEvent(new Event('change'));
-    } else if (this.props.fileList !==  oldProp.fileList) {
+    } else if (this.props.fileList !== oldProp.fileList) {
       this.eventTarget.dispatchEvent(new Event('change'));
     }
   }
@@ -183,7 +183,7 @@ class List extends React.Component<Prop> {
         return <FileListTile
           key={key}
           style={style}
-          uploading={this.props.uploadItems.find(v => {
+          uploading={this.props.uploadItems.find(() => {
             return false; // @TODO: detect uploading status
             // return (v.detail.dest === path || v.detail.dest === realPath) && v.detail.basename === basename;
           }) !== undefined}

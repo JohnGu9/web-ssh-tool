@@ -204,7 +204,7 @@ namespace FileExplorer {
           return res;
         });
       case SortType.date:
-        return array.sort(([_, stats0], [__, stats1]) => compare(stats0.modifiedTime, stats1.modifiedTime));
+        return array.sort(([, stats0], [, stats1]) => compare(stats0.modifiedTime, stats1.modifiedTime));
       case SortType.alphabetically:
         return array.sort(([key0], [key1]) => compare(key0, key1));
     }

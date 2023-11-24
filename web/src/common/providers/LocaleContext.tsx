@@ -51,7 +51,7 @@ const defaultLocale = {
   name: 'English',
   meta: english,
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  toggle: function (_: string) { }
+  toggle: function () { } as (a: string) => unknown
 }
 export type LocaleContextType = typeof defaultLocale;
 export const LocaleContext = React.createContext<LocaleContextType>(defaultLocale);

@@ -3,7 +3,7 @@ import { Elevation, CircularProgress, IconButton, Icon, Tooltip, Dialog, Button,
 import { v1 as uuid } from 'uuid';
 
 import { fileSize } from "../../common/Tools";
-import { Server, Settings } from "../../common/Providers";
+import { Server } from "../../common/Providers";
 import { Rest } from "../../common/Type";
 import AnimatedList from "../../components/AnimatedList";
 
@@ -253,7 +253,6 @@ class MultiFileExplorer extends React.Component<MultiFileExplorer.Props, MultiFi
 
 namespace MultiFileExplorer {
   export type Props = {
-    readonly settings: Settings.Type,
     readonly server: Server.Type,
     readonly auth: Server.Authentication.Type,
   };
@@ -264,8 +263,6 @@ namespace MultiFileExplorer {
     uploadManagementOpen: boolean,
   };
 }
-
-
 
 function UploadItem(props: { controller: FileExplorer.UploadController }) {
   const [state, setState] = React.useState<FileExplorer.UploadController.State>(props.controller.detail.state);

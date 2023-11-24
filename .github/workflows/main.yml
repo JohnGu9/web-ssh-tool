@@ -1,4 +1,6 @@
 on:
+  workflow_dispatch:
+
   push:
     tags:
       - v**
@@ -24,6 +26,9 @@ jobs:
       - name: Generate random ssl cart and key
         run: openssl req -nodes -new -x509  -keyout server.key -out server.crt -subj "/C=XX/ST=StateName/L=CityName/O=CompanyName/OU=CompanySectionName/CN=CommonNameOrHostname"
         working-directory: rust/src/tls
+
+      - name: Install cargo-license
+        run: cargo install cargo-license
 
       - name: Build Project
         run: npm run build
@@ -63,6 +68,9 @@ jobs:
       - name: Generate random ssl cart and key
         run: openssl req -nodes -new -x509  -keyout server.key -out server.crt -subj "/C=XX/ST=StateName/L=CityName/O=CompanyName/OU=CompanySectionName/CN=CommonNameOrHostname"
         working-directory: rust/src/tls
+
+      - name: Install cargo-license
+        run: cargo install cargo-license
 
       - name: Build Project
         run: npm run build

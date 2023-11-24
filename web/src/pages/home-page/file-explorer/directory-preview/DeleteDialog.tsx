@@ -20,7 +20,7 @@ function DeleteDialog({ state, close }: { state: DeleteDialog.State, close: () =
       actions={<>
         <Button label="delete forever"
           style={{ color: '#b00020' }}
-          onClick={async e => {
+          onClick={async () => {
             const value = await Promise.all(state.objects.map(async ({ type, path }) => {
               if (path !== null && path !== undefined) {
                 switch (type) {
@@ -65,7 +65,7 @@ function DeleteDialog({ state, close }: { state: DeleteDialog.State, close: () =
       <form id={id}
         onSubmit={async event => {
           event.preventDefault();
-          const value = await Promise.all(state.objects.map(async ({ type, path }) => {
+          const value = await Promise.all(state.objects.map(async ({ path }) => {
             if (path !== null && path !== undefined) {
               const res = await auth.rest('fs.trash', [[path]]);
               if (Rest.isError(res)) return false;

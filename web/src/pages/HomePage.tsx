@@ -4,9 +4,10 @@ import { Server, Settings } from "../common/Providers";
 import MultiFileExplorer from "./home-page/MultiFileExplorer";
 import MultiTerminalView from "./home-page/MultiTerminalView";
 import Scaffold from "../components/Scaffold";
-import iconv from 'iconv-lite';
 import LayoutBuilder from "../components/LayoutBuilder";
 import { Layout } from "../common/Type";
+
+import iconv from 'iconv-lite';
 
 function HomePage() {
   const server = React.useContext(Server.Context);
@@ -68,7 +69,7 @@ function HomePage() {
         builder={(size) => {
           return <MyLayout size={size} layout={layout}
             firstChild={<MultiTerminalView auth={auth} textDecoder={textDecoder} />}
-            secondChild={<MultiFileExplorer auth={auth} server={server} settings={settings} />} />
+            secondChild={<MultiFileExplorer auth={auth} server={server} />} />
         }} />
     </HomePage.Context.Provider>
   );

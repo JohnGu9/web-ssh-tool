@@ -46,7 +46,7 @@ class Content extends React.Component<Content.Props, Content.State> {
     }
   }
 
-  async _submit(event?: React.FormEvent<HTMLFormElement>) {
+  async _submit() {
     if (this.state.auth) return; // already sign in
     const { server, settings } = this.props;
     this.setState({ loading: true });
@@ -130,7 +130,7 @@ class Content extends React.Component<Content.Props, Content.State> {
                 </>}>
                 <form id="sign-in" onSubmit={event => {
                   event.preventDefault();
-                  this._submit(event);
+                  this._submit();
                 }}>
                   <Typography.Headline5>{meta.signIn}</Typography.Headline5>
                   <div style={{ height: '16px' }} />
@@ -300,7 +300,7 @@ class Auth implements Server.Authentication.Type {
       xhr.addEventListener('abort', event => reject(new CustomEvent('AbortError', { detail: event })), listenerOptions);
       xhr.addEventListener('error', event => reject(new CustomEvent('UnknownError', { detail: event })), listenerOptions);
       xhr.addEventListener('timeout', event => reject(new CustomEvent('TimeoutError', { detail: event })), listenerOptions);
-      xhr.onload = event => {
+      xhr.onload = () => {
         try {
           resolve(JSON.parse(xhr.responseText));
         } catch (error) {

@@ -1,6 +1,5 @@
 import './index.css';
 import 'material-icons/iconfont/filled.css';
-import 'buffer';
 import App from './App';
 import { createRoot } from 'react-dom/client';
 

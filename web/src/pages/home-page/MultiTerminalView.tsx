@@ -436,7 +436,7 @@ function CommandButton({ runCommand }: { runCommand: (c: string) => unknown }) {
               const newCommands = commands.filter((_, i) => i !== index)
               settings.setQuickCommands(JSON.stringify(newCommands));
             }}><Icon>close</Icon></IconButton>}
-            onClick={e => {
+            onClick={() => {
               close();
               runCommand(command);
             }} />)}

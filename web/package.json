@@ -42,6 +42,7 @@
     "eslint": "^8.45.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.3",
+    "rollup-plugin-node-polyfills": "^0.2.1",
     "sass": "^1.69.5",
     "terser": "^5.24.0",
     "typescript": "^5.2.2",
@@ -49,21 +50,10 @@
     "vite-plugin-preload": "^0.3.1",
     "vite-plugin-pwa": "^0.16.6"
   },
-  "overrides": {
-    "react-scripts": {
-      "typescript": "^5"
-    }
-  },
   "scripts": {
     "start": "vite",
     "build": "vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
   },
   "browserslist": {
     "production": [
