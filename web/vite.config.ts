@@ -3,35 +3,19 @@ import react from '@vitejs/plugin-react';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import preload from "vite-plugin-preload";
 import { VitePWA } from 'vite-plugin-pwa';
-
-import nodePolyfills from 'rollup-plugin-node-polyfills'; // for iconv-lite
+import { nodePolyfills } from 'vite-plugin-node-polyfills'// for iconv-lite
 // @TODO: remove iconv-lite and node polyfills in the future
 
 export default defineConfig(({ command }): UserConfig => {
-    const resolve = {
-        alias: {
-            // vite default polyfill not support string_decoder.StringDecoder by now
-            // but iconv-lite require string_decoder.StringDecoder
-            string_decoder:
-                'rollup-plugin-node-polyfills/polyfills/string-decoder',
-        }
-    };
-    const optimizeDeps = {
-        esbuildOptions: {
-            define: {
-                global: 'globalThis'
-            },
-        }
-    };
     const plugins: PluginOption[] = [
         react(),
         basicSsl(),
-        nodePolyfills() as PluginOption,
+        nodePolyfills({
+            include: ['string_decoder'],
+        }),
     ];
     if (command === 'serve') {
         return {
-            resolve,
-            optimizeDeps,
             server: {
                 port: 3000,
                 proxy: {
@@ -50,8 +34,6 @@ export default defineConfig(({ command }): UserConfig => {
         };
     }
     return {
-        resolve,
-        optimizeDeps,
         esbuild: {
             sourcemap: false,
             legalComments: "none",
