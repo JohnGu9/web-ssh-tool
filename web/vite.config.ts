@@ -8,7 +8,7 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills'// for iconv-lite
 
 export default defineConfig(({ command }): UserConfig => {
     const plugins: PluginOption[] = [
-        react(),
+        react() as PluginOption,
         basicSsl(),
         nodePolyfills({
             include: ['string_decoder'],
