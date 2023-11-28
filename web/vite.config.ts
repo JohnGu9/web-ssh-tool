@@ -1,4 +1,4 @@
-import { defineConfig, PluginOption, UserConfig } from 'vite';
+import { defineConfig, UserConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import preload from "vite-plugin-preload";
@@ -7,8 +7,8 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills'// for iconv-lite
 // @TODO: remove iconv-lite and node polyfills in the future
 
 export default defineConfig(({ command }): UserConfig => {
-    const plugins: PluginOption[] = [
-        react() as PluginOption,
+    const plugins = [
+        react(),
         basicSsl(),
         nodePolyfills({
             include: ['string_decoder'],
@@ -57,7 +57,6 @@ export default defineConfig(({ command }): UserConfig => {
                     comments: false,
                     preserve_annotations: false,
                 },
-                mangle: true,
             },
         },
         plugins: [
