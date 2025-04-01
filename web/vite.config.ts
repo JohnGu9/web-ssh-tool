@@ -11,7 +11,7 @@ export default defineConfig(({ command }): UserConfig => {
         react(),
         basicSsl(),
         nodePolyfills({
-            include: ['string_decoder'],
+            include: ['string_decoder', 'buffer'],
         }),
     ];
     if (command === 'serve') {
@@ -41,23 +41,6 @@ export default defineConfig(({ command }): UserConfig => {
         },
         build: {
             outDir: "build",
-            minify: "terser",
-            terserOptions: {
-                sourceMap: false,
-                toplevel: true,
-                ecma: 2015,
-                parse: {
-                    html5_comments: false,
-                },
-                compress: {
-                    drop_console: true,
-                    passes: 2,
-                },
-                format: {
-                    comments: false,
-                    preserve_annotations: false,
-                },
-            },
         },
         plugins: [
             ...plugins,
